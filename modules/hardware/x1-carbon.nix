@@ -6,12 +6,14 @@
   # Enable firmware updates
   services.fwupd.enable = true;
 
-  # Power management with TLP (fine-grained) or power-profiles-daemon (auto)
+  services.power-profiles-daemon.enable = false
+
+  # # Power management with TLP (fine-grained) or power-profiles-daemon (auto)
   services.tlp = {
     enable = true;
     settings = {
       CPU_SCALING_GOVERNOR_ON_AC = "performance";
-      CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
+      CPU_SCALING_GOVERNOR_ON_BAT = "fpowersave";
       USB_AUTOSUSPEND = 1;
       WIFI_PWR_ON_BAT = "on";
       PCIE_ASPM_ON_BAT = "powersupersave";
@@ -19,9 +21,6 @@
       STOP_CHARGE_THRESH_BAT0 = 80;
     };
   };
-
-  # Alternatively, use this for GNOME auto-switching power profiles
-  # services.power-profiles-daemon.enable = true;
 
   # Fan and thermal management
   # Some models support thinkfan; enable only if supported
@@ -53,7 +52,6 @@
   ];
 
   environment.systemPackages = with pkgs; [
-    tlp
     powertop
     fwupd
     lm_sensors
