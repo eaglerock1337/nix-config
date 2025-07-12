@@ -1,7 +1,6 @@
 { config, pkgs, ... }:
 
 let
-  nerdFont = pkgs.nerdfonts.override { fonts = [ "FiraCode" ]; };
   gruvboxDark = {
     bg = "#282828";
     fg = "#ebdbb2";
