@@ -12,7 +12,6 @@
     xterm
     firefox
     hexchat
-    steam
     xfce.thunar
     htop
     playerctl
