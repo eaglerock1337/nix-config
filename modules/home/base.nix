@@ -13,7 +13,7 @@
     firefox
     hexchat
     steam
-    thunar
+    xfce.thunar
     htop
     playerctl
     nerd-fonts.fira-code
