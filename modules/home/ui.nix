@@ -26,12 +26,6 @@ in {
     };
   };
 
-  services.feh = {
-    enable = true;
-    image = "../../assets/wallpaper.png";
-    options = [ "--bg-scale" ];                        # or --bg-fill, --bg-center, etc.
-  };
-
   services.picom = {
     enable = true;
     fade = true;
