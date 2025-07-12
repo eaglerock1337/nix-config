@@ -16,6 +16,8 @@
     thunar
     htop
     playerctl
+    nerd-fonts.fira-code
+    nerd-fonts.droid-sans-mono
     pamixer        # volume control
     brightnessctl  # brightness (optional)
     i3lock         # lock screen
@@ -23,9 +25,4 @@
   ];
 
   fonts.fontconfig.enable = true;
-
-  fonts.packages = with pkgs; [
-    nerd-fonts.fira-code
-    nerd-fonts.droid-sans-mono
-  ];
 }
