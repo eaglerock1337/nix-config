@@ -7,9 +7,9 @@
 {
   imports =
     [ # Include the results of the hardware scan.
-      ../hosts/common.nix
-      ../hosts/desktop-ui.nix
-      ../hardware/x1-carbon.nix
+      ../modules/hosts/common.nix
+      ../modules/hosts/desktop-ui.nix
+      ../modules/hardware/x1-carbon.nix
       ./hardware-configuration.nix
     ];
 
