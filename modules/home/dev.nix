@@ -27,11 +27,12 @@ in {
     nodePackages.prettier
 
     # --- Ruby ---
-    ruby
-    rubyPackages_3_1.bundler
-    rubyPackages_3_1.irb
-    rubyPackages_3_1.solargraph  # Ruby LSP
-    rubyPackages_3_1.rubocop
+    ruby_3_4
+    bundler
+    rubyPackages_3_4.irb
+    rubyPackages_3_4.rake
+    rubyPackages_3_4.solargraph  # Ruby LSP
+    rubyPackages_3_4.rubocop
 
     # --- Misc Dev Tools ---
     direnv
