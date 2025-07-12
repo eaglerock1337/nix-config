@@ -10,7 +10,6 @@ in {
     python3Packages.virtualenv
     pipenv
     black
-    flake8
     mypy
 
     # --- Go ---
