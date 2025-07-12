@@ -6,7 +6,7 @@
   # Enable firmware updates
   services.fwupd.enable = true;
 
-  services.power-profiles-daemon.enable = false
+  services.power-profiles-daemon.enable = false; # Use TLP instead
 
   # # Power management with TLP (fine-grained) or power-profiles-daemon (auto)
   services.tlp = {
