@@ -28,7 +28,7 @@ in {
 
   services.feh = {
     enable = true;
-    image = "/home/eaglerock/Pictures/wallpaper.jpg";
+    image = "../../assets/wallpaper.png";
     options = [ "--bg-scale" ];                        # or --bg-fill, --bg-center, etc.
   };
 
