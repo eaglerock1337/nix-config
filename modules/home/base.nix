@@ -8,7 +8,6 @@
     rofi
     picom
     polybar
-    nerdFont
     alacritty
     xterm
     firefox
