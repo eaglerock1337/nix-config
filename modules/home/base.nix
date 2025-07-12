@@ -11,7 +11,7 @@
     alacritty
     xterm
     firefox
-    xchat
+    hexchat
     steam
     thunar
     htop
