@@ -124,19 +124,18 @@ in {
 
       bars = [ ]; # Using polybar
 
-      workspaceNames = {
-        "1" = "1: ";        # Terminal
-        "2" = "2: ";        # VSCode
-        "3" = "3: ";        # Firefox
-        "4" = "4: ";        # Xchat
-        "5" = "5: ";        # Steam
-        "6" = "6: ";        # Terminals
-        "7" = "7: ";        # Firefox
-        "8" = "8: ";        # File Manager
-        "9" = "9: ";        # External Display
-      };
-
       keybindings = {
+        # Workspaces
+        "${config.xsession.windowManager.i3.config.modifier}+1" = "1: ";        # Terminal
+        "${config.xsession.windowManager.i3.config.modifier}+2" = "2: ";        # VSCode
+        "${config.xsession.windowManager.i3.config.modifier}+3" = "3: ";        # Firefox
+        "${config.xsession.windowManager.i3.config.modifier}+4" = "4: ";        # Xchat
+        "${config.xsession.windowManager.i3.config.modifier}+5" = "5: ";        # Steam
+        "${config.xsession.windowManager.i3.config.modifier}+6" = "6: ";        # Terminals
+        "${config.xsession.windowManager.i3.config.modifier}+7" = "7: ";        # Firefox
+        "${config.xsession.windowManager.i3.config.modifier}+8" = "8: ";        # File Manager
+        "${config.xsession.windowManager.i3.config.modifier}+9" = "9: ";        # External Display
+
         # Launch apps
         "${config.xsession.windowManager.i3.config.modifier}+Return" = "exec alacritty";
         "${config.xsession.windowManager.i3.config.modifier}+d" = "exec rofi -show drun";

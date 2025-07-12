@@ -10,15 +10,17 @@
   # Enable networking
   networking.networkmanager.enable = true;
 
-  # Enable the X11 windowing system.
-  services.xserver.enable = true;
+  services.xserver = {
+    enable = true;
+    displayManager = {
+      lightdm.enable = false;
+      sddm.enable = false;
+      gdm.enable = true;
+    };
+    desktopManager.gnome.enable = true;
+    windowManager.i3.enable = true;
+  }
 
-  # Enable the GNOME Desktop Environment.
-  services.xserver.displayManager.gdm.enable = true;
-  services.xserver.desktopManager.gnome.enable = true;
-
-  # Enable i3 plus GNOME
-  services.xserver.windowManager.i3.enable = true;
   services.displayManager.defaultSession = "none+i3";
 
   # Configure keymap in X11
