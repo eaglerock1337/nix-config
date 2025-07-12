@@ -165,6 +165,10 @@ in {
 
       startup = [
         {
+          command = "feh --bg-fill ~/git/nix-config/assets/wallpaper.png";
+          always = true;
+        }
+        {
           command = "alacritty --title scratchpad-terminal --class scratchpad-terminal";
           always = false;
           notification = false;
