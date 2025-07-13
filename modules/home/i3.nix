@@ -14,15 +14,15 @@ let
     gray = "#a89984";
   };
   workspaces = {
-    "1" = "1: ";        # Terminal
-    "2" = "2: ";        # VSCode
-    "3" = "3: ";        # Firefox
-    "4" = "4: ";        # Xchat
-    "5" = "5: ";        # Steam
-    "6" = "6: ";        # Terminals
-    "7" = "7: ";        # Chromium
-    "8" = "8: ";        # File Manager
-    "9" = "9: ";        # External Display
+    "1" = "1 ";        # Terminal
+    "2" = "2 ";        # VSCode
+    "3" = "3 ";        # Firefox
+    "4" = "4 ";        # Xchat
+    "5" = "5 ";        # Steam
+    "6" = "6 ";        # Terminals
+    "7" = "7 ";        # Chromium
+    "8" = "8 ";        # File Manager
+    "9" = "9 ";        # External Display
   };
 in {
   xsession.windowManager.i3 = {
@@ -65,7 +65,7 @@ in {
       modifier = "Mod4";
       fonts = {
         names = [ "FiraCode Nerd Font" ];
-        size = 16.0;
+        size = 24.0;
       };
 
       gaps = {
@@ -117,7 +117,7 @@ in {
         "XF86MonBrightnessDown" = "exec brightnessctl set 10%-";
 
         # Lock screen
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+l" = "exec i3lock -c 000000";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+l" = "exec i3lock -n -i $HOME/git/nix-config/assets/wallpaper.png";
 
         # Restart/exit
         "${config.xsession.windowManager.i3.config.modifier}+Shift+w" = "reload";
@@ -171,7 +171,7 @@ in {
         width = "100%";
         height = "3%";
         bottom = true;
-        font-0 = "FiraCode Nerd Font:size=16;2";
+        font-0 = "FiraCode Nerd Font:size=24;2";
         background = gruvboxDark.bg;
         foreground = gruvboxDark.fg;
         modules-left = "xworkspaces";
@@ -184,19 +184,19 @@ in {
         label-active = "%name%";
         label-active-background = gruvboxDark.bg;
         label-active-foreground = gruvboxDark.fg;
-        label-active-padding = "2";
+        label-active-padding = "4";
         label-occupied = "%name%";
         label-occupied-background = gruvboxDark.bg;
         label-occupied-foreground = gruvboxDark.blue;
-        label-occupied-padding = "2";
+        label-occupied-padding = "4";
         label-empty = "%name%";
         label-empty-background = gruvboxDark.bg;
         label-empty-foreground = gruvboxDark.gray;
-        label-empty-padding = "2";
+        label-empty-padding = "4";
         label-urgent = "%name%!";
         label-urgent-background = gruvboxDark.red;
         label-urgent-foreground = gruvboxDark.fg;
-        label-urgent-padding = "2";
+        label-urgent-padding = "4";
       };
 
       "module/date" = {
@@ -206,7 +206,7 @@ in {
         time = "%H:%M";
         date-alt = "%A, %d %B %Y";
         time-alt = "%H:%M:%S";
-        format = "🕓 <label>";
+        format = " <label>";
         label = "%date% %time%";
       };
 
