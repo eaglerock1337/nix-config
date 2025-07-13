@@ -33,6 +33,7 @@ in {
         monitor = "\${env:MONITOR:eDP-1}";
         width = "100%";
         height = "3%";
+        bottom = true;
         font-0 = "FiraCode Nerd Font:size=16;2";
         background = gruvboxDark.bg;
         foreground = gruvboxDark.fg;
@@ -206,7 +207,7 @@ in {
           command = "pkill polybar || true";
         }
         {
-          command = "polybar bottom &";
+          command = "polybar mainbar &";
         }
         {
           command = "feh --bg-fill ~/git/nix-config/assets/wallpaper.png";
