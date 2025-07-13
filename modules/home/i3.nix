@@ -270,12 +270,27 @@ in {
           notification = false;
         }
         {
-          command = "i3-msg '[instance=\"float\"] floating enable' && i3-msg '[instance=\"float\"] resize set 1800px 1000px' && i3-msg [instance=\"float\"] move position 380px 200px'";
+          command = "i3-msg '[instance=\"float\"] floating enable'";
+          always = true;
+          notification = false;
+        }
+        {
+          command = "i3-msg '[instance=\"float\"] resize set 1800px 1000px'";
+          always = true;
+          notification = false;
+        }
+        {
+          command = "i3-msg [instance=\"float\"] move position 380px 200px'";
           always = true;
           notification = false;
         }
         {
           command = "i3-msg '[instance=\"float\"] move scratchpad' && i3-msg 'scratchpad show'";
+          always = true;
+          notification = false;
+        }
+        {
+          command = "i3-msg 'scratchpad show'";
           always = true;
           notification = false;
         }
