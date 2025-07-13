@@ -36,7 +36,7 @@ in {
         font-0 = "FiraCode Nerd Font:size=16;2";
         background = gruvboxDark.bg;
         foreground = gruvboxDark.fg;
-        modules-left = "workspaces";
+        modules-left = "i3";
         modules-center = "date";
         modules-right = "cpu memory wlan battery";
       };
@@ -76,7 +76,7 @@ in {
         battery = "BAT0";
         adapter = "AC";
         full-at = 98;
-        format-charging = " %percentage%%";
+        format-charging = " %percentage% %";
         format-discharging = "🔋 %percentage%%";
       };
 
@@ -205,7 +205,7 @@ in {
           command = "pkill polybar || true";
         }
         {
-          command = "polybar top &";
+          command = "polybar bottom &";
         }
         {
           command = "feh --bg-fill ~/git/nix-config/assets/wallpaper.png";
