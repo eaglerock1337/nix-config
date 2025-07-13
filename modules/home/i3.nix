@@ -123,7 +123,7 @@ in {
       modifier = "Mod4";
       fonts = {
         names = [ "FiraCode Nerd Font" ];
-        size = 11.0;
+        size = 16.0;
       };
 
       gaps = {
@@ -185,7 +185,23 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+q" = "kill";
       };
 
+      assigns = {
+        "${workspaces."1"}" = [ { class = "^Alacritty$"; } { class = "^Xterm$"; } ];
+        "${workspaces."2"}" = [ { class = "^Code$"; } ];
+        "${workspaces."3"}" = [ { class = "^Firefox$"; } { class = "^Chromium$"; } ];
+        "${workspaces."4"}" = [ { class = "^Xchat$"; } ];
+        "${workspaces."5"}" = [ { class = "^Steam$"; } ];
+        "${workspaces."7"}" = [ { class = "^Firefox$"; } { class = "^Chromium$"; } ];
+        "${workspaces."8"}" = [ { class = "^Thunar$"; } ];
+      };
+
       startup = [
+        {
+          command = "pkill polybar || true";
+        }
+        {
+          command = "polybar top &";
+        }
         {
           command = "feh --bg-fill ~/git/nix-config/assets/wallpaper.png";
           always = true;

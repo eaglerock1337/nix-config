@@ -22,7 +22,7 @@ in {
     extraConfig = {
       modi = "drun,run";
       show-icons = true;
-      font = "FiraCode Nerd Font 11";
+      font = "FiraCode Nerd Font 16";
     };
   };
 
