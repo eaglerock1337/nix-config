@@ -265,12 +265,12 @@ in {
           notification = false;
         }
         {
-          command = ''i3-msg "exec alacritty --class float"'';
+          command = ''i3-msg "workspace alacritty --class float"'';
           always = true;
           notification = false;
         }
         {
-          command = "i3-msg 'c floating enable; [instance=\"float\"] move scratchpad; scratchpad show;'";
+          command = "i3-msg '[instance=\"float\"] floating enable; [instance=\"float\"] move scratchpad; scratchpad show;'";
           always = true;
           notification = false;
         }
