@@ -250,17 +250,18 @@ in {
           always = true;
         }
         {
-          command = "alacritty --class Terminal";
-          always = true;
+          command = ''i3-msc "workspace 1; exec alacritty --class Terminal"'';
+          always = false;
           notification = false;
         }
         {
-          command = "alacritty --class Terminal";
-          always = true;
+          command = ''i3-msc "workspace 1; exec alacritty --class Terminal"'';
+          always = false;
           notification = false;
-        }        {
-          command = "alacritty --class Terminal -e bash -c echo 'system info command'";
-          always = true;
+        }        
+        {
+          command = ''i3-msc "workspace 1; exec alacritty --class Terminal"'';
+          always = false;
           notification = false;
         }
         {
@@ -270,7 +271,7 @@ in {
         }
         {
           command = ''i3-msg "[instance=\\"float\\"] floating enable, resize set 1200 800, move scratchpad, scratchpad show, move position 69px 69px, move scratchpad"'';
-          always = false;
+          always = true;
           notification = false;
         }
 
