@@ -16,7 +16,7 @@ in {
 
   programs.vscode = {
     enable = true;
-    packages = pkgs.vscode;
+    package = pkgs.vscode;
 
     userSettings = {
       editor = {
