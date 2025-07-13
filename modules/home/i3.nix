@@ -249,27 +249,12 @@ in {
           always = false;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."2"}; exec alacritty'';
+          command = ''i3-msg "workspace ${workspaces."2"}; exec alacritty; floating enable; move scratchpad; scratchpad show;"'';
           always = false;
           notification = false;
         }
         {
-          command = ''i3-msg 'workspace ${workspaces."2"}; floating enable' '';
-          always = false;
-          notification = false;
-        }
-        {
-          command = ''i3-msg 'workspace ${workspaces."2"}; resize set 2000px 1200px' '';
-          always = false;
-          notification = false;
-        }
-        {
-          command = ''i3-msg 'workspace ${workspaces."2"}; move position 280px 100px' '';
-          always = false;
-          notification = false;
-        }
-        {
-          command = ''i3-msg 'workspace ${workspaces."2"}; move scratchpad' '';
+          command = ''i3-msg "workspace ${workspaces."2"}; resize set 2000px 1200px; move position 280px 100px; move scratchpad"'';
           always = false;
           notification = false;
         }
