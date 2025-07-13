@@ -7,17 +7,18 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }@inputs: {
-    nixosConfigurations.silicon = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
-      modules = [ ./hosts/silicon/configuration.nix ];
-    };
-
-    homeConfigurations = {
-      "eaglerock" = home-manager.lib.homeManagerConfiguration {
-        pkgs = import nixpkgs { system = "x86_64-linux"; };
+  outputs = inputs@{ self, nixpkgs, home-manager, ... }: {
+    nixosConfigurations = {
+      silicon = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
         modules = [
-          ./home/eaglerock.nix
+          ./hosts/silicon/configuration.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.eaglerock = import ./home/eaglerock.nix;
+          }
         ];
       };
     };
