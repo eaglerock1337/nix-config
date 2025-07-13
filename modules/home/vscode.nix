@@ -4,15 +4,20 @@
   programs.vscode = {
     enable = true;
 
-    extensions = with pkgs.vscode-extensions; [
-      tomphilbin.gruvbox-themes
+    extensions = (with pkgs.vscode-extensions; [
       bbenoist.nix
       vscode-icons-team.vscode-icons
       ms-python.python
       esbenp.prettier-vscode
       dbaeumer.vscode-eslint
+    ]) ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
+      {
+        publisher = "tomphilbin";
+        name = "gruvbox-themes";
+        version = "1.0.0";
+      }
     ];
-
+  
     userSettings = {
       editor = {
         tabSize = 2;
