@@ -264,27 +264,27 @@ in {
           notification = false;
         }
         {
-          command = ''i3-msg "exec alacritty'';
+          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty'';
           always = false;
           notification = false;
         }
         {
-          command = ''i3-msg '[class="^Alacritty$"] floating enable' '';
+          command = ''i3-msg 'workspace ${workspaces."1"}; [class="^Alacritty$"] floating enable' '';
           always = false;
           notification = false;
         }
         {
-          command = ''i3-msg '[class="^Alacritty$"] resize set 2000px 1200px' '';
+          command = ''i3-msg 'workspace ${workspaces."1"}; [class="^Alacritty$"] resize set 2000px 1200px' '';
           always = false;
           notification = false;
         }
         {
-          command = ''i3-msg '[class="^Alacritty$"] move position 280px 100px' '';
+          command = ''i3-msg 'workspace ${workspaces."1"}; [class="^Alacritty$"] move position 280px 100px' '';
           always = false;
           notification = false;
         }
         {
-          command = ''i3-msg '[class="^Alacritty$"] move scratchpad' '';
+          command = ''i3-msg 'workspace ${workspaces."1"}; [class="^Alacritty$"] move scratchpad' '';
           always = false;
           notification = false;
         }
