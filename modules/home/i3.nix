@@ -54,7 +54,7 @@ in {
 
       "module/date" = {
         type = "internal/date";
-        interval = 1.0;
+        interval = "1.0";
         date = "%Y-%m-%d%";
         time = "%H:%M";
         date-alt = "%A, %d %B %Y";
