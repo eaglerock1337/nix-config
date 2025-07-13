@@ -270,11 +270,15 @@ in {
           notification = false;
         }
         {
+          command = "i3-msg '[instance="float"] floating enable; [instance="float"] move scratchpad; scratchpad show; resize set 1800px 1000px; move position 380px 200px; move scratchpad'";
+          always = true;
+          notification = false;
+        }
+        {
           command = "i3-msg '[instance="float"] floating enable; move scratchpad; scratchpad show; resize set 1800px 1000px; move position 380px 200px; move scratchpad'";
           always = true;
           notification = false;
         }
-
       ];
     };
   };
