@@ -246,14 +246,32 @@ in {
           always = true;
         }
         {
-          command = "alacritty --name scratchpad --title scratchpad --class scratchpad";
+          command = ''i3-msg "append_layout ${./layouts/workspace-1.json}"'';
+          always = true;
+        }
+        {
+          command = "alacritty";
           always = true;
           notification = false;
         }
         {
-          command = ''i3-msg "append_layout ${./layouts/workspace-1.json}"'';
+          command = "alacritty";
           always = true;
+          notification = false;
+        }        {
+          command = "alacritty";
+          always = true;
+          notification = false;
         }
+        {
+          command = "alacritty --name scratchpad --title scratchpad --class scratchpad";
+          always = true;
+          notification = false;
+        }
+        # TODO: Enable later
+        # {
+        #   command = "xrandr --output HDMI-1 --mode 1920x1080 --right-of eDP-1";
+        # }
       ];
 
       window.commands = [
