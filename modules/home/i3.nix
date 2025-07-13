@@ -246,7 +246,7 @@ in {
           always = true;
         }
         {
-          command = ''i3-msg "append_layout ${./layouts/workspace-1.json}"'';
+          command = ''i3-msg "workspace 1; append_layout ${./layouts/workspace-1.json}"'';
           always = true;
         }
         {
