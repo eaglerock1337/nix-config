@@ -270,7 +270,7 @@ in {
           notification = false;
         }
         {
-          command = "i3-msg '[instance=\"float\"] floating enable, resize set 1800 1000, move scratchpad, scratchpad show, move scratchpad'";
+          command = "i3-msg '[instance=\"float\"] floating enable, move scratchpad, scratchpad show, resize set 1800 1000, move position 380px 200px, move scratchpad'";
           always = true;
           notification = false;
         }
