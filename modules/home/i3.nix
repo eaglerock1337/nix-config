@@ -139,9 +139,15 @@ in {
       startup = [
         {
           command = "pkill polybar || true";
+          always = true;
         }
         {
           command = "polybar mainbar &";
+          always = true;
+        }
+        {
+          command = "picom --config ~/.config/picom/picom.conf &";
+          always = true;
         }
         {
           command = "feh --bg-fill ~/git/nix-config/assets/wallpaper.png";
@@ -168,20 +174,25 @@ in {
         font-0 = "FiraCode Nerd Font:size=16;2";
         background = gruvboxDark.bg;
         foreground = gruvboxDark.fg;
-        modules-left = "i3";
+        modules-left = "xworkspaces";
         modules-center = "date";
         modules-right = "cpu memory wlan battery";
       };
 
-      "module/i3" = {
-        type = "internal/i3";
-        format = "<label-state>";
-        index-sort = true;
-        strip-wsnumbers = false;
-        pin-workspaces = true;
-        label-focused = "%name%";
-        label-unfocused = "%name%";
+      "module/xworkspaces" = {
+        type = "internal/workspaces";
+        label-active = "%name%";
+        label-active-background = gruvboxDark.bg;
+        label-active-foreground = gruvboxDark.blue;
+        label-active-padding = "1";
+        label-empty = "%name%";
+        label-empty-background = gruvboxDark.bg;
+        label-empty-foreground = gruvboxDark.gray;
+        label-empty-padding = "1";
         label-urgent = "%name%!";
+        label-urgent-background = gruvboxDark.red;
+        label-urgent-foreground = gruvboxDark.fg;
+        label-urgent-padding = "1";
       };
 
       "module/date" = {
@@ -191,6 +202,8 @@ in {
         time = "%H:%M";
         date-alt = "%A, %d %B %Y";
         time-alt = "%H:%M:%S";
+        format = "🕓 <label>";
+        label = "%date% %time%";
       };
 
       "module/cpu" = {
@@ -221,4 +234,54 @@ in {
     };
     script = ''polybar mainbar & '';
   };
+
+  xdg.configFile."picom/picom.conf".text = ''
+    corner-radius = 10;
+
+    # Shadow
+    shadow = false;
+
+    # Blur
+    blur-background = false;
+
+    blur-background-exclude = [
+        "window_type = 'dock'",
+        "window_type = 'desktop'",
+        "_GTK_FRAME_EXTENTS@:c",
+        "class_g = 'Peek'",
+        "class_g = 'polybar'",
+        "i:e:gnome-screenshot"
+    ];
+
+    rounded-corners-exclude = [
+        "class_g = 'polybar'",
+        "class_g *?= 'rofi'",
+        "window_type = 'dock'"
+    ];
+
+    # Fading
+    fading = false;
+    inactive-opacity: 0.9;
+    inactive-dim: 0.1;
+    mark-ovredir-focused = true;
+
+    # Other
+    backend = "xrender"
+    mark-wmwin-focused = false;
+    use-ewmh-active-win = false;
+    detect-rounded-corners = true;
+    detect-client-opacity = false;
+    refresh-rate = 0;
+    vsync = false;
+    dbe = false;
+    unredir-if-possible = false;
+    focus-exclude = [ "class_g ?= 'feh'" ];
+    detect-transient = true;
+    detect-client-leader = true;
+
+    # GLX backend
+    glx-no-stencil = true;
+    glx-copy-from-front = false;
+    glx-no-rebind-pixmap = true;
+  '';
 }
