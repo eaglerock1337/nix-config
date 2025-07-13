@@ -245,6 +245,10 @@ in {
           always = true;
         }
         {
+          command = ''i3-msg "workspace ${workspaces."1"}; append_layout ${./layouts/workspace-1.json}"'';
+          always = false;
+        }
+        {
           command = ''i3-msg "workspace ${workspaces."2"}; exec alacritty'';
           always = false;
           notification = false;
@@ -268,10 +272,6 @@ in {
           command = ''i3-msg 'workspace ${workspaces."2"}; move scratchpad' '';
           always = false;
           notification = false;
-        }
-        {
-          command = ''i3-msg "workspace ${workspaces."1"}; append_layout ${./layouts/workspace-1.json}"'';
-          always = false;
         }
         {
           command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Terminal"'';
