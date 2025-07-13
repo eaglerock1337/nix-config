@@ -250,22 +250,22 @@ in {
           always = true;
         }
         {
-          command = "exec alacritty --name terminal-1
+          command = "alacritty --name terminal-1
           ";
           always = true;
           notification = false;
         }
         {
-          command = "exec alacritty --name terminal-2";
+          command = "alacritty --name terminal-2";
           always = true;
           notification = false;
         }        {
-          command = "exec alacritty --name terminal-3";
+          command = "alacritty --name terminal-3";
           always = true;
           notification = false;
         }
         {
-          command = "exec alacritty --name scratchpad";
+          command = "alacritty --name scratchpad";
           always = true;
           notification = false;
         }
