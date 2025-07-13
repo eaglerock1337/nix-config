@@ -145,7 +145,6 @@ in {
         "$mod+7" = "workspace \"${workspaces."7"}\"";
         "$mod+8" = "workspace \"${workspaces."8"}\"";
         "$mod+9" = "workspace \"${workspaces."9"}\"";
-        "$mod+0" = "workspace \"${workspaces."10"}\"";
 
         # Move containers to workspaces
         "$mod+Shift+1" = "move container to workspace \"${workspaces."1"}\"";
@@ -157,7 +156,6 @@ in {
         "$mod+Shift+7" = "move container to workspace \"${workspaces."7"}\"";
         "$mod+Shift+8" = "move container to workspace \"${workspaces."8"}\"";
         "$mod+Shift+9" = "move container to workspace \"${workspaces."9"}\"";
-        "$mod+Shift+0" = "move container to workspace \"${workspaces."10"}\"";
 
         # Launch apps
         "${config.xsession.windowManager.i3.config.modifier}+Return" = "exec alacritty";
