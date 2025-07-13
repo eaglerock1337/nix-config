@@ -14,7 +14,7 @@
     "percent": 0.6,
     "swallows": [
        {
-         "name": "terminal-1",
+         "name": "terminal-1"
          // "class": "^Alacritty$",
          // "instance": "^Alacritty$",
          // "machine": "^silicon$",
@@ -48,7 +48,7 @@
             "percent": 0.5,
             "swallows": [
                {
-                  "name": "terminal-2",
+                  "name": "terminal-2"
                   // "class": "^Alacritty$",
                   // "instance": "^Alacritty$",
                   // "machine": "^silicon$",
@@ -72,7 +72,7 @@
             "percent": 0.5,
             "swallows": [
                {
-                  "name": "terminal-3",
+                  "name": "terminal-3"
                   // "class": "^Alacritty$",
                   // "instance": "^Alacritty$",
                   // "machine": "^silicon$",
