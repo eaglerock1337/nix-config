@@ -31,7 +31,6 @@ in {
     config = {
       colors = {
         background = gruvboxDark.bg;
-        statusline = gruvboxDark.yellow;
         focused = {
           border = gruvboxDark.blue;
           background = gruvboxDark.blue;
