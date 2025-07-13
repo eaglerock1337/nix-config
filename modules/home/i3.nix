@@ -265,7 +265,7 @@ in {
           notification = false;
         }
         {
-          command = ''i3-msg "exec alacritty --class float"'';
+          command = ''alacritty --class float'';
           always = true;
           notification = false;
         }
