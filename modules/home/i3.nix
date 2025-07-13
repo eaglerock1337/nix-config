@@ -280,10 +280,12 @@ in {
         # }
       ];
 
-      window.commands = {
-        criteria = { class = "Alacritty"; };
-        command = "floating enable; move scratchpad; scratchpad show; resize set 2000px 1200px; move position 280px 100px; move scratchpad";
-      };
+      window.commands = [
+        {
+          criteria = { class = "Alacritty"; };
+          command = "floating enable; move scratchpad; scratchpad show; resize set 2000px 1200px; move position 280px 100px; move scratchpad";
+        }
+      ];
     };
   };
 
