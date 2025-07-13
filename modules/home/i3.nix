@@ -54,13 +54,11 @@ in {
 
       "module/date" = {
         type = "internal/date";
-        interval = 1.0
-        date = %Y-%m-%d%
-        time = %H:%M
-        ; if `date-alt` or `time-alt` is defined, clicking
-        ; the module will toggle between formats
-        date-alt = %A, %d %B %Y
-        time-alt = %H:%M:%S
+        interval = 1.0;
+        date = "%Y-%m-%d%";
+        time = "%H:%M";
+        date-alt = "%A, %d %B %Y";
+        time-alt = "%H:%M:%S";
       };
 
       "module/cpu" = {
