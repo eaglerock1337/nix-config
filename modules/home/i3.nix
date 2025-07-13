@@ -250,12 +250,12 @@ in {
           always = true;
         }
         {
-          command = "alacritty --class Terminal -e bash";
+          command = "alacritty --class Terminal";
           always = true;
           notification = false;
         }
         {
-          command = "alacritty --class Terminal -e bash";
+          command = "alacritty --class Terminal";
           always = true;
           notification = false;
         }        {
@@ -264,7 +264,7 @@ in {
           notification = false;
         }
         {
-          command = "alacritty --class float,Scratchpad -e bash";
+          command = "alacritty --class float;
           always = true;
           notification = false;
         }

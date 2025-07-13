@@ -14,11 +14,8 @@
     "percent": 0.6,
     "swallows": [
        {
-         "name": "terminal-1",
-         "class": "^Terminal$",
-         "instance": "^Alacritty$",
-         "machine": "^silicon$",
-         "title": "^eaglerock\\@silicon\\:\\ \\~$"
+         "class": "Terminal",
+         "instance": "^Terminal$"
       }
     ],
     "type": "con"
@@ -48,11 +45,8 @@
             "percent": 0.5,
             "swallows": [
                {
-                  "name": "terminal-2",
-                  "class": "^Terminal$",
-                  "instance": "^Alacritty$",
-                  "machine": "^silicon$",
-                  "title": "^eaglerock\\@silicon\\:\\ \\~$"
+                  "class": "Terminal",
+                  "instance": "^Terminal$"
                }
             ],
             "type": "con"
@@ -72,11 +66,8 @@
             "percent": 0.5,
             "swallows": [
                {
-                  "name": "terminal-3",
-                  "class": "^Terminal$",
-                  "instance": "^Alacritty$",
-                  "machine": "^silicon$",
-                  "title": "^eaglerock\\@silicon\\:\\ \\~$"
+                  "class": "Terminal",
+                  "instance": "^Terminal$"
                }
             ],
             "type": "con"
