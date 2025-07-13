@@ -65,7 +65,7 @@ in {
       modifier = "Mod4";
       fonts = {
         names = [ "FiraCode Nerd Font" ];
-        size = 24.0;
+        size = 18.0;
       };
 
       gaps = {
@@ -168,7 +168,7 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+F7" = "exec --no-startup-id chvt 7";
 
         # Lock screen
-        "${config.xsession.windowManager.i3.config.modifier}+x" = "exec i3lock -n --color ${gruvboxDark.blue}";
+        "${config.xsession.windowManager.i3.config.modifier}+x" = "exec i3lock -n --color=${gruvboxDark.blue}";
 
         # Restart/exit
         "${config.xsession.windowManager.i3.config.modifier}+Shift+w" = "reload";
