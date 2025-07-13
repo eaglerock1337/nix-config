@@ -264,7 +264,7 @@ in {
           notification = false;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."2"}; exec alacritty --class Scratchpad"'';
+          command = ''i3-msg "exec alacritty --class Scratchpad"'';
           always = false;
           notification = false;
         }
