@@ -65,7 +65,7 @@ in {
       modifier = "Mod4";
       fonts = {
         names = [ "FiraCode Nerd Font" ];
-        size = .0;
+        size = 18.0;
       };
 
       gaps = {
