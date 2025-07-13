@@ -264,7 +264,7 @@ in {
           notification = false;
         }
         {
-          command = ''alacritty'';
+          command = ''i3-msg "exec alacritty --class Scratchpad"'';
           always = false;
           notification = false;
         }
@@ -282,8 +282,8 @@ in {
 
       window.commands = [
         {
-          criteria = { class = "Alacritty"; };
-          command = "floating enable; move scratchpad; scratchpad show; resize set 2000px 1200px; move position 280px 100px; move scratchpad";
+          criteria = { class = "Scratchpad"; };
+          command = "floating enable; move scratchpad; scratchpad show; resize set 2000px 1200px; move position 280px 100px; scratchpad show";
         }
       ];
     };
