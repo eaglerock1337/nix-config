@@ -289,11 +289,6 @@ in {
           always = true;
           notification = false;
         }
-        {
-          command = "i3-msg 'scratchpad show'";
-          always = true;
-          notification = false;
-        }
       ];
     };
   };
