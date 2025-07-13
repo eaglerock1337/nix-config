@@ -30,7 +30,7 @@ in {
     enable = true;
     config = {
       "bar/mainbar" = {
-        monitor = "\${env:MONITOR:HDMI-1}";
+        monitor = "\${env:MONITOR:eDP-1}";
         width = "100%";
         height = 30;
         font-0 = "FiraCode Nerd Font:size=11;2";
@@ -136,26 +136,26 @@ in {
 
       keybindings = {
         # Workspaces
-        "$mod+1" = "workspace \"${workspaces."1"}\"";
-        "$mod+2" = "workspace \"${workspaces."2"}\"";
-        "$mod+3" = "workspace \"${workspaces."3"}\"";
-        "$mod+4" = "workspace \"${workspaces."4"}\"";
-        "$mod+5" = "workspace \"${workspaces."5"}\"";
-        "$mod+6" = "workspace \"${workspaces."6"}\"";
-        "$mod+7" = "workspace \"${workspaces."7"}\"";
-        "$mod+8" = "workspace \"${workspaces."8"}\"";
-        "$mod+9" = "workspace \"${workspaces."9"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+1" = "workspace \"${workspaces."1"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+2" = "workspace \"${workspaces."2"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+3" = "workspace \"${workspaces."3"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+4" = "workspace \"${workspaces."4"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+5" = "workspace \"${workspaces."5"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+6" = "workspace \"${workspaces."6"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+7" = "workspace \"${workspaces."7"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+8" = "workspace \"${workspaces."8"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+9" = "workspace \"${workspaces."9"}\"";
 
         # Move containers to workspaces
-        "$mod+Shift+1" = "move container to workspace \"${workspaces."1"}\"";
-        "$mod+Shift+2" = "move container to workspace \"${workspaces."2"}\"";
-        "$mod+Shift+3" = "move container to workspace \"${workspaces."3"}\"";
-        "$mod+Shift+4" = "move container to workspace \"${workspaces."4"}\"";
-        "$mod+Shift+5" = "move container to workspace \"${workspaces."5"}\"";
-        "$mod+Shift+6" = "move container to workspace \"${workspaces."6"}\"";
-        "$mod+Shift+7" = "move container to workspace \"${workspaces."7"}\"";
-        "$mod+Shift+8" = "move container to workspace \"${workspaces."8"}\"";
-        "$mod+Shift+9" = "move container to workspace \"${workspaces."9"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+1" = "move container to workspace \"${workspaces."1"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+2" = "move container to workspace \"${workspaces."2"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+3" = "move container to workspace \"${workspaces."3"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+4" = "move container to workspace \"${workspaces."4"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+5" = "move container to workspace \"${workspaces."5"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+6" = "move container to workspace \"${workspaces."6"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+7" = "move container to workspace \"${workspaces."7"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+8" = "move container to workspace \"${workspaces."8"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+9" = "move container to workspace \"${workspaces."9"}\"";
 
         # Launch apps
         "${config.xsession.windowManager.i3.config.modifier}+Return" = "exec alacritty";
