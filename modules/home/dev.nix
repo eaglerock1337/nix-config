@@ -29,7 +29,6 @@ in {
 
     # --- Ruby ---
     ruby_3_4
-    bundler
     rubyPackages_3_4.irb
     rubyPackages_3_4.rake
     rubyPackages_3_4.solargraph  # Ruby LSP
