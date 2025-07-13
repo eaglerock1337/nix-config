@@ -15,10 +15,11 @@
     "swallows": [
        {
          "name": "terminal-1",
-         "class": "^Alacritty$",
-         "instance": "^Alacritty$",
-         "machine": "^silicon$",
-         "title": "^eaglerock\\@silicon\\:\\ \\~$"       }
+         // "class": "^Alacritty$",
+         // "instance": "^Alacritty$",
+         // "machine": "^silicon$",
+         // "title": "^eaglerock\\@silicon\\:\\ \\~$"
+      }
     ],
     "type": "con"
 }
@@ -48,10 +49,10 @@
             "swallows": [
                {
                   "name": "terminal-2",
-                  "class": "^Alacritty$",
-                  "instance": "^Alacritty$",
-                  "machine": "^silicon$",
-                  "title": "^eaglerock\\@silicon\\:\\ \\~$"
+                  // "class": "^Alacritty$",
+                  // "instance": "^Alacritty$",
+                  // "machine": "^silicon$",
+                  // "title": "^eaglerock\\@silicon\\:\\ \\~$"
                }
             ],
             "type": "con"
@@ -72,10 +73,10 @@
             "swallows": [
                {
                   "name": "terminal-3",
-                  "class": "^Alacritty$",
-                  "instance": "^Alacritty$",
-                  "machine": "^silicon$",
-                  "title": "^eaglerock\\@silicon\\:\\ \\~$"
+                  // "class": "^Alacritty$",
+                  // "instance": "^Alacritty$",
+                  // "machine": "^silicon$",
+                  // "title": "^eaglerock\\@silicon\\:\\ \\~$"
                }
             ],
             "type": "con"
