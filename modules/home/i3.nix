@@ -245,12 +245,12 @@ in {
           always = true;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."2"}; exec alacritty --class float,Alacritty"'';
+          command = ''i3-msg "exec alacritty --class float,Alacritty"'';
           always = false;
           notification = false;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."2"}; [instance="float"] floating enable; [instance="float"] move scratchpad"'';
+          command = ''i3-msg "[instance="float"] floating enable; [instance="float"] move scratchpad"'';
           always = false;
           notification = false;
         }
