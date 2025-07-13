@@ -180,7 +180,7 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+F7" = "exec --no-startup-id chvt 7";
 
         # Lock screen
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+l" = "exec i3lock -n -i $HOME/git/nix-config/assets/wallpaper.png";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+xS" = "exec i3lock -n -i $HOME/git/nix-config/assets/wallpaper.png";
 
         # Restart/exit
         "${config.xsession.windowManager.i3.config.modifier}+Shift+w" = "reload";
@@ -247,19 +247,19 @@ in {
         label-active = "%name%";
         label-active-background = gruvboxDark.bg;
         label-active-foreground = gruvboxDark.fg;
-        label-active-padding = "2";
+        label-active-padding = "1";
         label-occupied = "%name%";
         label-occupied-background = gruvboxDark.bg;
         label-occupied-foreground = gruvboxDark.blue;
-        label-occupied-padding = "2";
+        label-occupied-padding = "1";
         label-empty = "%name%";
         label-empty-background = gruvboxDark.bg;
         label-empty-foreground = gruvboxDark.gray;
-        label-empty-padding = "2";
+        label-empty-padding = "1";
         label-urgent = "%name%!";
         label-urgent-background = gruvboxDark.red;
         label-urgent-foreground = gruvboxDark.fg;
-        label-urgent-padding = "2";
+        label-urgent-padding = "1";
       };
 
       "module/date" = {
