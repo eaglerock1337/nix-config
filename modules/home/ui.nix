@@ -23,7 +23,7 @@ in {
 
   programs.alacritty = {
     enable = true;
-    theme = "gruvbox-dark";
+    theme = "gruvbox_dark";
     settings = {
       font = {
         normal.family = "FiraCode Nerd Font";
