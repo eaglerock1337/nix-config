@@ -27,7 +27,7 @@ let
 in {
   xsession.windowManager.i3 = {
     enable = true;
-
+    
     config = {
       colors = {
         background = gruvboxDark.bg;
@@ -78,73 +78,73 @@ in {
 
       keybindings = {
         # Workspaces
-        "${config.xsession.windowManager.i3.config.modifier}+1" = "workspace \"${workspaces."1"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+2" = "workspace \"${workspaces."2"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+3" = "workspace \"${workspaces."3"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+4" = "workspace \"${workspaces."4"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+5" = "workspace \"${workspaces."5"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+6" = "workspace \"${workspaces."6"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+7" = "workspace \"${workspaces."7"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+8" = "workspace \"${workspaces."8"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+9" = "workspace \"${workspaces."9"}\"";
+        "${modifier}+1" = "workspace \"${workspaces."1"}\"";
+        "${modifier}+2" = "workspace \"${workspaces."2"}\"";
+        "${modifier}+3" = "workspace \"${workspaces."3"}\"";
+        "${modifier}+4" = "workspace \"${workspaces."4"}\"";
+        "${modifier}+5" = "workspace \"${workspaces."5"}\"";
+        "${modifier}+6" = "workspace \"${workspaces."6"}\"";
+        "${modifier}+7" = "workspace \"${workspaces."7"}\"";
+        "${modifier}+8" = "workspace \"${workspaces."8"}\"";
+        "${modifier}+9" = "workspace \"${workspaces."9"}\"";
 
         # Move containers to workspaces
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+1" = "move container to workspace \"${workspaces."1"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+2" = "move container to workspace \"${workspaces."2"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+3" = "move container to workspace \"${workspaces."3"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+4" = "move container to workspace \"${workspaces."4"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+5" = "move container to workspace \"${workspaces."5"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+6" = "move container to workspace \"${workspaces."6"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+7" = "move container to workspace \"${workspaces."7"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+8" = "move container to workspace \"${workspaces."8"}\"";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+9" = "move container to workspace \"${workspaces."9"}\"";
+        "${modifier}+Shift+1" = "move container to workspace \"${workspaces."1"}\"";
+        "${modifier}+Shift+2" = "move container to workspace \"${workspaces."2"}\"";
+        "${modifier}+Shift+3" = "move container to workspace \"${workspaces."3"}\"";
+        "${modifier}+Shift+4" = "move container to workspace \"${workspaces."4"}\"";
+        "${modifier}+Shift+5" = "move container to workspace \"${workspaces."5"}\"";
+        "${modifier}+Shift+6" = "move container to workspace \"${workspaces."6"}\"";
+        "${modifier}+Shift+7" = "move container to workspace \"${workspaces."7"}\"";
+        "${modifier}+Shift+8" = "move container to workspace \"${workspaces."8"}\"";
+        "${modifier}+Shift+9" = "move container to workspace \"${workspaces."9"}\"";
 
         # Change focus
-        "${config.xsession.windowManager.i3.config.modifier}+j" = "focus left";
-        "${config.xsession.windowManager.i3.config.modifier}+k" = "focus down";
-        "${config.xsession.windowManager.i3.config.modifier}+l" = "focus up";
-        "${config.xsession.windowManager.i3.config.modifier}+semicolon" = "focus right";  
+        "${modifier}+j" = "focus left";
+        "${modifier}+k" = "focus down";
+        "${modifier}+l" = "focus up";
+        "${modifier}+semicolon" = "focus right";  
 
         # Change focus with cursor keys
-        "${config.xsession.windowManager.i3.config.modifier}+Left" = "focus left";
-        "${config.xsession.windowManager.i3.config.modifier}+Down" = "focus down";
-        "${config.xsession.windowManager.i3.config.modifier}+Right" = "focus right";
-        "${config.xsession.windowManager.i3.config.modifier}+Up" = "focus up";
+        "${modifier}+Left" = "focus left";
+        "${modifier}+Down" = "focus down";
+        "${modifier}+Right" = "focus right";
+        "${modifier}+Up" = "focus up";
 
         # Move focused window
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+j" = "move left";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+k" = "move down";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+l" = "move up";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+semicolon" = "move right";
+        "${modifier}+Shift+j" = "move left";
+        "${modifier}+Shift+k" = "move down";
+        "${modifier}+Shift+l" = "move up";
+        "${modifier}+Shift+semicolon" = "move right";
 
         # Move focused window with cursor keys
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+Left" = "move left";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+Down" = "move down"; 
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+Right" = "move right";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+Up" = "move up";
+        "${modifier}+Shift+Left" = "move left";
+        "${modifier}+Shift+Down" = "move down"; 
+        "${modifier}+Shift+Right" = "move right";
+        "${modifier}+Shift+Up" = "move up";
 
         # Change layout
-        "${config.xsession.windowManager.i3.config.modifier}+s" = "layout stacking";
-        "${config.xsession.windowManager.i3.config.modifier}+w" = "layout tab";
-        "${config.xsession.windowManager.i3.config.modifier}+e" = "layout toggle split";
+        "${modifier}+s" = "layout stacking";
+        "${modifier}+w" = "layout tab";
+        "${modifier}+e" = "layout toggle split";
 
         # Split windows
-        "${config.xsession.windowManager.i3.config.modifier}+v" = "split vertical";
-        "${config.xsession.windowManager.i3.config.modifier}+h" = "split horizontal";
+        "${modifier}+v" = "split vertical";
+        "${modifier}+h" = "split horizontal";
 
         # Fullscreen focused window
-        "${config.xsession.windowManager.i3.config.modifier}+f" = "fullscreen";
+        "${modifier}+f" = "fullscreen";
 
         # Toggle floating mode
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+space" = "floating toggle";
+        "${modifier}+Shift+space" = "floating toggle";
 
         # Launch apps
-        "${config.xsession.windowManager.i3.config.modifier}+Return" = "exec alacritty";
-        "${config.xsession.windowManager.i3.config.modifier}+d" = "exec rofi -show drun";
+        "${modifier}+Return" = "exec alacritty";
+        "${modifier}+d" = "exec rofi -show drun";
 
         # Scratchpad terminal
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+minus" = "move scratchpad";
-        "${config.xsession.windowManager.i3.config.modifier}+minus" = "scratchpad show";
+        "${modifier}+Shift+minus" = "move scratchpad";
+        "${modifier}+minus" = "scratchpad show";
 
         # Volume keys
         "XF86AudioRaiseVolume" = "exec --no-startup-id pamixer -i 5";
@@ -156,25 +156,25 @@ in {
         "XF86MonBrightnessDown" = "exec brightnessctl set 10%-";
 
         # Enter resize mode
-        "${config.xsession.windowManager.i3.config.modifier}+r" = "mode \"resize\"";
+        "${modifier}+r" = "mode \"resize\"";
 
         # Switch between tty sessions
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F1" = "exec --no-startup-id chvt 1";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F2" = "exec --no-startup-id chvt 2";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F3" = "exec --no-startup-id chvt 3";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F4" = "exec --no-startup-id chvt 4";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F5" = "exec --no-startup-id chvt 5";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F6" = "exec --no-startup-id chvt 6";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F7" = "exec --no-startup-id chvt 7";
+        "${modifier}+Shift+F1" = "exec --no-startup-id chvt 1";
+        "${modifier}+Shift+F2" = "exec --no-startup-id chvt 2";
+        "${modifier}+Shift+F3" = "exec --no-startup-id chvt 3";
+        "${modifier}+Shift+F4" = "exec --no-startup-id chvt 4";
+        "${modifier}+Shift+F5" = "exec --no-startup-id chvt 5";
+        "${modifier}+Shift+F6" = "exec --no-startup-id chvt 6";
+        "${modifier}+Shift+F7" = "exec --no-startup-id chvt 7";
 
         # Lock screen
-        "${config.xsession.windowManager.i3.config.modifier}+x" = "exec i3lock -n --color=${gruvboxDark.blue}";
+        "${modifier}+x" = "exec i3lock -n --color=${gruvboxDark.blue}";
 
         # Restart/exit
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+w" = "reload";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+r" = "restart";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+e" = "exec i3-nagbar -t warning -m 'Exit i3?' -b 'Yes' 'i3-msg exit'";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+q" = "kill";
+        "${modifier}+Shift+w" = "reload";
+        "${modifier}+Shift+r" = "restart";
+        "${modifier}+Shift+e" = "exec i3-nagbar -t warning -m 'Exit i3?' -b 'Yes' 'i3-msg exit'";
+        "${modifier}+Shift+q" = "kill";
       };
 
       # Resize mode keybindings
@@ -206,11 +206,7 @@ in {
 
       startup = [
         {
-          command = "pkill polybar || true";
-          always = true;
-        }
-        {
-          command = "polybar mainbar &";
+          command = "systemctl --user restart polybar.service";
           always = true;
         }
         {

@@ -66,6 +66,9 @@ in {
         normal.family = "FiraCode Nerd Font";
         size = 11;
       };
+      window = {
+        opacity = 0.8;
+      }
     };
   };
 }
