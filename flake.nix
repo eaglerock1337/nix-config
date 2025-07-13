@@ -8,12 +8,10 @@
   };
 
   outputs = { nixpkgs, home-manager, ... }:
-    nixosConfigurations.silicon: {
+    nixosConfigurations.silicon = nixpkgs.lib.nixosSystem: {
       system = "x86_64-linux";
-      modules = [
-        ./hosts/silicon/configuration.nix
-
-    }
+      modules = [ ./hosts/silicon/configuration.nix ];
+    };
 
     homeConfigurations = {
       "eaglerock" = home-manager.lib.homeManagerConfiguration {
@@ -22,7 +20,7 @@
           ./home/eaglerock.nix
         ];
       };
-    }
+    };
 
     let
       system = "x86_64-linux";
