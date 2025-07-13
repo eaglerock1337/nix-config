@@ -7,9 +7,17 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, nixpkgs, home-manager, ... }: {
+  outputs = {
+    self,
+    nixpkgs,
+    home-manager,
+    ...
+  } @ inputs: let
+    inherit (self) outputs;
+  in {
     nixosConfigurations = {
       silicon = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs outputs; };
         system = "x86_64-linux";
         modules = [
           ./hosts/silicon/configuration.nix
@@ -21,7 +29,7 @@
       eaglerock = home-manager.lib.homeManagerConfiguration {
         pkgs = nixpkgs.legacyPackages.x86_64-linux;
         modules = [ ./home/eaglerock.nix ];
-        specialArgs = { inherit inputs outputs; };
+        extraSpecialArgs = { inherit inputs outputs; };
       };
     };
   };
