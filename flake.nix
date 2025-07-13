@@ -7,8 +7,8 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }: {
-    nixosConfigurations.silicon = nixpkgs.lib.nixosSystem: {
+  outputs = { self, nixpkgs, home-manager, ... }@inputs: {
+    nixosConfigurations.silicon = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [ ./hosts/silicon/configuration.nix ];
     };
