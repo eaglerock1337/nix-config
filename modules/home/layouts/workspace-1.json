@@ -15,7 +15,7 @@
     "swallows": [
        {
          "name": "terminal-1",
-         "class": "^Alacritty$",
+         "class": "^Terminal$",
          "instance": "^Alacritty$",
          "machine": "^silicon$",
          "title": "^eaglerock\\@silicon\\:\\ \\~$"
@@ -49,7 +49,7 @@
             "swallows": [
                {
                   "name": "terminal-2",
-                  "class": "^Alacritty$",
+                  "class": "^Terminal$",
                   "instance": "^Alacritty$",
                   "machine": "^silicon$",
                   "title": "^eaglerock\\@silicon\\:\\ \\~$"
@@ -73,7 +73,7 @@
             "swallows": [
                {
                   "name": "terminal-3",
-                  "class": "^Alacritty$",
+                  "class": "^Terminal$",
                   "instance": "^Alacritty$",
                   "machine": "^silicon$",
                   "title": "^eaglerock\\@silicon\\:\\ \\~$"
