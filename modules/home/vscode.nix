@@ -14,8 +14,9 @@ in {
     vscode-with-extensions
   ];
 
-  programs.vscode-with-extensions = {
+  programs.vscode = {
     enable = true;
+    package = pkgs.vscode-with-extensions;
 
     userSettings = {
       editor = {
