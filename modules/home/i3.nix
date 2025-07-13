@@ -13,6 +13,17 @@ let
     aqua = "#8ec07c";
     gray = "#a89984";
   };
+  workspaces = {
+    "1" = "1: ";        # Terminal
+    "2" = "2: ";        # VSCode
+    "3" = "3: ";        # Firefox
+    "4" = "4: ";        # Xchat
+    "5" = "5: ";        # Steam
+    "6" = "6: ";        # Terminals
+    "7" = "7: ";        # Firefox
+    "8" = "8: ";        # File Manager
+    "9" = "9: ";        # External Display
+  };
 in {
   # POLYBAR CONFIG
   services.polybar = {
@@ -122,18 +133,6 @@ in {
       };
 
       bars = [ ]; # Using polybar
-
-      workspaces = {
-        "1" = "1: ";        # Terminal
-        "2" = "2: ";        # VSCode
-        "3" = "3: ";        # Firefox
-        "4" = "4: ";        # Xchat
-        "5" = "5: ";        # Steam
-        "6" = "6: ";        # Terminals
-        "7" = "7: ";        # Firefox
-        "8" = "8: ";        # File Manager
-        "9" = "9: ";        # External Display
-      };
 
       keybindings = {
         # Workspaces
