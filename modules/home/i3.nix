@@ -281,7 +281,14 @@ in {
             instance = "^Scratchpad$";
             class = "^Scratchpad$";
           };
-          command = "floating enable; move scratchpad; scratchpad show; resize set 2000px 1200px; move position 280px 100px; scratchpad show";
+          command = "floating enable";
+        }
+        {
+          criteria = { 
+            instance = "^Scratchpad$";
+            class = "^Scratchpad$";
+          };
+          command = "move scratchpad; scratchpad show; resize set 2000px 1200px; move position 280px 100px; scratchpad show";
         }
       ];
     };
