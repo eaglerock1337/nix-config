@@ -4,14 +4,14 @@ let
   gruvboxDark = {
     bg = "#282828";
     fg = "#ebdbb2";
-    black = "#1d2021";
-    red = "#fb4934";
-    green = "#b8bb26";
-    yellow = "#fabd2f";
-    blue = "#83a598";
-    purple = "#d3869b";
-    aqua = "#8ec07c";
+    red = "#cc241d";
+    green = "#98971a";
+    yellow = "#d79921";
+    blue = "#458588";
+    purple = "#b16286";
+    aqua = "#689d68";
     gray = "#a89984";
+    darkgray = "#1d2021";
   };
   workspaces = {
     "1" = "1 ";        # Terminal
@@ -31,31 +31,32 @@ in {
     config = {
       colors = {
         background = gruvboxDark.bg;
+        statusline = gruvboxDark.yellow;
         focused = {
-          border = gruvboxDark.yellow;
-          background = gruvboxDark.yellow;
-          text = gruvboxDark.bg;
-          indicator = gruvboxDark.yellow;
-          childBorder = gruvboxDark.yellow;
+          border = gruvboxDark.blue;
+          background = gruvboxDark.blue;
+          text = gruvboxDark.darkgray;
+          indicator = gruvboxDark.purple;
+          childBorder = gruvboxDark.darkgray;
         };
         focusedInactive = {
-          border = gruvboxDark.gray;
-          background = gruvboxDark.bg;
-          text = gruvboxDark.gray;
-          indicator = gruvboxDark.gray;
-          childBorder = gruvboxDark.gray;
+          border = gruvboxDark.darkgray;
+          background = gruvboxDark.darkgray;
+          text = gruvboxDark.yellow;
+          indicator = gruvboxDark.purple;
+          childBorder = gruvboxDark.darkgray;
         };
         unfocused = {
-          border = gruvboxDark.black;
-          background = gruvboxDark.bg;
-          text = gruvboxDark.gray;
-          indicator = gruvboxDark.black;
-          childBorder = gruvboxDark.black;
+          border = gruvboxDark.darkgray;
+          background = gruvboxDark.darkgray;
+          text = gruvboxDark.yellow;
+          indicator = gruvboxDark.purple;
+          childBorder = gruvboxDark.darkgray;
         };
         urgent = {
           border = gruvboxDark.red;
           background = gruvboxDark.red;
-          text = gruvboxDark.fg;
+          text = gruvboxDark.white;
           indicator = gruvboxDark.red;
           childBorder = gruvboxDark.red;
         };
@@ -233,7 +234,7 @@ in {
       "bar/mainbar" = {
         monitor = "\${env:MONITOR:eDP-1}";
         width = "100%";
-        height = "3%";
+        height = "4%";
         bottom = true;
         font-0 = "FiraCode Nerd Font:size=24;2";
         background = gruvboxDark.bg;

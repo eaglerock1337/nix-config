@@ -11,18 +11,24 @@ in {
     package = vscodePackage;
 
     extensions = with pkgs.vscode-extensions; [
+      tomphilbin.gruvbox-themes
+      bbenoist.nix
+      vscode-icons-team.vscode-icons
       ms-python.python
       esbenp.prettier-vscode
       dbaeumer.vscode-eslint
-      # Add more as needed
     ];
 
     userSettings = {
       "editor.tabSize" = 2;
       "editor.formatOnSave" = true;
       "files.autoSave" = "onFocusChange";
-      "workbench.colorTheme" = "Default Dark+";
-      "terminal.integrated.fontSize" = 14;
+      "workbench.colorTheme" = "Gruvbox Dark (Soft)";
+      "workbench.iconTheme" = "vscode-icons";
+      "editor.fontFamily" = "FiraCode Nerd Font";
+      "editor.fontLigatures" = true;
+      "editor.fontSize" = 18;
+      "terminal.integrated.fontSize" = 18;
     };
   };
 }
