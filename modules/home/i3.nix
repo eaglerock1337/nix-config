@@ -185,6 +185,7 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+l" = "exec i3lock -c 000000";
 
         # Restart/exit
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+w" = "reload";
         "${config.xsession.windowManager.i3.config.modifier}+Shift+r" = "restart";
         "${config.xsession.windowManager.i3.config.modifier}+Shift+e" = "exec i3-nagbar -t warning -m 'Exit i3?' -b 'Yes' 'i3-msg exit'";
         "${config.xsession.windowManager.i3.config.modifier}+Shift+q" = "kill";
