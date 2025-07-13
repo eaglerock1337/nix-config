@@ -54,7 +54,13 @@ in {
 
       "module/date" = {
         type = "internal/date";
-        format = " %Y-%m-%d  %H:%M";
+        interval = 1.0
+        date = %Y-%m-%d%
+        time = %H:%M
+        ; if `date-alt` or `time-alt` is defined, clicking
+        ; the module will toggle between formats
+        date-alt = %A, %d %B %Y
+        time-alt = %H:%M:%S
       };
 
       "module/cpu" = {
@@ -64,7 +70,7 @@ in {
 
       "module/memory" = {
         type = "internal/memory";
-        format = " %percentage_used%%";
+        format = "󰍛 %percentage_used%%";
       };
 
       "module/battery" = {
@@ -78,17 +84,9 @@ in {
 
       "module/wlan" = {
         type = "internal/network";
-        interface = "wlan0";
+        interface = "wlp0s20f3";
         format-connected = " %essid";
         format-disconnected = "睊 Disconnected";
-      };
-
-      "module/workspaces" = {
-        type = "internal/i3";
-        format = "<label-state>";
-        label-focused = "%name%";
-        label-unfocused = "%name%";
-        label-urgent = "%name%!";
       };
     };
     script = ''polybar mainbar & '';
