@@ -246,26 +246,26 @@ in {
           always = true;
         }
         {
-          command = ''i3-msg "workspace 1; append_layout ${./layouts/workspace-1.json}"'';
+          command = ''i3-msg "workspace ${workspaces."1"}; append_layout ${./layouts/workspace-1.json}"'';
           always = false;
         }
         {
-          command = ''i3-msg "workspace 1; exec alacritty --class Terminal"'';
+          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Terminal"'';
           always = false;
           notification = false;
         }
         {
-          command = ''i3-msg "workspace 1; exec alacritty --class Terminal"'';
+          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Terminal"'';
           always = false;
           notification = false;
         }        
         {
-          command = ''i3-msg "workspace 1; exec alacritty --class Terminal"'';
+          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Terminal"'';
           always = false;
           notification = false;
         }
         {
-          command = ''alacritty'';
+          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty'';
           always = false;
           notification = false;
         }
