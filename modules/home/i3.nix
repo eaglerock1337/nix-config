@@ -180,7 +180,7 @@ in {
       };
 
       "module/xworkspaces" = {
-        type = "internal/workspaces";
+        type = "internal/xworkspaces";
         label-active = "%name%";
         label-active-background = gruvboxDark.bg;
         label-active-foreground = gruvboxDark.blue;
@@ -232,7 +232,6 @@ in {
         format-disconnected = "睊 Disconnected";
       };
     };
-    script = ''polybar mainbar & '';
   };
 
   xdg.configFile."picom/picom.conf".text = ''
