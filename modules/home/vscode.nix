@@ -10,7 +10,7 @@ let
     dbaeumer.vscode-eslint
   ]);
 in {
-  environment.systemPackages = with pkgs; [
+  home.packages = with pkgs; [
     vscode-with-extensions
   ];
 
