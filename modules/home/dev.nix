@@ -2,7 +2,7 @@
 
 let
   # Optional: Pin the Node version for consistency
-  nodejs = pkgs.nodejs_20;
+  nodejs = pkgs.nodejs_22;
   myNodePackages = pkgs.nodePackages.override { inherit nodejs; };
 in {
   home.packages = with pkgs; [
@@ -20,12 +20,12 @@ in {
     delve # Debugger
 
     # --- Node.js / TypeScript ---
-    nodejs
-    myNodePackages.npm
-    myNodePackages.typescript
-    myNodePackages.typescript-language-server
-    myNodePackages.eslint
-    myNodePackages.prettier
+    # nodejs
+    # myNodePackages.npm
+    # myNodePackages.typescript
+    # myNodePackages.typescript-language-server
+    # myNodePackages.eslint
+    # myNodePackages.prettier
 
     # --- Ruby ---
     ruby_3_4
