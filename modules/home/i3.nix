@@ -264,25 +264,15 @@ in {
           notification = false;
         }
         {
-          command = ''i3-msg "exec alacritty --class scratchpad,Alacritty"'';
+          command = ''i3-msg "workspace ${workspaces."2"}; exec alacritty --class Scratchpad"'';
           always = false;
           notification = false;
         }
-        # {
-        #   command = ''i3-msg "workspace ${workspaces."2"}; [instance="float"] floating enable; [instance="float"] move scratchpad"'';
-        #   always = false;
-        #   notification = false;
-        # }
-        # {
-        #   command = ''i3-msg "workspace ${workspaces."2"}; [instance="float"] scratchpad show; resize set 2000px 1200px; move position 280px 100px; move scratchpad"'';
-        #   always = false;
-        #   notification = false;
-        # }
       ];
 
       window.commands = [
         {
-          criteria = { instance = "scratchpad"; };
+          criteria = { instance = "Scratchpad"; class = "Scratchpad"; };
           command = "floating enable; move scratchpad; scratchpad show; resize set 2000px 1200px; move position 280px 100px; scratchpad show";
         }
       ];
