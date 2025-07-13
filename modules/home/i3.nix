@@ -264,7 +264,7 @@ in {
           notification = false;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty'';
+          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty"'';
           always = false;
           notification = false;
         }
@@ -284,7 +284,7 @@ in {
           notification = false;
         }
         {
-          command = ''i3-msg 'workspace ${workspaces."1"}; [class="^Alacritty$"] move scratchpad' '';
+          command = ''i3-msg '[class="^Alacritty$"] move scratchpad' '';
           always = false;
           notification = false;
         }
