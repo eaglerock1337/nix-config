@@ -249,6 +249,11 @@ in {
           always = false;
         }
         {
+          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Scratchpad"'';
+          always = false;
+          notification = false;
+        }
+        {
           command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Terminal"'';
           always = false;
           notification = false;
@@ -260,11 +265,6 @@ in {
         }        
         {
           command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Terminal"'';
-          always = false;
-          notification = false;
-        }
-        {
-          command = ''i3-msg "exec alacritty --class Scratchpad"'';
           always = false;
           notification = false;
         }
