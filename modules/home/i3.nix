@@ -249,11 +249,6 @@ in {
           always = false;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Scratchpad" && sleep 0.5'';
-          always = false;
-          notification = false;
-        }
-        {
           command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Terminal"'';
           always = false;
           notification = false;
@@ -273,11 +268,16 @@ in {
           always = false;
           notification = false;
         }
+        {
+          command = ''i3-msg "exec alacritty --class Scratchpad"'';
+          always = false;
+          notification = false;
+        }
       ];
 
       window.commands = [
         {
-          criteria = { instance = "Scratchpad"; class = "Scratchpad"; };
+          criteria = { instance = "^Scratchpad$"; class = "^Scratchpad$"; };
           command = "floating enable; move scratchpad; scratchpad show; resize set 2000px 1200px; move position 280px 100px; scratchpad show";
         }
       ];
