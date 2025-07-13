@@ -260,7 +260,7 @@ in {
           notification = false;
         }        
         {
-          command = ''i3-msg "workspace 1; exec alacritty --class Terminal"'';
+          command = ''i3-msg "exec alacritty --class Terminal"'';
           always = false;
           notification = false;
         }
@@ -270,7 +270,7 @@ in {
           notification = false;
         }
         {
-          command = "i3-msg '[instance=\"float\"] floating enable, move scratchpad, scratchpad show, resize set 1800 1000, move position 380px 200px, move scratchpad'";
+          command = "i3-msg '[instance="float"] floating enable, move scratchpad, scratchpad show, resize set 1800 1000, move position 380px 200px, move scratchpad'";
           always = true;
           notification = false;
         }
