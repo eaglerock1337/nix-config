@@ -279,7 +279,7 @@ in {
         {
           criteria = { 
             instance = "^Scratchpad$";
-            class = "^Scratchpad$"
+            class = "^Scratchpad$";
           };
           command = "floating enable; move scratchpad; scratchpad show; resize set 2000px 1200px; move position 280px 100px; scratchpad show";
         }
