@@ -123,6 +123,11 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+Right" = "move right";
         "${config.xsession.windowManager.i3.config.modifier}+Shift+Up" = "move up";
 
+        # Change layout
+        "${config.xsession.windowManager.i3.config.modifier}+s" = "layout stacking";
+        "${config.xsession.windowManager.i3.config.modifier}+w" = "layout tab";
+        "${config.xsession.windowManager.i3.config.modifier}+e" = "layout toggle split";
+
         # Split windows
         "${config.xsession.windowManager.i3.config.modifier}+v" = "split vertical";
         "${config.xsession.windowManager.i3.config.modifier}+h" = "split horizontal";
@@ -163,7 +168,7 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+F7" = "exec --no-startup-id chvt 7";
 
         # Lock screen
-        "${config.xsession.windowManager.i3.config.modifier}+x" = "exec i3lock -n -i $HOME/git/nix-config/assets/wallpaper.png";
+        "${config.xsession.windowManager.i3.config.modifier}+x" = "exec i3lock -n --color ${gruvboxDark.blue}";
 
         # Restart/exit
         "${config.xsession.windowManager.i3.config.modifier}+Shift+w" = "reload";
@@ -192,7 +197,7 @@ in {
       assigns = {
         "${workspaces."1"}" = [ { class = "^Alacritty$"; } { class = "^Xterm$"; } ];
         "${workspaces."2"}" = [ { class = "^Code$"; } ];
-        "${workspaces."3"}" = [ { class = "^Firefox$"; } ];
+        "${workspaces."3"}" = [ { class = "^firefox$"; } ];
         "${workspaces."4"}" = [ { class = "^Hexchat$"; } ];
         "${workspaces."5"}" = [ { class = "^steam$"; } ];
         "${workspaces."7"}" = [ { class = "^Chromium$"; } ];
