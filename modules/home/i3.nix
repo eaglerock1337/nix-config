@@ -211,7 +211,6 @@ in {
       };
 
       assigns = {
-        "${workspaces."1"}" = [ { class = "^Alacritty$"; } { class = "^Xterm$"; } ];
         "${workspaces."2"}" = [ { class = "^Code$"; } ];
         "${workspaces."3"}" = [ { class = "^firefox$"; } ];
         "${workspaces."4"}" = [ { class = "^Hexchat$"; } ];
