@@ -17,7 +17,7 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.users.eaglerock = import ./home/eaglerock.nix;
+            home-manager.users.eaglerock = ./home/eaglerock.nix;
           }
         ];
       };
