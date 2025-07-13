@@ -254,7 +254,7 @@ in {
           notification = false;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."2"}; [instance="float"] floating enable; [instance="float"] move scratchpad;"'';'';
+          command = ''i3-msg "workspace ${workspaces."2"}; [instance="float"] floating enable; [instance="float"] move scratchpad"'';
           always = false;
           notification = false;
         }
