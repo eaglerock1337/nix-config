@@ -245,21 +245,6 @@ in {
           always = true;
         }
         {
-          command = ''i3-msg "exec alacritty --class float,Alacritty"'';
-          always = false;
-          notification = false;
-        }
-        {
-          command = ''i3-msg "[instance="float"] floating enable; [instance="float"] move scratchpad"'';
-          always = false;
-          notification = false;
-        }
-        {
-          command = ''i3-msg "[instance="float"] scratchpad show; [instance="float"] resize set 2000px 1200px; [instance="float"] move position 280px 100px; move scratchpad"'';
-          always = false;
-          notification = false;
-        }
-        {
           command = ''i3-msg "workspace ${workspaces."1"}; append_layout ${./layouts/workspace-1.json}"'';
           always = false;
         }
@@ -278,9 +263,29 @@ in {
           always = false;
           notification = false;
         }
+        {
+          command = ''alacritty'';
+          always = false;
+          notification = false;
+        }
+        # {
+        #   command = ''i3-msg "workspace ${workspaces."2"}; [instance="float"] floating enable; [instance="float"] move scratchpad"'';
+        #   always = false;
+        #   notification = false;
+        # }
+        # {
+        #   command = ''i3-msg "workspace ${workspaces."2"}; [instance="float"] scratchpad show; resize set 2000px 1200px; move position 280px 100px; move scratchpad"'';
+        #   always = false;
+        #   notification = false;
+        # }
       ];
     };
   };
+
+  window.commands = {
+    criteria = { class = "Alacritty"; };
+    command = "floating enable; move scratchpad; scratchpad show; resize set 2000px 1200px; move position 280px 100px; move scratchpad";
+  }
 
   # TODO: Enable this command later
   # {
