@@ -15,6 +15,7 @@
         publisher = "tomphilbin";
         name = "gruvbox-themes";
         version = "1.0.0";
+        sha256 = "sha256-DnwASBp1zvJluDc/yhSB87d0WM8PSbzqAvoICURw03c=";
       }
     ];
   
