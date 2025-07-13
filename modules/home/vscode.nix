@@ -1,22 +1,17 @@
 { config, pkgs, lib, ... }:
 
-let
-  extensions = (with pkgs.vscode-extensions; [
-    tomphilbin.gruvbox-themes
-    bbenoist.nix
-    vscode-icons-team.vscode-icons
-    ms-python.python
-    esbenp.prettier-vscode
-    dbaeumer.vscode-eslint
-  ]);
-in {
-  home.packages = with pkgs; [
-    vscode-with-extensions
-  ];
-
+{
   programs.vscode = {
     enable = true;
-    package = pkgs.vscode-with-extensions;
+
+    extensions = with pkgs.vscode-extensions; [
+      tomphilbin.gruvbox-themes
+      bbenoist.nix
+      vscode-icons-team.vscode-icons
+      ms-python.python
+      esbenp.prettier-vscode
+      dbaeumer.vscode-eslint
+    ];
 
     userSettings = {
       editor = {
