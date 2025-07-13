@@ -99,12 +99,46 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+8" = "move container to workspace \"${workspaces."8"}\"";
         "${config.xsession.windowManager.i3.config.modifier}+Shift+9" = "move container to workspace \"${workspaces."9"}\"";
 
+        # Change focus
+        "${config.xsession.windowManager.i3.config.modifier}+j" = "focus left";
+        "${config.xsession.windowManager.i3.config.modifier}+k" = "focus down";
+        "${config.xsession.windowManager.i3.config.modifier}+l" = "focus up";
+        "${config.xsession.windowManager.i3.config.modifier}+semicolon" = "focus right";  
+
+        # Change focus with cursor keys
+        "${config.xsession.windowManager.i3.config.modifier}+Left" = "focus left";
+        "${config.xsession.windowManager.i3.config.modifier}+Down" = "focus down";
+        "${config.xsession.windowManager.i3.config.modifier}+Right" = "focus right";
+        "${config.xsession.windowManager.i3.config.modifier}+Up" = "focus up";
+
+        # Move focused window
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+j" = "move left";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+k" = "move down";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+l" = "move up";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+semicolon" = "move right";
+
+        # Move focused window with cursor keys
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+Left" = "move left";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+Down" = "move down"; 
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+Right" = "move right";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+Up" = "move up";
+
+        # Split windows
+        "${config.xsession.windowManager.i3.config.modifier}+v" = "split vertical";
+        "${config.xsession.windowManager.i3.config.modifier}+h" = "split horizontal";
+
+        # Fullscreen focused window
+        "${config.xsession.windowManager.i3.config.modifier}+f" = "fullscreen";
+
+        # Toggle floating mode
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+space" = "floating toggle";
+
         # Launch apps
         "${config.xsession.windowManager.i3.config.modifier}+Return" = "exec alacritty";
         "${config.xsession.windowManager.i3.config.modifier}+d" = "exec rofi -show drun";
 
         # Scratchpad terminal
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+minus" = "move container to scratchpad";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+minus" = "move scratchpad";
         "${config.xsession.windowManager.i3.config.modifier}+minus" = "scratchpad show";
 
         # Volume keys
@@ -115,6 +149,35 @@ in {
         # Brightness (optional)
         "XF86MonBrightnessUp" = "exec brightnessctl set +10%";
         "XF86MonBrightnessDown" = "exec brightnessctl set 10%-";
+
+        # Enter resize mode
+        "${config.xsession.windowManager.i3.config.modifier}+r" = "mode resize";
+
+        # Resize mode keybindings
+        "mode_resize" = {
+          "j"  = "resize shrink width 10 px or 10 ppt";
+          "k"  = "resize grow height 10 px or 10 ppt";
+          "l"    = "resize shrink height 10 px or 10 ppt";
+          "semicolon" = "resize grow width 10 px or 10 ppt";
+
+          "Left"  = "resize shrink width 10 px or 10 ppt";
+          "Down"  = "resize grow height 10 px or 10 ppt";
+          "Up"    = "resize shrink height 10 px or 10 ppt";
+          "Right" = "resize grow width 10 px or 10 ppt";
+
+          # Exit resize mode with Escape or Return
+          "Return" = "mode default";
+          "Escape" = "mode default";
+        };
+
+        # Switch between tty sessions
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+F1" = "exec --no-startup-id chvt 1";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+F2" = "exec --no-startup-id chvt 2";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+F3" = "exec --no-startup-id chvt 3";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+F4" = "exec --no-startup-id chvt 4";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+F5" = "exec --no-startup-id chvt 5";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+F6" = "exec --no-startup-id chvt 6";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+F7" = "exec --no-startup-id chvt 7";
 
         # Lock screen
         "${config.xsession.windowManager.i3.config.modifier}+Shift+l" = "exec i3lock -n -i $HOME/git/nix-config/assets/wallpaper.png";
@@ -184,19 +247,19 @@ in {
         label-active = "%name%";
         label-active-background = gruvboxDark.bg;
         label-active-foreground = gruvboxDark.fg;
-        label-active-padding = "4";
+        label-active-padding = "2";
         label-occupied = "%name%";
         label-occupied-background = gruvboxDark.bg;
         label-occupied-foreground = gruvboxDark.blue;
-        label-occupied-padding = "4";
+        label-occupied-padding = "2";
         label-empty = "%name%";
         label-empty-background = gruvboxDark.bg;
         label-empty-foreground = gruvboxDark.gray;
-        label-empty-padding = "4";
+        label-empty-padding = "2";
         label-urgent = "%name%!";
         label-urgent-background = gruvboxDark.red;
         label-urgent-foreground = gruvboxDark.fg;
-        label-urgent-padding = "4";
+        label-urgent-padding = "2";
       };
 
       "module/date" = {
