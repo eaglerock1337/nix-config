@@ -260,12 +260,12 @@ in {
           notification = false;
         }        
         {
-          command = ''i3-msg "exec alacritty --class Terminal"'';
+          command = ''i3-msg "workspace 1; exec alacritty --class Terminal"'';
           always = false;
           notification = false;
         }
         {
-          command = ''i3-msg "workspace 1; exec alacritty --class float"'';
+          command = ''i3-msg "exec alacritty --class float"'';
           always = true;
           notification = false;
         }
