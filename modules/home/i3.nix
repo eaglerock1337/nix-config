@@ -245,6 +245,31 @@ in {
           always = true;
         }
         {
+          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty'';
+          always = false;
+          notification = false;
+        }
+        {
+          command = ''i3-msg 'workspace ${workspaces."1"}; floating enable' '';
+          always = false;
+          notification = false;
+        }
+        {
+          command = ''i3-msg 'workspace ${workspaces."1"}; resize set 2000px 1200px' '';
+          always = false;
+          notification = false;
+        }
+        {
+          command = ''i3-msg 'workspace ${workspaces."1"}; move position 280px 100px' '';
+          always = false;
+          notification = false;
+        }
+        {
+          command = ''i3-msg 'workspace ${workspaces."1"}; move scratchpad' '';
+          always = false;
+          notification = false;
+        }
+        {
           command = ''i3-msg "workspace ${workspaces."1"}; append_layout ${./layouts/workspace-1.json}"'';
           always = false;
         }
@@ -260,31 +285,6 @@ in {
         }        
         {
           command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Terminal"'';
-          always = false;
-          notification = false;
-        }
-        {
-          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Scratchpad"'';
-          always = false;
-          notification = false;
-        }
-        {
-          command = ''i3-msg 'workspace ${workspaces."1"}; [class="^Scratchpad$"] floating enable' '';
-          always = false;
-          notification = false;
-        }
-        {
-          command = ''i3-msg 'workspace ${workspaces."1"}; [class="^Scratchpad$"] resize set 2000px 1200px' '';
-          always = false;
-          notification = false;
-        }
-        {
-          command = ''i3-msg 'workspace ${workspaces."1"}; [class="^Scratchpad$"] move position 280px 100px' '';
-          always = false;
-          notification = false;
-        }
-        {
-          command = ''i3-msg 'workspace ${workspaces."1"}; [class="^Scratchpad$"] move scratchpad' '';
           always = false;
           notification = false;
         }
