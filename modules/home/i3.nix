@@ -250,17 +250,17 @@ in {
           always = true;
         }
         {
-          command = ''i3-msc "workspace 1; exec alacritty --class Terminal"'';
+          command = ''i3-msg "workspace 1; exec alacritty --class Terminal"'';
           always = false;
           notification = false;
         }
         {
-          command = ''i3-msc "workspace 1; exec alacritty --class Terminal"'';
+          command = ''i3-msg "workspace 1; exec alacritty --class Terminal"'';
           always = false;
           notification = false;
         }        
         {
-          command = ''i3-msc "workspace 1; exec alacritty --class Terminal"'';
+          command = ''i3-msg "workspace 1; exec alacritty --class Terminal"'';
           always = false;
           notification = false;
         }
