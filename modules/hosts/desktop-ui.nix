@@ -13,8 +13,6 @@
   services.xserver = {
     enable = true;
     displayManager = {
-      lightdm.enable = false;
-      sddm.enable = false;
       gdm.enable = true;
     };
     desktopManager.gnome.enable = true;

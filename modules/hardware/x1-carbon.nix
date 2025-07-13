@@ -33,7 +33,7 @@
   services.acpid.enable = true;
 
   # Touchpad and TrackPoint
-  services.xserver.libinput = {
+  services.libinput = {
     enable = true;
     touchpad = {
       disableWhileTyping = true;
