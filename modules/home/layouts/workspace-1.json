@@ -14,11 +14,11 @@
     "percent": 0.6,
     "swallows": [
        {
-       // "class": "^Alacritty$",
-       // "instance": "^Alacritty$",
-       // "machine": "^silicon$",
-       // "title": "^eaglerock\\@silicon\\:\\ \\~\\/git\\/nix\\-config\\/modules\\/home$"
-       }
+         "name": "terminal-1",
+         "class": "^Alacritty$",
+         "instance": "^Alacritty$",
+         "machine": "^silicon$",
+         "title": "^eaglerock\\@silicon\\:\\ \\~$"       }
     ],
     "type": "con"
 }
@@ -47,10 +47,11 @@
             "percent": 0.5,
             "swallows": [
                {
-               // "class": "^Alacritty$",
-               // "instance": "^Alacritty$",
-               // "machine": "^silicon$",
-               // "title": "^eaglerock\\@silicon\\:\\ \\~$"
+                  "name": "terminal-2",
+                  "class": "^Alacritty$",
+                  "instance": "^Alacritty$",
+                  "machine": "^silicon$",
+                  "title": "^eaglerock\\@silicon\\:\\ \\~$"
                }
             ],
             "type": "con"
@@ -70,10 +71,11 @@
             "percent": 0.5,
             "swallows": [
                {
-               // "class": "^Alacritty$",
-               // "instance": "^Alacritty$",
-               // "machine": "^silicon$",
-               // "title": "^eaglerock\\@silicon\\:\\ \\~$"
+                  "name": "terminal-3",
+                  "class": "^Alacritty$",
+                  "instance": "^Alacritty$",
+                  "machine": "^silicon$",
+                  "title": "^eaglerock\\@silicon\\:\\ \\~$"
                }
             ],
             "type": "con"
