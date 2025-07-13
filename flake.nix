@@ -21,23 +21,4 @@
         ];
       };
     };
-
-    let
-      system = "x86_64-linux";
-      mkHost = hostname: nixpkgs.lib.nixosSystem {
-        inherit system;
-        modules = [
-          ./hosts/${hostname}/configuration.nix
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useUserPackages = true;
-            home-manager.users.eaglerock = import ./home/eaglerock.nix;
-          }
-        ];
-      };
-    in {
-      nixosConfigurations = {
-        silicon = mkHost "silicon";
-      };
-    };
 }
