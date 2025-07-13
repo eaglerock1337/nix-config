@@ -245,10 +245,6 @@ in {
           always = true;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."1"}; append_layout ${./layouts/workspace-1.json}"'';
-          always = false;
-        }
-        {
           command = ''i3-msg "workspace ${workspaces."2"}; exec alacritty --class float,Alacritty"'';
           always = false;
           notification = false;
@@ -259,9 +255,13 @@ in {
           notification = false;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."2"}; [instance="float"] scratchpad show; [instance="float"] resize set 2000px 1200px; [instance="float"] move position 280px 100px; move scratchpad"'';
+          command = ''[instance="float"] scratchpad show; [instance="float"] resize set 2000px 1200px; [instance="float"] move position 280px 100px; move scratchpad"'';
           always = false;
           notification = false;
+        }
+        {
+          command = ''i3-msg "workspace ${workspaces."1"}; append_layout ${./layouts/workspace-1.json}"'';
+          always = false;
         }
         {
           command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty --class Terminal"'';
