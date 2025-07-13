@@ -232,6 +232,7 @@ in {
         format-disconnected = "睊 Disconnected";
       };
     };
+    script = "polybar mainbar &";
   };
 
   xdg.configFile."picom/picom.conf".text = ''
