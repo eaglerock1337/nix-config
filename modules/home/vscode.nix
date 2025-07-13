@@ -1,29 +1,22 @@
 { config, pkgs, lib, ... }:
 
 let
-  vscodeWithExtensions = pkgs.vscode-with-extensions.override {
-    vscodeExtensions = with pkgs.vscode-extensions; [
-      tomphilbin.gruvbox-themes
-      bbenoist.nix
-      vscode-icons-team.vscode-icons
-      ms-python.python
-      esbenp.prettier-vscode
-      dbaeumer.vscode-eslint
-    ];
-  };
+  extensions = (with pkgs.vscode-extensions; [
+    tomphilbin.gruvbox-themes
+    bbenoist.nix
+    vscode-icons-team.vscode-icons
+    ms-python.python
+    esbenp.prettier-vscode
+    dbaeumer.vscode-eslint
+  ]);
 in {
+  environment.systemPackages = with pkgs; [
+    vscode-with-extensions
+  ];
+
   programs.vscode = {
     enable = true;
-    package = vscodeWithExtensions;
-
-    extensions = (with pkgs.vscode-extensions; [
-      tomphilbin.gruvbox-themes
-      bbenoist.nix
-      vscode-icons-team.vscode-icons
-      ms-python.python
-      esbenp.prettier-vscode
-      dbaeumer.vscode-eslint
-    ]);
+    packages = pkgs.vscode;
 
     userSettings = {
       editor = {
