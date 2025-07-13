@@ -24,6 +24,7 @@ let
     "8" = "8 ";        # File Manager
     "9" = "9 ";        # External Display
   };
+  wallpaper = "~/git/nix-config/assets/wallpaper-gibson.png";
 in {
   xsession.windowManager.i3 = {
     enable = true;
@@ -168,7 +169,7 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+F7" = "exec --no-startup-id chvt 7";
 
         # Lock screen
-        "${config.xsession.windowManager.i3.config.modifier}+x" = "exec i3lock -n --color=${gruvboxDark.blue}";
+        "${config.xsession.windowManager.i3.config.modifier}+x" = "exec i3lock -n -i ${wallpaper}";
 
         # Restart/exit
         "${config.xsession.windowManager.i3.config.modifier}+Shift+w" = "reload";
@@ -214,7 +215,7 @@ in {
           always = true;
         }
         {
-          command = "feh --bg-fill ~/git/nix-config/assets/wallpaper.png";
+          command = "feh --bg-fill ${wallpaper}";
           always = true;
         }
         {
