@@ -151,24 +151,7 @@ in {
         "XF86MonBrightnessDown" = "exec brightnessctl set 10%-";
 
         # Enter resize mode
-        "${config.xsession.windowManager.i3.config.modifier}+r" = "mode resize";
-
-        # Resize mode keybindings
-        "mode_resize" = {
-          "j"  = "resize shrink width 10 px or 10 ppt";
-          "k"  = "resize grow height 10 px or 10 ppt";
-          "l"    = "resize shrink height 10 px or 10 ppt";
-          "semicolon" = "resize grow width 10 px or 10 ppt";
-
-          "Left"  = "resize shrink width 10 px or 10 ppt";
-          "Down"  = "resize grow height 10 px or 10 ppt";
-          "Up"    = "resize shrink height 10 px or 10 ppt";
-          "Right" = "resize grow width 10 px or 10 ppt";
-
-          # Exit resize mode with Escape or Return
-          "Return" = "mode default";
-          "Escape" = "mode default";
-        };
+        "${config.xsession.windowManager.i3.config.modifier}+r" = "mode \"resize\"";
 
         # Switch between tty sessions
         "${config.xsession.windowManager.i3.config.modifier}+Shift+F1" = "exec --no-startup-id chvt 1";
@@ -180,7 +163,7 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+F7" = "exec --no-startup-id chvt 7";
 
         # Lock screen
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+xS" = "exec i3lock -n -i $HOME/git/nix-config/assets/wallpaper.png";
+        "${config.xsession.windowManager.i3.config.modifier}+x" = "exec i3lock -n -i $HOME/git/nix-config/assets/wallpaper.png";
 
         # Restart/exit
         "${config.xsession.windowManager.i3.config.modifier}+Shift+w" = "reload";
@@ -189,12 +172,29 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+q" = "kill";
       };
 
+      # Resize mode keybindings
+      modes.resize = {
+        "j"  = "resize shrink width 10 px or 10 ppt";
+        "k"  = "resize grow height 10 px or 10 ppt";
+        "l"    = "resize shrink height 10 px or 10 ppt";
+        "semicolon" = "resize grow width 10 px or 10 ppt";
+
+        "Left"  = "resize shrink width 10 px or 10 ppt";
+        "Down"  = "resize grow height 10 px or 10 ppt";
+        "Up"    = "resize shrink height 10 px or 10 ppt";
+        "Right" = "resize grow width 10 px or 10 ppt";
+
+        # Exit resize mode with Escape or Return
+        "Return" = "mode default";
+        "Escape" = "mode default";
+      };
+
       assigns = {
         "${workspaces."1"}" = [ { class = "^Alacritty$"; } { class = "^Xterm$"; } ];
         "${workspaces."2"}" = [ { class = "^Code$"; } ];
         "${workspaces."3"}" = [ { class = "^Firefox$"; } ];
-        "${workspaces."4"}" = [ { class = "^Xchat$"; } ];
-        "${workspaces."5"}" = [ { class = "^Steam$"; } ];
+        "${workspaces."4"}" = [ { class = "^Hexchat$"; } ];
+        "${workspaces."5"}" = [ { class = "^steam$"; } ];
         "${workspaces."7"}" = [ { class = "^Chromium$"; } ];
         "${workspaces."8"}" = [ { class = "^Thunar$"; } ];
       };
