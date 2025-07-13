@@ -65,7 +65,7 @@ in {
       modifier = "Mod4";
       fonts = {
         names = [ "FiraCode Nerd Font" ];
-        size = 18.0;
+        size = .0;
       };
 
       gaps = {
@@ -272,7 +272,7 @@ in {
         interval = "1.0";
         date = "%Y-%m-%d%";
         time = "%H:%M";
-        date-alt = "%A, %d %B %Y";
+        date-alt = "%A, %B %d %Y";
         time-alt = "%H:%M:%S";
         format = " <label>";
         label = "%date% %time%";
@@ -280,12 +280,12 @@ in {
 
       "module/cpu" = {
         type = "internal/cpu";
-        format = " %percentage%%";
+        format = " %percentage% %";
       };
 
       "module/memory" = {
         type = "internal/memory";
-        format = "󰍛 %percentage_used%%";
+        format = "󰍛 %percentage_used% %";
       };
 
       "module/battery" = {
@@ -294,13 +294,13 @@ in {
         adapter = "AC";
         full-at = 98;
         format-charging = " %percentage% %";
-        format-discharging = "🔋 %percentage%%";
+        format-discharging = "🔋 %percentage% %";
       };
 
       "module/wlan" = {
         type = "internal/network";
         interface = "wlp0s20f3";
-        format-connected = " %essid";
+        format-connected = " %essid%";
         format-disconnected = "睊 Disconnected";
       };
     };
