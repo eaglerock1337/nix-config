@@ -275,7 +275,7 @@ in {
           notification = false;
         }
         {
-          command = "i3-msg '[instance=\"float\"] move scratchpad' && i3-msg 'scratchpad show;'";
+          command = "i3-msg '[instance=\"float\"] move scratchpad' && i3-msg 'scratchpad show'";
           always = true;
           notification = false;
         }
