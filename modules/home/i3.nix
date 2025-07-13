@@ -219,9 +219,16 @@ in {
           always = true;
         }
         {
-          command = "alacritty --title scratchpad-terminal --class scratchpad-terminal";
-          always = false;
+          command = "alacritty --name scratchpad --title scratchpad --class scratchpad";
+          always = true;
           notification = false;
+        }
+      ];
+
+      window.commands = [
+        {
+          criteria = { instance = "stratchpad"; };
+          command = "floating enable, move scratchpad, scratchpad show, move position 69px 69px, move scratchpad";
         }
       ];
     };
