@@ -250,17 +250,16 @@ in {
           always = true;
         }
         {
-          command = "alacritty --name terminal-1
-          ";
+          command = "alacritty";
           always = true;
           notification = false;
         }
         {
-          command = "alacritty --name terminal-2";
+          command = "alacritty";
           always = true;
           notification = false;
         }        {
-          command = "alacritty --name terminal-3";
+          command = "alacritty";
           always = true;
           notification = false;
         }
