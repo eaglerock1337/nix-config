@@ -265,27 +265,27 @@ in {
           notification = false;
         }
         {
-          command = ''alacritty --class float'';
+          command = ''alacritty'';
           always = true;
           notification = false;
         }
         {
-          command = ''i3-msg '[class="^float$"] floating enable' '';
+          command = ''i3-msg '[class="^Alacritty$"] floating enable' '';
           always = true;
           notification = false;
         }
         {
-          command = ''i3-msg '[class="^float$"] resize set 1800px 1000px' '';
+          command = ''i3-msg '[class="^Alacritty$"] resize set 1800px 1000px' '';
           always = true;
           notification = false;
         }
         {
-          command = ''i3-msg '[class="^float$"] move position 380px 200px' '';
+          command = ''i3-msg '[class="^Alacritty$"] move position 380px 200px' '';
           always = true;
           notification = false;
         }
         {
-          command = ''i3-msg '[class="^float$"] move scratchpad' '';
+          command = ''i3-msg '[class="^Alacritty$"] move scratchpad' '';
           always = true;
           notification = false;
         }
