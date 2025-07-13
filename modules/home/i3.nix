@@ -23,6 +23,7 @@ let
     "7" = "7 ";        # Chromium
     "8" = "8 ";        # File Manager
     "9" = "9 ";        # External Display
+    "10" = "10 ";        # External Display
   };
   wallpaper = "~/git/nix-config/assets/wallpaper-gibson.png";
 in {
@@ -64,6 +65,8 @@ in {
 
       terminal = "alacritty";
       modifier = "Mod4";
+      floating.modifier = "${config.xsession.windowManager.i3.config.modifier}";
+
       fonts = {
         names = [ "FiraCode Nerd Font" ];
         size = 18.0;
@@ -78,6 +81,52 @@ in {
       bars = [ ]; # Using polybar
 
       keybindings = {
+        # Launch apps
+        "${config.xsession.windowManager.i3.config.modifier}+Return" = "exec alacritty";
+        "${config.xsession.windowManager.i3.config.modifier}+d" = "exec rofi -show drun";
+
+        # Change focus
+        "${config.xsession.windowManager.i3.config.modifier}+j" = "focus left";
+        "${config.xsession.windowManager.i3.config.modifier}+k" = "focus down";
+        "${config.xsession.windowManager.i3.config.modifier}+l" = "focus up";
+        "${config.xsession.windowManager.i3.config.modifier}+semicolon" = "focus right";  
+
+        # Change focus with cursor keys
+        "${config.xsession.windowManager.i3.config.modifier}+Left" = "focus left";
+        "${config.xsession.windowManager.i3.config.modifier}+Down" = "focus down";
+        "${config.xsession.windowManager.i3.config.modifier}+Up" = "focus up";
+        "${config.xsession.windowManager.i3.config.modifier}+Right" = "focus right";
+
+        # Move focused window
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+j" = "move left";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+k" = "move down";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+l" = "move up";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+semicolon" = "move right";
+
+        # Move focused window with cursor keys
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+Left" = "move left";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+Down" = "move down"; 
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+Up" = "move up";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+Right" = "move right";
+
+        # Split windows
+        "${config.xsession.windowManager.i3.config.modifier}+v" = "split vertical";
+        "${config.xsession.windowManager.i3.config.modifier}+h" = "split horizontal";
+
+        # Fullscreen focused window
+        "${config.xsession.windowManager.i3.config.modifier}+f" = "fullscreen";
+
+        # Change container layout
+        "${config.xsession.windowManager.i3.config.modifier}+s" = "layout stacking";
+        "${config.xsession.windowManager.i3.config.modifier}+w" = "layout tab";
+        "${config.xsession.windowManager.i3.config.modifier}+e" = "layout toggle split";
+
+        # Toggle floating mode
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+space" = "floating toggle";
+
+        # Change focus between tiling and floating windows
+        "${config.xsession.windowManager.i3.config.modifier}+space" = "focus mode_toggle";
+
         # Workspaces
         "${config.xsession.windowManager.i3.config.modifier}+1" = "workspace \"${workspaces."1"}\"";
         "${config.xsession.windowManager.i3.config.modifier}+2" = "workspace \"${workspaces."2"}\"";
@@ -88,6 +137,7 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+7" = "workspace \"${workspaces."7"}\"";
         "${config.xsession.windowManager.i3.config.modifier}+8" = "workspace \"${workspaces."8"}\"";
         "${config.xsession.windowManager.i3.config.modifier}+9" = "workspace \"${workspaces."9"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+0" = "workspace \"${workspaces."10"}\"";
 
         # Move containers to workspaces
         "${config.xsession.windowManager.i3.config.modifier}+Shift+1" = "move container to workspace \"${workspaces."1"}\"";
@@ -99,53 +149,21 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+7" = "move container to workspace \"${workspaces."7"}\"";
         "${config.xsession.windowManager.i3.config.modifier}+Shift+8" = "move container to workspace \"${workspaces."8"}\"";
         "${config.xsession.windowManager.i3.config.modifier}+Shift+9" = "move container to workspace \"${workspaces."9"}\"";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+0" = "move container to workspace \"${workspaces."10"}\"";
 
-        # Change focus
-        "${config.xsession.windowManager.i3.config.modifier}+j" = "focus left";
-        "${config.xsession.windowManager.i3.config.modifier}+k" = "focus down";
-        "${config.xsession.windowManager.i3.config.modifier}+l" = "focus up";
-        "${config.xsession.windowManager.i3.config.modifier}+semicolon" = "focus right";  
+        # Restart/exit
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+c" = "reload";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+r" = "restart";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+e" = "exec i3-nagbar -t warning -m 'Exit i3?' -b 'Yes' 'i3-msg exit'";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+q" = "kill";
 
-        # Change focus with cursor keys
-        "${config.xsession.windowManager.i3.config.modifier}+Left" = "focus left";
-        "${config.xsession.windowManager.i3.config.modifier}+Down" = "focus down";
-        "${config.xsession.windowManager.i3.config.modifier}+Right" = "focus right";
-        "${config.xsession.windowManager.i3.config.modifier}+Up" = "focus up";
+        # Enter resize mode
+        "${config.xsession.windowManager.i3.config.modifier}+r" = "mode resize";
 
-        # Move focused window
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+j" = "move left";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+k" = "move down";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+l" = "move up";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+semicolon" = "move right";
+        # Custom Stuff
 
-        # Move focused window with cursor keys
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+Left" = "move left";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+Down" = "move down"; 
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+Right" = "move right";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+Up" = "move up";
-
-        # Change layout
-        "${config.xsession.windowManager.i3.config.modifier}+s" = "layout stacking";
-        "${config.xsession.windowManager.i3.config.modifier}+w" = "layout tab";
-        "${config.xsession.windowManager.i3.config.modifier}+e" = "layout toggle split";
-
-        # Split windows
-        "${config.xsession.windowManager.i3.config.modifier}+v" = "split vertical";
-        "${config.xsession.windowManager.i3.config.modifier}+h" = "split horizontal";
-
-        # Fullscreen focused window
-        "${config.xsession.windowManager.i3.config.modifier}+f" = "fullscreen";
-
-        # Toggle floating mode
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+space" = "floating toggle";
-
-        # Launch apps
-        "${config.xsession.windowManager.i3.config.modifier}+Return" = "exec alacritty";
-        "${config.xsession.windowManager.i3.config.modifier}+d" = "exec rofi -show drun";
-
-        # Scratchpad terminal
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+minus" = "move scratchpad";
-        "${config.xsession.windowManager.i3.config.modifier}+minus" = "scratchpad show";
+        # Lock screen
+        "${config.xsession.windowManager.i3.config.modifier}+x" = "exec i3lock -n -i ${wallpaper}";
 
         # Volume keys
         "XF86AudioRaiseVolume" = "exec --no-startup-id pamixer -i 5";
@@ -156,26 +174,22 @@ in {
         "XF86MonBrightnessUp" = "exec brightnessctl set +10%";
         "XF86MonBrightnessDown" = "exec brightnessctl set 10%-";
 
-        # Enter resize mode
-        "${config.xsession.windowManager.i3.config.modifier}+r" = "mode \"resize\"";
+        # Scratchpad terminal
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+minus" = "move scratchpad";
+        "${config.xsession.windowManager.i3.config.modifier}+minus" = "scratchpad show";
+
+        # Toggle workspace between monitors
+        "${config.xsession.windowManager.i3.config.modifier}+x" = "move workspace to output right";
 
         # Switch between tty sessions
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F1" = "exec --no-startup-id chvt 1";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F2" = "exec --no-startup-id chvt 2";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F3" = "exec --no-startup-id chvt 3";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F4" = "exec --no-startup-id chvt 4";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F5" = "exec --no-startup-id chvt 5";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F6" = "exec --no-startup-id chvt 6";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+F7" = "exec --no-startup-id chvt 7";
+        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F1" = "exec --no-startup-id chvt 1";
+        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F2" = "exec --no-startup-id chvt 2";
+        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F3" = "exec --no-startup-id chvt 3";
+        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F4" = "exec --no-startup-id chvt 4";
+        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F5" = "exec --no-startup-id chvt 5";
+        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F6" = "exec --no-startup-id chvt 6";
+        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F7" = "exec --no-startup-id chvt 7";
 
-        # Lock screen
-        "${config.xsession.windowManager.i3.config.modifier}+x" = "exec i3lock -n -i ${wallpaper}";
-
-        # Restart/exit
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+w" = "reload";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+r" = "restart";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+e" = "exec i3-nagbar -t warning -m 'Exit i3?' -b 'Yes' 'i3-msg exit'";
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+q" = "kill";
       };
 
       # Resize mode keybindings
