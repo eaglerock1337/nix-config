@@ -23,7 +23,7 @@
         fontLigatures = true;
         inlineSuggest.enabled = true;
         bracketPairColorization.enabled = true;
-      }
+      };
 
       workbench = {
         colorTheme = "Gruvbox Dark (Soft)";
