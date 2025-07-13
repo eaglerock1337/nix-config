@@ -266,27 +266,27 @@ in {
         }
         {
           command = ''alacritty'';
-          always = true;
+          always = false;
           notification = false;
         }
         {
           command = ''i3-msg '[class="^Alacritty$"] floating enable' '';
-          always = true;
+          always = false;
           notification = false;
         }
         {
-          command = ''i3-msg '[class="^Alacritty$"] resize set 1800px 1000px' '';
-          always = true;
+          command = ''i3-msg '[class="^Alacritty$"] resize set 2000px 1200px' '';
+          always = false;
           notification = false;
         }
         {
-          command = ''i3-msg '[class="^Alacritty$"] move position 380px 200px' '';
-          always = true;
+          command = ''i3-msg '[class="^Alacritty$"] move position 280px 100px' '';
+          always = false;
           notification = false;
         }
         {
           command = ''i3-msg '[class="^Alacritty$"] move scratchpad' '';
-          always = true;
+          always = false;
           notification = false;
         }
       ];
