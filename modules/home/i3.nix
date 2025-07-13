@@ -255,7 +255,7 @@ in {
           notification = false;
         }
         {
-          command = ''[instance="float"] scratchpad show; [instance="float"] resize set 2000px 1200px; [instance="float"] move position 280px 100px; move scratchpad"'';
+          command = ''i3-msg "[instance="float"] scratchpad show; [instance="float"] resize set 2000px 1200px; [instance="float"] move position 280px 100px; move scratchpad"'';
           always = false;
           notification = false;
         }
