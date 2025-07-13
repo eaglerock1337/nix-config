@@ -25,72 +25,6 @@ let
     "9" = "9: ";        # External Display
   };
 in {
-  # POLYBAR CONFIG
-  services.polybar = {
-    enable = true;
-    config = {
-      "bar/mainbar" = {
-        monitor = "\${env:MONITOR:eDP-1}";
-        width = "100%";
-        height = "3%";
-        bottom = true;
-        font-0 = "FiraCode Nerd Font:size=16;2";
-        background = gruvboxDark.bg;
-        foreground = gruvboxDark.fg;
-        modules-left = "i3";
-        modules-center = "date";
-        modules-right = "cpu memory wlan battery";
-      };
-
-      "module/i3" = {
-        type = "internal/i3";
-        format = "<label-state>";
-        index-sort = true;
-        strip-wsnumbers = false;
-        pin-workspaces = true;
-        label-focused = "%name%";
-        label-unfocused = "%name%";
-        label-urgent = "%name%!";
-      };
-
-      "module/date" = {
-        type = "internal/date";
-        interval = "1.0";
-        date = "%Y-%m-%d%";
-        time = "%H:%M";
-        date-alt = "%A, %d %B %Y";
-        time-alt = "%H:%M:%S";
-      };
-
-      "module/cpu" = {
-        type = "internal/cpu";
-        format = " %percentage%%";
-      };
-
-      "module/memory" = {
-        type = "internal/memory";
-        format = "󰍛 %percentage_used%%";
-      };
-
-      "module/battery" = {
-        type = "internal/battery";
-        battery = "BAT0";
-        adapter = "AC";
-        full-at = 98;
-        format-charging = " %percentage% %";
-        format-discharging = "🔋 %percentage%%";
-      };
-
-      "module/wlan" = {
-        type = "internal/network";
-        interface = "wlp0s20f3";
-        format-connected = " %essid";
-        format-disconnected = "睊 Disconnected";
-      };
-    };
-    script = ''polybar mainbar & '';
-  };
-
   xsession.windowManager.i3 = {
     enable = true;
 
@@ -220,5 +154,71 @@ in {
         }
       ];
     };
+  };
+
+  # POLYBAR CONFIG
+  services.polybar = {
+    enable = true;
+    config = {
+      "bar/mainbar" = {
+        monitor = "\${env:MONITOR:eDP-1}";
+        width = "100%";
+        height = "3%";
+        bottom = true;
+        font-0 = "FiraCode Nerd Font:size=16;2";
+        background = gruvboxDark.bg;
+        foreground = gruvboxDark.fg;
+        modules-left = "i3";
+        modules-center = "date";
+        modules-right = "cpu memory wlan battery";
+      };
+
+      "module/i3" = {
+        type = "internal/i3";
+        format = "<label-state>";
+        index-sort = true;
+        strip-wsnumbers = false;
+        pin-workspaces = true;
+        label-focused = "%name%";
+        label-unfocused = "%name%";
+        label-urgent = "%name%!";
+      };
+
+      "module/date" = {
+        type = "internal/date";
+        interval = "1.0";
+        date = "%Y-%m-%d%";
+        time = "%H:%M";
+        date-alt = "%A, %d %B %Y";
+        time-alt = "%H:%M:%S";
+      };
+
+      "module/cpu" = {
+        type = "internal/cpu";
+        format = " %percentage%%";
+      };
+
+      "module/memory" = {
+        type = "internal/memory";
+        format = "󰍛 %percentage_used%%";
+      };
+
+      "module/battery" = {
+        type = "internal/battery";
+        battery = "BAT0";
+        adapter = "AC";
+        full-at = 98;
+        format-charging = " %percentage% %";
+        format-discharging = "🔋 %percentage%%";
+      };
+
+      "module/wlan" = {
+        type = "internal/network";
+        interface = "wlp0s20f3";
+        format-connected = " %essid";
+        format-disconnected = "睊 Disconnected";
+      };
+    };
+    script = ''polybar mainbar & '';
   };
 }
