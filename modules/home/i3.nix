@@ -15,12 +15,12 @@ let
   };
   workspaces = {
     "1" = "1 ";        # Terminal
-    "2" = "2 ";        # VSCode
+    "2" = "2 ";        # VSCode
     "3" = "3 ";        # Firefox
-    "4" = "4 ";        # Xchat
+    "4" = "4 ";        # Hexchat
     "5" = "5 ";        # Steam
     "6" = "6 ";        # Terminals
-    "7" = "7 ";        # Chromium
+    "7" = "7 ";        # Chromium
     "8" = "8 ";        # File Manager
     "9" = "9 ";        # External Display
   };
