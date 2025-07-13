@@ -123,17 +123,42 @@ in {
 
       bars = [ ]; # Using polybar
 
+      workspaces = {
+        "1" = "1: ";        # Terminal
+        "2" = "2: ";        # VSCode
+        "3" = "3: ";        # Firefox
+        "4" = "4: ";        # Xchat
+        "5" = "5: ";        # Steam
+        "6" = "6: ";        # Terminals
+        "7" = "7: ";        # Firefox
+        "8" = "8: ";        # File Manager
+        "9" = "9: ";        # External Display
+      };
+
       keybindings = {
         # Workspaces
-        "${config.xsession.windowManager.i3.config.modifier}+1" = "workspace 1: $";        # Terminal
-        "${config.xsession.windowManager.i3.config.modifier}+2" = "workspace 2: ";        # VSCode
-        "${config.xsession.windowManager.i3.config.modifier}+3" = "workspace 3: ";        # Firefox
-        "${config.xsession.windowManager.i3.config.modifier}+4" = "workspace 4: ";        # Xchat
-        "${config.xsession.windowManager.i3.config.modifier}+5" = "workspace 5: ";        # Steam
-        "${config.xsession.windowManager.i3.config.modifier}+6" = "workspace 6: ";        # Terminals
-        "${config.xsession.windowManager.i3.config.modifier}+7" = "workspace 7: ";        # Firefox
-        "${config.xsession.windowManager.i3.config.modifier}+8" = "workspace 8: ";        # File Manager
-        "${config.xsession.windowManager.i3.config.modifier}+9" = "workspace 9: ";        # External Display
+        "$mod+1" = "workspace \"${workspaces."1"}\"";
+        "$mod+2" = "workspace \"${workspaces."2"}\"";
+        "$mod+3" = "workspace \"${workspaces."3"}\"";
+        "$mod+4" = "workspace \"${workspaces."4"}\"";
+        "$mod+5" = "workspace \"${workspaces."5"}\"";
+        "$mod+6" = "workspace \"${workspaces."6"}\"";
+        "$mod+7" = "workspace \"${workspaces."7"}\"";
+        "$mod+8" = "workspace \"${workspaces."8"}\"";
+        "$mod+9" = "workspace \"${workspaces."9"}\"";
+        "$mod+0" = "workspace \"${workspaces."10"}\"";
+
+        # Move containers to workspaces
+        "$mod+Shift+1" = "move container to workspace \"${workspaces."1"}\"";
+        "$mod+Shift+2" = "move container to workspace \"${workspaces."2"}\"";
+        "$mod+Shift+3" = "move container to workspace \"${workspaces."3"}\"";
+        "$mod+Shift+4" = "move container to workspace \"${workspaces."4"}\"";
+        "$mod+Shift+5" = "move container to workspace \"${workspaces."5"}\"";
+        "$mod+Shift+6" = "move container to workspace \"${workspaces."6"}\"";
+        "$mod+Shift+7" = "move container to workspace \"${workspaces."7"}\"";
+        "$mod+Shift+8" = "move container to workspace \"${workspaces."8"}\"";
+        "$mod+Shift+9" = "move container to workspace \"${workspaces."9"}\"";
+        "$mod+Shift+0" = "move container to workspace \"${workspaces."10"}\"";
 
         # Launch apps
         "${config.xsession.windowManager.i3.config.modifier}+Return" = "exec alacritty";
