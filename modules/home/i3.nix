@@ -249,12 +249,12 @@ in {
           always = false;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."2"}; exec alacritty; floating enable; move scratchpad; scratchpad show;"'';
+          command = ''i3-msg "workspace ${workspaces."2"}; exec alacritty; [class="^Alacritty$"] floating enable; [class="^Alacritty$"] move scratchpad;"'';
           always = false;
           notification = false;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."2"}; resize set 2000px 1200px; move position 280px 100px; move scratchpad"'';
+          command = ''i3-msg "workspace ${workspaces."2"}; [class="^Alacritty$"] scratchpad show; resize set 2000px 1200px; move position 280px 100px; move scratchpad"'';
           always = false;
           notification = false;
         }
