@@ -55,7 +55,7 @@ in {
         urgent = {
           border = gruvboxDark.red;
           background = gruvboxDark.red;
-          text = gruvboxDark.white;
+          text = gruvboxDark.fg;
           indicator = gruvboxDark.red;
           childBorder = gruvboxDark.red;
         };
