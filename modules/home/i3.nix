@@ -265,7 +265,7 @@ in {
           notification = false;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."1"}; exec alacritty'';
+          command = ''i3-msg "exec alacritty'';
           always = false;
           notification = false;
         }
