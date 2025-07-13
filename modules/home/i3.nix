@@ -20,7 +20,7 @@ let
     "4" = "4: ";        # Xchat
     "5" = "5: ";        # Steam
     "6" = "6: ";        # Terminals
-    "7" = "7: ";        # Firefox
+    "7" = "7: ";        # Chromium
     "8" = "8: ";        # File Manager
     "9" = "9: ";        # External Display
   };
@@ -32,13 +32,24 @@ in {
       "bar/mainbar" = {
         monitor = "\${env:MONITOR:eDP-1}";
         width = "100%";
-        height = 30;
-        font-0 = "FiraCode Nerd Font:size=11;2";
+        height = "3%";
+        font-0 = "FiraCode Nerd Font:size=16;2";
         background = gruvboxDark.bg;
         foreground = gruvboxDark.fg;
         modules-left = "workspaces";
         modules-center = "date";
         modules-right = "cpu memory wlan battery";
+      };
+
+      "module/i3" = {
+        type = "internal/i3";
+        format = "<label-state>";
+        index-sort = true;
+        strip-wsnumbers = false;
+        pin-workspaces = true;
+        label-focused = "%name%";
+        label-unfocused = "%name%";
+        label-urgent = "%name%!";
       };
 
       "module/date" = {
@@ -186,10 +197,10 @@ in {
       assigns = {
         "${workspaces."1"}" = [ { class = "^Alacritty$"; } { class = "^Xterm$"; } ];
         "${workspaces."2"}" = [ { class = "^Code$"; } ];
-        "${workspaces."3"}" = [ { class = "^Firefox$"; } { class = "^Chromium$"; } ];
+        "${workspaces."3"}" = [ { class = "^Firefox$"; } ];
         "${workspaces."4"}" = [ { class = "^Xchat$"; } ];
         "${workspaces."5"}" = [ { class = "^Steam$"; } ];
-        "${workspaces."7"}" = [ { class = "^Firefox$"; } { class = "^Chromium$"; } ];
+        "${workspaces."7"}" = [ { class = "^Chromium$"; } ];
         "${workspaces."8"}" = [ { class = "^Thunar$"; } ];
       };
 
