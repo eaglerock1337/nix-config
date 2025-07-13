@@ -14,7 +14,6 @@ in {
       ms-python.python
       esbenp.prettier-vscode
       dbaeumer.vscode-eslint
-      ms-vscode.vscode-typescript-next
       # Add more as needed
     ];
 
