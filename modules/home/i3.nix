@@ -264,29 +264,24 @@ in {
           notification = false;
         }
         {
-          command = "alacritty --class float;
+          command = "alacritty --class float";
           always = true;
           notification = false;
         }
         {
-          command = ''i3-msg '[instance="float"] move scratchpad, scratchpad show, move position 69px 69px, move scratchpad''';
-          always=false;
+          command = ''i3-msg "[instance=\\"float\\"] floating enable, move scratchpad, scratchpad show, move position 69px 69px, move scratchpad"'';
+          always = false;
           notification = false;
         }
-        # TODO: Enable later
-        # {
-        #   command = "xrandr --output HDMI-1 --mode 1920x1080 --right-of eDP-1";
-        # }
-      ];
 
-      # window.commands = [
-      #   {
-      #     criteria = { instance = "float"; };
-      #     command = "floating enable, move scratchpad, scratchpad show, move position 69px 69px, move scratchpad";
-      #   }
-      # ];
+      ];
     };
   };
+
+  # TODO: Enable this command later
+  # {
+  #   command = "xrandr --output HDMI-1 --mode 1920x1080 --right-of eDP-1";
+  # }
 
   # POLYBAR CONFIG
   services.polybar = {
