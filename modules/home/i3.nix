@@ -247,7 +247,7 @@ in {
         }
         {
           command = ''i3-msg "workspace 1; append_layout ${./layouts/workspace-1.json}"'';
-          always = true;
+          always = false;
         }
         {
           command = ''i3-msg "workspace 1; exec alacritty --class Terminal"'';
@@ -265,7 +265,7 @@ in {
           notification = false;
         }
         {
-          command = "alacritty --class float";
+          command = ''i3-msg "workspace 1; exec alacritty --class float"'';
           always = true;
           notification = false;
         }
