@@ -10,6 +10,7 @@
     ../modules/home/ui.nix
     ../modules/home/i3.nix
     ../modules/home/dev.nix
+    ../modules/home/vscode.nix
   ];
 
   # Let Home Manager install and manage itself.

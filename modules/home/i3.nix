@@ -125,15 +125,15 @@ in {
 
       keybindings = {
         # Workspaces
-        "${config.xsession.windowManager.i3.config.modifier}+1" = "1: ";        # Terminal
-        "${config.xsession.windowManager.i3.config.modifier}+2" = "2: ";        # VSCode
-        "${config.xsession.windowManager.i3.config.modifier}+3" = "3: ";        # Firefox
-        "${config.xsession.windowManager.i3.config.modifier}+4" = "4: ";        # Xchat
-        "${config.xsession.windowManager.i3.config.modifier}+5" = "5: ";        # Steam
-        "${config.xsession.windowManager.i3.config.modifier}+6" = "6: ";        # Terminals
-        "${config.xsession.windowManager.i3.config.modifier}+7" = "7: ";        # Firefox
-        "${config.xsession.windowManager.i3.config.modifier}+8" = "8: ";        # File Manager
-        "${config.xsession.windowManager.i3.config.modifier}+9" = "9: ";        # External Display
+        "${config.xsession.windowManager.i3.config.modifier}+1" = "workspace 1: $";        # Terminal
+        "${config.xsession.windowManager.i3.config.modifier}+2" = "workspace 2: ";        # VSCode
+        "${config.xsession.windowManager.i3.config.modifier}+3" = "workspace 3: ";        # Firefox
+        "${config.xsession.windowManager.i3.config.modifier}+4" = "workspace 4: ";        # Xchat
+        "${config.xsession.windowManager.i3.config.modifier}+5" = "workspace 5: ";        # Steam
+        "${config.xsession.windowManager.i3.config.modifier}+6" = "workspace 6: ";        # Terminals
+        "${config.xsession.windowManager.i3.config.modifier}+7" = "workspace 7: ";        # Firefox
+        "${config.xsession.windowManager.i3.config.modifier}+8" = "workspace 8: ";        # File Manager
+        "${config.xsession.windowManager.i3.config.modifier}+9" = "workspace 9: ";        # External Display
 
         # Launch apps
         "${config.xsession.windowManager.i3.config.modifier}+Return" = "exec alacritty";
