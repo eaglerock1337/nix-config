@@ -178,8 +178,9 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+minus" = "move scratchpad";
         "${config.xsession.windowManager.i3.config.modifier}+minus" = "scratchpad show";
 
-        # Toggle workspace between monitors
-        "${config.xsession.windowManager.i3.config.modifier}+x" = "move workspace to output right";
+        # TODO: Enable later
+        # # Toggle workspace between monitors
+        # "${config.xsession.windowManager.i3.config.modifier}+x" = "move workspace to output right"; 
 
         # Switch between tty sessions
         # "${config.xsession.windowManager.i3.config.modifier}+Shift+F1" = "exec --no-startup-id chvt 1";
@@ -219,6 +220,18 @@ in {
         "${workspaces."8"}" = [ { class = "^Thunar$"; } ];
       };
 
+      # TODO: Enable later
+      # workspaceOutputAssign = [
+      #   {
+      #     workspace = "9";
+      #     output = "HDMI-1";
+      #   }
+      #   {
+      #     workspace = "10";
+      #     output = "HDMI-1";
+      #   }
+      # ];
+
       startup = [
         {
           command = "systemctl --user restart polybar.service";
@@ -236,6 +249,10 @@ in {
           command = "alacritty --name scratchpad --title scratchpad --class scratchpad";
           always = true;
           notification = false;
+        }
+        {
+          command = ''i3-msg "append_layout ${./layouts/workspace-1.json}"'';
+          always = true;
         }
       ];
 
