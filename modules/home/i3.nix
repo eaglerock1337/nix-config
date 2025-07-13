@@ -250,21 +250,21 @@ in {
           always = true;
         }
         {
-          command = "alacritty -name terminal-1";
+          command = "alacritty --class float,Terminal -e bash";
           always = true;
           notification = false;
         }
         {
-          command = "alacritty -name terminal-2";
+          command = "alacritty --class float,Terminal -e bash";
           always = true;
           notification = false;
         }        {
-          command = "alacritty -name terminal-3";
+          command = "alacritty --class float,Terminal -e bash -c echo 'system info command'";
           always = true;
           notification = false;
         }
         {
-          command = "alacritty name scratchpad";
+          command = "alacritty";
           always = true;
           notification = false;
         }
@@ -277,7 +277,8 @@ in {
       window.commands = [
         {
           criteria = { instance = "stratchpad"; };
-          command = "floating enable, move scratchpad, scratchpad show, move position 69px 69px, move scratchpad";
+          command = "floating enable";
+          # command = "floating enable, move scratchpad, scratchpad show, move position 69px 69px, move scratchpad";
         }
       ];
     };
