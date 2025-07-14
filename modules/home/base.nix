@@ -66,7 +66,7 @@
     tldr            # Simplified man pages
   ];
 
-  environment.variables = {
+  home.sessionVariables = {
     EDITOR = "nvim";  # Set default editor
     VISUAL = "nvim";  # Set default visual editor
     PAGER = "less";   # Set default pager
