@@ -19,6 +19,8 @@ in {
     brightnessctl  # brightness (optional)
     i3lock         # lock screen
     alacritty      # terminal
+    gruvbox-gtk-theme
+    lxappearance
   ];
 
   # ROFI Config
