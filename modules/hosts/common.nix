@@ -72,6 +72,7 @@
     iotop           # I/O monitor
     dool            # Versatile resource monitor
     ncdu            # TUI disk usage explorer
+    efibootmgr      # EFI boot manager
 
     # --- Networking ---
     curl
