@@ -8,7 +8,7 @@ in {
     enable = true;
     efiSupport = true;
     gfxmodeEfi = "auto";
-    device = "nvme0n1";
+    device = "/dev/nvme0n1";
     theme = "${grubThemePath}/theme.txt";
   };
 
