@@ -83,7 +83,7 @@
       colorscheme gruvbox
     '';
 
-    plugins = with vimPlugins; [
+    plugins = with pkgs.vimPlugins; [
       gruvbox
       vim-airline
       vim-airline-themes
