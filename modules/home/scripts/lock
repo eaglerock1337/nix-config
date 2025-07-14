@@ -16,6 +16,7 @@ i3lock-color \
   --layout-color=ebdbb2FF \
   --ring-width=4 \
   --radius=110 \
-  --ind-clock \
+  --time-pos="x+110:h-70" \
+  --date-pos="x+110:h-40" \
   --time-str="%H:%M" \
   --date-str="%A, %d %B"
