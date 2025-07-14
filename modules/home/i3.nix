@@ -349,12 +349,14 @@ in {
 
       "module/cpu" = {
         type = "internal/cpu";
-        format = " %percentage% %";
+        format = " <label>";
+        label = "CPU %percentage%%";
       };
 
       "module/memory" = {
         type = "internal/memory";
-        format = "󰍛 %percentage_used% %";
+        format = "󰍛 <label>";
+        label = "RAM %percentage_used%%";
       };
 
       "module/battery" = {
@@ -362,14 +364,28 @@ in {
         battery = "BAT0";
         adapter = "AC";
         full-at = 98;
-        format-charging = " %percentage% %";
-        format-discharging = "🔋 %percentage% %";
+        format-charging = " <animation-charging> <label-charging>";
+        label-charging = "%percentage%% +%consumption%W";
+        animation-charging-0 = "";
+        animation-charging-1 = "";
+        animation-charging-2 = "";
+        animation-charging-3 = "";
+        animation-charging-4 = "";
+        animation-charging-framerate = 500;
+        format-discharging = "🔋 <ramp-capacity> <label-discharging>";
+        label-discharging = "%percentage%% -%consumption%W";
+        ramp-capacity-0 = "";
+        ramp-capacity-1 = "";
+        ramp-capacity-2 = "";
+        ramp-capacity-3 = "";
+        ramp-capacity-4 = "";
       };
 
       "module/wlan" = {
         type = "internal/network";
         interface = "wlp0s20f3";
-        format-connected = " %essid%";
+        format-connected = " <label-connected>";
+        label-connected = "%essid%";
         format-disconnected = "睊 Disconnected";
       };
     };
