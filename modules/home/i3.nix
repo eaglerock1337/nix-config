@@ -23,7 +23,7 @@ let
     "7" = "7 ";        # Chromium
     "8" = "8 ";        # File Manager
     "9" = "9 ";        # External Display
-    "10" = "10 ";        # External Display
+    "10" = "10 ";      # External Display
   };
   wallpaper = "~/git/nix-config/assets/wallpaper-gibson.png";
 in {
@@ -118,7 +118,7 @@ in {
 
         # Change container layout
         "${config.xsession.windowManager.i3.config.modifier}+s" = "layout stacking";
-        "${config.xsession.windowManager.i3.config.modifier}+w" = "layout tab";
+        "${config.xsession.windowManager.i3.config.modifier}+w" = "layout tabbed";
         "${config.xsession.windowManager.i3.config.modifier}+e" = "layout toggle split";
 
         # Toggle floating mode
