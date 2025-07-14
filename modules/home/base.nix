@@ -91,6 +91,7 @@
   };
 
   home.file = {
+    ".vimrc".source = ./vimrc;
     ".config/nvim/colors/gruvbox.vim".source = ./themes/vim/gruvbox.vim;
     ".config/nvim/init.vim".source = ./themes/vim/init.vim;
     ".config/nvim/autoload/airline/themes/gruvbox_airline.vim".source = ./themes/airline/gruvbox.vim;
