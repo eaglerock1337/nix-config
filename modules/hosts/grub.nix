@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  grubThemePath = "/etc/grub/themes/gruvbox";
+  grubThemePath = "./grub";
 in {
   boot.loader.systemd-boot.enable = false;
   boot.loader.grub = {
@@ -13,6 +13,4 @@ in {
   };
 
   boot.loader.efi.canTouchEfiVariables = true;
-
-  environment.etc."grub/themes/gruvbox".source = ./grub;
 }
