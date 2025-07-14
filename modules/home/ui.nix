@@ -32,7 +32,7 @@ in {
     };
 
     font = {
-      name = "FiraCode Nerd Font 18";
+      name = "FiraCode Nerd Font 24";
     };
 
     iconTheme = {
