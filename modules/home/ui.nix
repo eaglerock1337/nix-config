@@ -23,6 +23,26 @@ in {
     lxappearance
   ];
 
+  gtk = {
+    enable = true;
+
+    theme = {
+      name = "Gruvbox-dark";
+      package = pkgs.gruvbox-gtk-theme;
+    };
+
+    font = {
+      name = "FiraCode Nerd Font 14";
+    };
+
+    textScalingFactor = 1.25;
+
+    iconTheme = {
+      name = "Papirus-Dark";
+      package = pkgs.papirus-icon-theme;
+    };
+  };
+
   # ROFI Config
   programs.rofi = {
     enable = true;
