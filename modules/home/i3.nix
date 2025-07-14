@@ -312,8 +312,7 @@ in {
         background = gruvboxDark.bg;
         foreground = gruvboxDark.fg;
         modules-left = "xworkspaces";
-        modules-center = "date";
-        modules-right = "cpu memory wlan battery";
+        modules-right = "cpu memory wlan battery date";
       };
 
       "module/xworkspaces" = {
@@ -344,18 +343,21 @@ in {
         date-alt = "%A, %B %d %Y";
         time-alt = "%H:%M:%S";
         format = " <label>";
+        format-padding = 1;
         label = "%date% %time%";
       };
 
       "module/cpu" = {
         type = "internal/cpu";
-        format = " <label>";
+        format = " <label>";
+        format-padding = 1;
         label = "CPU %percentage%%";
       };
 
       "module/memory" = {
         type = "internal/memory";
-        format = "󰍛 <label>";
+        format = " <label>";
+        format-padding = 1;
         label = "RAM %percentage_used%%";
       };
 
@@ -364,6 +366,7 @@ in {
         battery = "BAT0";
         adapter = "AC";
         full-at = 98;
+        format-padding = 1;
         format-charging = " <animation-charging> <label-charging>";
         label-charging = "%percentage%% +%consumption%W";
         animation-charging-0 = "";
@@ -387,6 +390,7 @@ in {
         format-connected = " <label-connected>";
         label-connected = "%essid%";
         format-disconnected = "睊 Disconnected";
+        format-padding = 1;
       };
     };
     script = "polybar mainbar &";
