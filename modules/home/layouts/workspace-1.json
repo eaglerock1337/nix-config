@@ -11,7 +11,7 @@
     },
     "marks": [],
     "name": "eaglerock@silicon: ~",
-    "percent": 0.7,
+    "percent": 0.65,
     "swallows": [
        {
          "class": "Terminal",
@@ -27,7 +27,7 @@
     "floating": "auto_off",
     "layout": "splitv",
     "marks": [],
-    "percent": 0.3,
+    "percent": 0.35,
     "type": "con",
     "nodes": [
         {
