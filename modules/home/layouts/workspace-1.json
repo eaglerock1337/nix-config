@@ -5,7 +5,7 @@
     "floating": "auto_off",
     "geometry": {
        "height": 600,
-       "width": 800,
+       "width": 1000,
        "x": 0,
        "y": 0
     },
@@ -36,7 +36,7 @@
             "floating": "auto_off",
             "geometry": {
                "height": 600,
-               "width": 800,
+               "width": 600,
                "x": 0,
                "y": 0
             },
@@ -57,7 +57,7 @@
             "floating": "auto_off",
             "geometry": {
                "height": 600,
-               "width": 800,
+               "width": 600,
                "x": 0,
                "y": 0
             },
