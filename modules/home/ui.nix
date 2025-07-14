@@ -32,10 +32,8 @@ in {
     };
 
     font = {
-      name = "FiraCode Nerd Font 14";
+      name = "FiraCode Nerd Font 18";
     };
-
-    textScalingFactor = 1.25;
 
     iconTheme = {
       name = "Papirus-Dark";
