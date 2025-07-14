@@ -19,27 +19,28 @@ in {
     brightnessctl  # brightness (optional)
     i3lock         # lock screen
     alacritty      # terminal
+    fira
     gruvbox-gtk-theme
     lxappearance
   ];
 
-  gtk = {
-    enable = true;
+  # gtk = {
+  #   enable = true;
 
-    theme = {
-      name = "Gruvbox-dark";
-      package = pkgs.gruvbox-gtk-theme;
-    };
+  #   theme = {
+  #     name = "Gruvbox-dark";
+  #     package = pkgs.gruvbox-gtk-theme;
+  #   };
 
-    font = {
-      name = "FiraCode Nerd Font 24";
-    };
+  #   font = {
+  #     name = "Fira Sans 16";
+  #   };
 
-    iconTheme = {
-      name = "Papirus-Dark";
-      package = pkgs.papirus-icon-theme;
-    };
-  };
+  #   iconTheme = {
+  #     name = "Papirus-Dark";
+  #     package = pkgs.papirus-icon-theme;
+  #   };
+  # };
 
   # ROFI Config
   programs.rofi = {
