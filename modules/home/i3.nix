@@ -312,7 +312,12 @@ in {
         background = gruvboxDark.bg;
         foreground = gruvboxDark.fg;
         modules-left = "xworkspaces";
-        modules-right = "cpu memory wlan battery date";
+        modules-right = "cpu separator memory separator wlan separator battery separator date";
+      };
+
+      "module/separator" = {
+        type = "custom/text";
+        content = " << ";
       };
 
       "module/xworkspaces" = {
