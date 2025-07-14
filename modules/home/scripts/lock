@@ -15,7 +15,7 @@ i3lock-color \
   --date-color=ebdbb2FF \
   --layout-color=ebdbb2FF \
   --ring-width=8 \
-  --radius=200 \
+  --radius=110 \
   --time-pos="x+110:h-70" \
   --date-pos="x+110:h-40" \
   --time-str="%H:%M" \
