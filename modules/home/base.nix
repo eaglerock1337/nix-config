@@ -30,7 +30,7 @@
     lsof            # List open files
     strace          # Syscall tracing
     iotop           # I/O monitor
-    dstat           # Versatile resource monitor
+    dool            # Versatile resource monitor
     ncdu            # TUI disk usage explorer
 
     # --- Networking ---
