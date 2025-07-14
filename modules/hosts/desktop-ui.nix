@@ -8,6 +8,8 @@
   imports = [ ];
 
   environment.systemPackages = with pkgs; [
+    i3
+    i3status
     feh
     rofi
     picom
@@ -70,12 +72,4 @@
 
   # Install firefox.
   programs.firefox.enable = true;
-
-  # List packages installed in system profile. To search, run:
-  # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    i3
-    i3status
-  ];
-
 }
