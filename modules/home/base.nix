@@ -71,6 +71,7 @@
   programs.neovim = {
     enable = true;
     defaultEditor = true;
+    vimAlias = true;
 
     extraConfig = ''
       syntax enable
