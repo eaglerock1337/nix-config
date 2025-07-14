@@ -19,7 +19,6 @@
     sd              # Intuitive sed replacement
 
     # --- Editors & Viewers ---
-    neovim          # Modern Vim
     micro           # Friendly terminal editor
     less            # Pager
     glow            # Markdown previewer
@@ -56,9 +55,6 @@
     tmux
     entr            # Run commands on file changes
     delta           # Beautiful diff viewer
-    direnv          # Auto-env loading
-    git
-    gh              # GitHub CLI
     unzip
     zip
     file

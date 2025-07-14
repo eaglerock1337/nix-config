@@ -7,8 +7,6 @@ in {
     feh
     rofi
     picom
-    polybar
-    alacritty
     xterm
     firefox
     hexchat

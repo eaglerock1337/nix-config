@@ -34,8 +34,6 @@ in {
 
     # --- Misc Dev Tools ---
     direnv
-    jq
-    git
     gh  # GitHub CLI
   ];
 
