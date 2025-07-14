@@ -44,10 +44,63 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-    wget
+    # --- Shell & File Utilities ---
+    bat             # Better cat with syntax highlighting
+    eza             # Better ls
+    fd              # Fast alternative to find
+    ripgrep         # Fast grep (used by many fuzzy finders)
+    fzf             # Fuzzy finder
+    du-dust         # Better du
+    duf             # Disk usage/free visualizer
+    tree            # Directory tree view
+    zoxide          # Smarter cd
+    jq              # JSON processor
+    yq              # YAML processor
+    sd              # Intuitive sed replacement
+    git             # Version control
+
+    # --- Editors & Viewers ---
+    micro           # Friendly terminal editor
+    less            # Pager
+    glow            # Markdown previewer
+
+    # --- Process & System Tools ---
+    htop            # System monitor
+    btop            # Fancy resource monitor
+    lsof            # List open files
+    strace          # Syscall tracing
+    iotop           # I/O monitor
+    dool            # Versatile resource monitor
+    ncdu            # TUI disk usage explorer
+
+    # --- Networking ---
     curl
-    git
+    wget
+    httpie          # Human-friendly curl
+    dig
+    iperf3
+    mtr             # Traceroute+ping
+    nmap
+    socat
+    rsync
+    openssh
+
+    # --- Security & Secrets ---
+    gnupg
+    gnutls
+    age
+    pinentry
+    pass            # Standard Unix password manager
+
+    # --- Productivity / Enhancements ---
+    tmux
+    entr            # Run commands on file changes
+    delta           # Beautiful diff viewer
+    unzip
+    zip
+    file
+    man-db
+    tldr            # Simplified man pages
   ];
 
   # Enable the OpenSSH daemon.

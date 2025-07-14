@@ -3,28 +3,6 @@
 let
   nerdFont = pkgs.nerdfonts.override { fonts = [ "FiraCode" ]; };
 in {
-  home.packages = with pkgs; [
-    feh
-    rofi
-    picom
-    xterm
-    firefox
-    hexchat
-    xfce.thunar
-    playerctl
-    nerd-fonts.fira-code
-    nerd-fonts.droid-sans-mono
-    themix-gui
-    pamixer        # volume control
-    brightnessctl  # brightness (optional)
-    i3lock-color   # lock screen
-    imagemagick    # screen blur
-    alacritty      # terminal
-    fira
-    gruvbox-gtk-theme
-    lxappearance
-  ];
-
   # TODO: Enable GTK theming
   # gtk = {
   #   enable = true;

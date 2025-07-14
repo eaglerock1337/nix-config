@@ -7,6 +7,28 @@
 {
   imports = [ ];
 
+  environment.systemPackages = with pkgs; [
+    feh
+    rofi
+    picom
+    xterm
+    firefox
+    hexchat
+    xfce.thunar
+    playerctl
+    nerd-fonts.fira-code
+    nerd-fonts.droid-sans-mono
+    themix-gui
+    pamixer        # volume control
+    brightnessctl  # brightness (optional)
+    i3lock-color   # lock screenF
+    imagemagick    # screen blur
+    alacritty      # terminal
+    fira
+    gruvbox-gtk-theme
+    lxappearance
+  ];
+
   # Enable networking
   networking.networkmanager.enable = true;
 

@@ -34,7 +34,7 @@ in {
 
     # --- Misc Dev Tools ---
     direnv
-    gh  # GitHub CLI
+    gh      # GitHub CLI
   ];
 
   # Optional: configure environment variables

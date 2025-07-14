@@ -32,3 +32,4 @@ sudo nixos-rebuild switch --flake ~/git/nix-config#gibson  # substitute hostname
 - Corky setup
 - Get TTY sessions working
 - Clone repos and start building code environments
+- Set up GTK config as home-manager file
