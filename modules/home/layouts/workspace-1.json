@@ -5,13 +5,13 @@
     "floating": "auto_off",
     "geometry": {
        "height": 600,
-       "width": 1000,
+       "width": 800,
        "x": 0,
        "y": 0
     },
     "marks": [],
     "name": "eaglerock@silicon: ~",
-    "percent": 0.6,
+    "percent": 0.7,
     "swallows": [
        {
          "class": "Terminal",
@@ -27,7 +27,7 @@
     "floating": "auto_off",
     "layout": "splitv",
     "marks": [],
-    "percent": 0.4,
+    "percent": 0.3,
     "type": "con",
     "nodes": [
         {
@@ -36,7 +36,7 @@
             "floating": "auto_off",
             "geometry": {
                "height": 600,
-               "width": 600,
+               "width": 800,
                "x": 0,
                "y": 0
             },
@@ -57,7 +57,7 @@
             "floating": "auto_off",
             "geometry": {
                "height": 600,
-               "width": 600,
+               "width": 800,
                "x": 0,
                "y": 0
             },
