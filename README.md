@@ -22,3 +22,13 @@ sudo nixos-rebuild switch --flake ~/git/nix-config#gibson  # substitute hostname
 
 - Set theme to Gruvbox-Dark
 - Set font to Fira Sans Regular 20
+
+## things to do
+
+- GRUB theme
+- Choose desktop manager (lightdm?)
+- Login screen rework
+- Polybar rework
+- Corky setup
+- Get TTY sessions working
+- Clone repos and start building code environments

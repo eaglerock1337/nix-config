@@ -25,6 +25,7 @@ in {
     lxappearance
   ];
 
+  # TODO: Enable GTK theming
   # gtk = {
   #   enable = true;
 
