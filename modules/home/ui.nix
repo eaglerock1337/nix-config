@@ -3,6 +3,26 @@
 let
   nerdFont = pkgs.nerdfonts.override { fonts = [ "FiraCode" ]; };
 in {
+  home.packages = with pkgs; [
+    feh
+    rofi
+    picom
+    polybar
+    alacritty
+    xterm
+    firefox
+    hexchat
+    xfce.thunar
+    playerctl
+    nerd-fonts.fira-code
+    nerd-fonts.droid-sans-mono
+    themix-gui
+    pamixer        # volume control
+    brightnessctl  # brightness (optional)
+    i3lock         # lock screen
+    alacritty      # terminal
+  ];
+
   # ROFI Config
   programs.rofi = {
     enable = true;
