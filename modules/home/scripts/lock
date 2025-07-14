@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+# Lock screen with Gruvbox colors
+i3lock-color \
+  -i ~/git/nix-config/assets/wallpaper-gibson-blur.png \
+  --inside-color=1d2021FF \
+  --ring-color=458588FF \
+  --line-color=00000000 \
+  --separator-color=00000000 \
+  --verif-color=98971aFF \
+  --wrong-color=cc241dFF \
+  --keyhl-color=d79921FF \
+  --bshl-color=b16286FF \
+  --time-color=ebdbb2FF \
+  --date-color=ebdbb2FF \
+  --layout-color=ebdbb2FF \
+  --ring-width=4 \
+  --radius=110 \
+  --ind-clock \
+  --time-str="%H:%M" \
+  --date-str="%A, %d %B"

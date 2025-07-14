@@ -17,7 +17,8 @@ in {
     themix-gui
     pamixer        # volume control
     brightnessctl  # brightness (optional)
-    i3lock         # lock screen
+    i3lock-color   # lock screen
+    imagemagick    # screen blur
     alacritty      # terminal
     fira
     gruvbox-gtk-theme
@@ -71,6 +72,13 @@ in {
       window = {
         opacity = 0.8;
       };
+    };
+  };
+
+  home.file = {
+    ".local/bin/lock" = {
+      source = ./scripts/lock;
+      executable = true;
     };
   };
 }

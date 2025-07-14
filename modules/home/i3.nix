@@ -163,7 +163,7 @@ in {
         # Custom Stuff
 
         # Lock screen
-        "${config.xsession.windowManager.i3.config.modifier}+Shift+x" = "exec i3lock -n -i ${wallpaper}";
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+x" = "exec i3lock ~/.local/bin/lock";
 
         # Volume keys
         "XF86AudioRaiseVolume" = "exec --no-startup-id pamixer -i 5";
