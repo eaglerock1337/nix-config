@@ -3,9 +3,9 @@
 let
   grubAssets = "./grub";
   gruvboxTheme = pkgs.runCommand "grub-theme" {
-    themeTxt = /. + "${grubAssets}/theme.txt";
-    background = /. + "${grubAssets}/grub-wallpaper.png";
-    font = /. + "${grubAssets}/FiraSans-Regular.pf2";
+    themeTxt = ./. + "${grubAssets}/theme.txt";
+    background = ./. + "${grubAssets}/grub-wallpaper.png";
+    font = ./. + "${grubAssets}/FiraSans-Regular.pf2";
   } ''
     mkdir -p "$out"
     cp "$themeTxt" "$out/theme.txt"
