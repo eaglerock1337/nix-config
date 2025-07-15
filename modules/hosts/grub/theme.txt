@@ -1,12 +1,13 @@
 title-text: "NixOS"
-desktop-color: "#1d2021"
-terminal-color: "#ebdbb2"
-border-color: "#d79921"
-selected-bg-color: "#458588"
-selected-fg-color: "#ebdbb2"
-message-color: "#ebdbb2"
-time-color: "#ebdbb2"
-menu-color: "#ebdbb2"
-highlight-color: "#d79921"
-font: "converted-font.pf2"
-desktop_image: "background.png"
+title-font: "FiraSans-Regular.pf2"
+desktop_image: "grub-wallpaper.png"
+
++ boot_menu {
+  left = 20%
+  top = 20%
+  width = 60%
+  height = 60%
+  item_font = "FiraCode-Regular.pf2"
+  item_color = "#d79921"
+  selected_item_color = "#ebdbb2"
+}
