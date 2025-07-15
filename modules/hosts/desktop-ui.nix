@@ -40,10 +40,10 @@
       lightdm = {
         enable = true;
         background = "../../assets/login.png";
-        greeter = {
+        greeters.gtk = {
           enable = true;
-          package = pkgs.lightdm-gtk-greeter;
           theme = "gruvbox-dark";
+          package = pkgs.gruvbox-gtk-theme;
         };
       };
       gdm.enable = false;
