@@ -11,9 +11,10 @@
 
   programs.bash = {
     shellAliases = {
-      ll = "exa -l --group-directories-first";    # Use eza for better ls
-      la = "exa -la --group-directories-first";   # List all files with eza
-      grep = "rg";                                # Use ripgrep as default grep
+      ll = "exa -l --group-directories-first";          # Use eza for better ls
+      la = "exa -la --group-directories-first";         # List all files with eza
+      grep = "rg";                                      # Use ripgrep as default grep
+      gpnr = "cd ~/git/nix-config && git pull && nr";   # Git pull and nixos-rebuild switch
     };
   };
 
