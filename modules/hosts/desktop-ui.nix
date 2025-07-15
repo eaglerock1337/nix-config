@@ -40,16 +40,12 @@
       lightdm = {
         enable = true;
         background = ./. + "/../../assets/login.png";
-        greeters.gtk = {
+        greeters.slick = {
           enable = true;
           theme = {
             name = "Gruvbox-Dark";
             package = pkgs.gruvbox-gtk-theme;
           };
-          extraConfig = ''
-            position=50% 25%
-            font-name=Fira Sans 24
-          '';
         };
       };
       gdm.enable = false;
