@@ -43,7 +43,7 @@
         greeters.gtk = {
           enable = true;
           theme = {
-            name = "gruvbox-dark";
+            name = "Gruvbox-Dark";
             package = pkgs.gruvbox-gtk-theme;
           };
         };
