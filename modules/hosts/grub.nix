@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  grubAssets = "../../assets/grub";
+  grubAssets = "./grub";
   gruvboxTheme = pkgs.runCommand "grub-theme" {
     themeTxt = "${grubAssets}/theme.txt";
     background = "${grubAssets}/grub-wallpaper.png";
