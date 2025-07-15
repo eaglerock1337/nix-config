@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  dir = builtins.getEnv "PWD";
+  dir = builtins.toString ./.;
   grubTheme = "${dir}/grub/theme.txt";
 in {
   boot.loader.systemd-boot.enable = false;
