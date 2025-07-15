@@ -242,7 +242,7 @@ in {
 
       startup = [
         {
-          command = "xrandr --output eDP-1 --scale 0.66x0.66 --dpi 144";
+          command = "xrandr --output eDP-1 --scale 0.8x0.8 --dpi 144";
         }
         {
           command = "systemctl --user restart polybar.service";
