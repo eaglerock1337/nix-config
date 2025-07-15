@@ -9,10 +9,11 @@ in {
     gfxmodeEfi = "auto";
     device = "nodev";
     splashImage = "${themeSource}/grub-wallpaper.png";
-    font = "${themeSource}/FiraSans-Regular.pf2";
+    font = "${themeSource}/FiraCode-Regular.pf2";
     theme = "${themeSource}/theme.txt";
   };
 
   boot.loader.systemd-boot.enable = false;
+  boot.loader.efi.espMountPoint = "/boot";
   boot.loader.efi.canTouchEfiVariables = true;
 }
