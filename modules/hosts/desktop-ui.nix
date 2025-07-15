@@ -17,6 +17,10 @@
     xterm
     xfce.thunar
 
+    # utilities
+    scrot
+    flameshot
+
     # Multimedia
     vlc
     hexchat
