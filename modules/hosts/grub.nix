@@ -1,7 +1,8 @@
 { config, lib, pkgs, ... }:
 
 let
-  grubTheme = "./grub/theme.txt";
+  dir = builtins.dirOf (toString __file__);
+  grubTheme = "${dir}/grub/theme.txt";
 in {
   boot.loader.systemd-boot.enable = false;
   boot.loader.grub = {
