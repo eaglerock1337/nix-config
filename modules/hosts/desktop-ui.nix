@@ -44,7 +44,6 @@
           enable = true;
           package = pkgs.lightdm-gtk-greeter;
           theme = "gruvbox-dark";
-          fontName = "FiraCode Nerd Font 16";
         };
       };
       gdm.enable = false;
