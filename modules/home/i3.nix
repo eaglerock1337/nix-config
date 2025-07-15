@@ -304,7 +304,7 @@ in {
             instance = "^Scratchpad$";
             class = "^Scratchpad$";
           };
-          command = "move scratchpad; scratchpad show; resize set 2000px 1200px; move position 280px 100px; scratchpad show";
+          command = "move scratchpad; scratchpad show; resize set 1600px 960px; move position 224px 80px; scratchpad show";
         }
       ];
     };
