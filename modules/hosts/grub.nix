@@ -1,8 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  # dir = builtins.toString ./.;
-  # grubTheme = "${dir}/grub/theme.txt";
+  grubThemePath = ./grub;
   gruvboxTheme = pkgs.runCommand "grub-theme" {} ''
     mkdir -p $out
     cp -r ${grubThemePath}/* $out/
