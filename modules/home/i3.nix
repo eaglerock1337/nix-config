@@ -285,7 +285,7 @@ in {
           notification = false;
         }
         {
-          command = ''i3-msg "exec alacritty -e sh -c 'neofetch; exec $SHELL' --class Scratchpad"'';
+          command = ''i3-msg "exec alacritty --class Scratchpad --command sh -c 'neofetch; exec $SHELL'"'';
           always = false;
           notification = false;
         }
