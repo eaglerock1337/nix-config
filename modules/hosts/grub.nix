@@ -9,7 +9,7 @@ in {
     enable = true;
     efiSupport = true;
     gfxmodeEfi = "auto";
-    device = "/dev/nvme0n1";
+    device = "nodev";
     theme = builtins.toString grubTheme;
   };
 
