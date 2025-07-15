@@ -17,17 +17,30 @@ let
     # Optional metadata
     meta.description = "Gruvbox‐style GRUB theme";
   };
-in {
-  environment.systemPackages = [
-    pkgs.nixos-grub2-theme
-  ];
 
+  hyperFluentSrc = pkgs.fetchFromGitHub {
+    owner  = "Coopydood";
+    repo   = "HyperFluent-GRUB-Theme";
+    rev    = "main";
+    sha256 = "16ai3nbscxq7gymadllp4gckaxy7w1vpp022b51zykl0ism1kalp";
+  };
+
+  hyperFluentTheme = pkgs.stdenv.mkDerivation {
+    name = "hyperfluent-grub-theme";
+    src  = hyperFluentSrc;
+    phases = [ "installPhase" ];
+    installPhase = ''
+      mkdir -p $out
+      cp -r $src/nixos/. $out/
+    '';
+  };
+in {
   boot.loader.grub = {
     enable = true;
     efiSupport = true;
     gfxmodeEfi = "auto";
     device = "nodev";
-    theme = pkgs.nixos-grub2-theme;
+    theme = "${hyperFluentTheme}/theme.txt";
     # splashImage = "${gruvboxTheme}/grub-wallpaper.png";
     # font = "${gruvboxTheme}/FiraCode-Regular.pf2";
     # theme = "${gruvboxTheme}/theme.txt";
