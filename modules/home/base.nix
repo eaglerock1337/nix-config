@@ -9,6 +9,7 @@
     PAGER = "less";   # Set default pager
   };
 
+  # TODO: figure out why this isn't working
   programs.bash = {
     shellAliases = {
       ll = "exa -l --group-directories-first";          # Use eza for better ls

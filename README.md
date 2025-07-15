@@ -25,9 +25,7 @@ sudo nixos-rebuild switch --flake ~/git/nix-config#gibson  # substitute hostname
 
 ## things to do
 
-- GRUB theme
-- Choose desktop manager (lightdm?)
-- Login screen rework
+- GRUB theme improvements
 - Polybar rework
 - Corky setup
 - Get TTY sessions working
