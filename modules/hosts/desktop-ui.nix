@@ -39,7 +39,7 @@
     displayManager = {
       lightdm = {
         enable = true;
-        background = "../../assets/login.png";
+        background = ./. + "../../assets/login.png";
         greeters.gtk = {
           enable = true;
           theme = {
