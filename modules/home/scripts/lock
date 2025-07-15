@@ -16,7 +16,7 @@ i3lock-color \
   \
   --verif-color=98971aFF \
   --wrong-color=cc241dFF \
-  --keyhl-color=689d68FF \
+  --keyhl-color=98971aFF \
   --bshl-color=b16286FF \
   --time-color=b16286FF \
   --date-color=b16286FF \
