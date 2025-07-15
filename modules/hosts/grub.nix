@@ -18,14 +18,19 @@ let
     meta.description = "Gruvbox‐style GRUB theme";
   };
 in {
+  environment.systemPackages = [
+    pkgs.nixos-grub2-theme
+  ];
+
   boot.loader.grub = {
     enable = true;
     efiSupport = true;
     gfxmodeEfi = "auto";
     device = "nodev";
-    splashImage = "${gruvboxTheme}/grub-wallpaper.png";
-    font = "${gruvboxTheme}/FiraCode-Regular.pf2";
-    theme = "${gruvboxTheme}/theme.txt";
+    theme = pkgs.nixos-grub2-theme
+    # splashImage = "${gruvboxTheme}/grub-wallpaper.png";
+    # font = "${gruvboxTheme}/FiraCode-Regular.pf2";
+    # theme = "${gruvboxTheme}/theme.txt";
   };
 
   boot.loader.systemd-boot.enable = false;
