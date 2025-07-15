@@ -20,7 +20,7 @@
     # utilities
     scrot
     flameshot
-    gimp3-with-utilities
+    gimp3-with-plugins
     rpi-imager
 
     # Multimedia
