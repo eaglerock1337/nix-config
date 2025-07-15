@@ -40,7 +40,7 @@
       lightdm = {
         enable = true;
         background = ./. + "/../../assets/login.png";
-        greeters.slick = {
+        greeters.enso = {
           enable = true;
           theme = {
             name = "Gruvbox-Dark";
