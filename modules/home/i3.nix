@@ -213,7 +213,7 @@ in {
       assigns = {
         "${workspaces."2"}" = [ { class = "^Code$"; } ];
         "${workspaces."3"}" = [ { class = "^firefox$"; } ];
-        "${workspaces."4"}" = [ { class = "^Hexchat$"; } ];
+        "${workspaces."4"}" = [ { class = "^Hexchat$"; class = "^discord$"; } ];
         "${workspaces."5"}" = [ { class = "^steam$"; } ];
         "${workspaces."7"}" = [ { class = "^Chromium$"; } ];
         "${workspaces."8"}" = [ { class = "^Thunar$"; } ];

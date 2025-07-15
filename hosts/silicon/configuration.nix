@@ -10,7 +10,7 @@
       ../../modules/hosts/common.nix
       ../../modules/hosts/grub.nix
       ../../modules/hosts/desktop-ui.nix
-      ../../modules/hosts/steam.nix
+      ../../modules/hosts/gaming.nix
       ../../modules/hardware/x1-carbon.nix
       ./hardware-configuration.nix
     ];

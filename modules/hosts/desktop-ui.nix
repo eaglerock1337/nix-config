@@ -8,27 +8,38 @@
   imports = [ ];
 
   environment.systemPackages = with pkgs; [
+    # i3 environment
     i3
     i3status
     feh
     rofi
     picom
     xterm
-    firefox
-    hexchat
     xfce.thunar
+
+    # Multimedia
+    vlc
+    hexchat
+    discord
+
+    # Utilities
     playerctl
-    nerd-fonts.fira-code
-    nerd-fonts.droid-sans-mono
-    themix-gui
     pamixer        # volume control
     brightnessctl  # brightness (optional)
     i3lock-color   # lock screen
     imagemagick    # screen blur
     alacritty      # terminal
-    fira
+
+    # GTK & Theming
+    gnome-tweaks
     gruvbox-gtk-theme
     lxappearance
+    themix-gui
+
+    # Fonts
+    fira    
+    nerd-fonts.fira-code
+    nerd-fonts.droid-sans-mono
   ];
 
   # Enable networking
@@ -84,6 +95,6 @@
     #media-session.enable = true;
   };
 
-  # Install firefox.
+  # Install firefox
   programs.firefox.enable = true;
 }

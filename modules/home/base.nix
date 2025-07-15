@@ -9,6 +9,13 @@
     PAGER = "less";   # Set default pager
   };
 
+  programs.bash.enable = true;
+  programs.bash.interactiveShellInit = ''
+    nr() {
+      sudo nixos-rebuild switch --flake ~/git/nix-config#"$(hostname -s)" "$@";
+    }
+  '';
+
   programs.neovim = {
     enable = true;
     defaultEditor = true;
