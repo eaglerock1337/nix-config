@@ -3,6 +3,7 @@
 # Lock screen with Gruvbox colors
 i3lock-color \
   -i ~/git/nix-config/assets/wallpaper-gibson-blur.png \
+  --scale \
   --insidever-color=D7992180 \
   --ringver-color=D79921FF \
   \
@@ -12,25 +13,47 @@ i3lock-color \
   --inside-color=1d202180 \
   --ring-color=98971aFF \
   --line-color=d79921FF \
+  --dateoutline-color=98971aFF \
+  --dateoutline-width=0 \
+  --timeoutline-color=98971aFF \
+  --timeoutline-width=0 \
+  --layoutoutline-color=98971aFF \
+  --layoutoutline-width=20 \
+  --greeteroutline-color=98971aFF \
+  --greeteroutline-width=0 \
   --separator-color=d79921FF \
   \
-  --verif-color=458588FF \
-  --wrong-color=cc241dFF \
+  --verif-color=D79921FF \
+  --wrong-color=D79921FF \
   --keyhl-color=458588FF \
   --bshl-color=b16286FF \
   --time-color=b16286FF \
   --date-color=b16286FF \
   --layout-color=ebdbb2FF \
   --ring-width=12 \
-  --radius=120 \
+  --radius=80 \
+  \
+  --greeter-text="$(hostname -s)" \
+  --greeter-font="Fira Code Bold" \
+  --greeter-size=40 \
+  --greeter-color=458588FF \
+  --greeter-pos="w/2:75" \
+  \
+  --wrong-text="oopsie" \
+  --wrong-font="Fira Sans Bold" \
+  --wrong-size=20 \
+  --verif-text="checking" \
+  --verif-font="Fira Sans Bold" \
+  --verif-size=20 \
+  --noinput-text="" \
   \
   --clock \
   --indicator \
-  --date-pos="w/2:h-150" \
+  --date-pos="w/2:h-75" \
   --date-font="Fira Sans" \
-  --date-size=48 \
-  --time-pos="w/2:h-250" \
+  --date-size=24 \
+  --time-pos="w/2:h-125" \
   --time-font="Fira Code" \
-  --time-size=100 \
+  --time-size=50 \
   --time-str="%H:%M:%S" \
   --date-str="%A, %m-%d-%Y"

@@ -3,10 +3,16 @@
 {
   programs.home-manager.enable = true;
 
-  home.sessionVariables = {
-    EDITOR = "nvim";  # Set default editor
-    VISUAL = "nvim";  # Set default visual editor
-    PAGER = "less";   # Set default pager
+  home = {
+    sessionVariables = {
+      EDITOR = "nvim";  # Set default editor
+      VISUAL = "nvim";  # Set default visual editor
+      PAGER = "less";   # Set default pager
+    };
+
+    sessionPath = [
+      "${config.home.homeDirectory}/.local/bin"
+    ];
   };
 
   # TODO: figure out why this isn't working
