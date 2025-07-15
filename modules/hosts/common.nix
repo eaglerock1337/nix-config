@@ -107,6 +107,7 @@
     file
     man-db
     tldr            # Simplified man pages
+    neofetch
   ];
 
   # Enable the OpenSSH daemon.
