@@ -37,7 +37,17 @@
   services.xserver = {
     enable = true;
     displayManager = {
-      gdm.enable = true;
+      lightdm = {
+        enable = true;
+        background = "../../assets/login.png";
+        greeter = {
+          enable = true;
+          package = pkgs.lightdm-gtk-greeter;
+          theme = "gruvbox-dark";
+          fontName = "FiraCode Nerd Font 16";
+        };
+      };
+      gdm.enable = false;
     };
     desktopManager.gnome.enable = true;
     windowManager.i3.enable = true;

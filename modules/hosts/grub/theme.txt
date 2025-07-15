@@ -1,5 +1,6 @@
 title-text: "NixOS Boot Menu"
 title-font: "Fira Sans Regular 40"
+title-color: "#d79921"
 message-font: "Fira Sans Regular 40"
 message-color: "#689d68"
 terminal-font: "Fira Code Regular 30"
