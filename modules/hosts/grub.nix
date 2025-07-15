@@ -8,7 +8,7 @@ in {
     efiSupport = true;
     gfxmodeEfi = "auto";
     device = "nodev";
-    splashImage = "${themeSource}/grub-background.png";
+    splashImage = "${themeSource}/grub-wallpaper.png";
     font = "${themeSource}/FiraSans-Regular.pf2";
     theme = "${themeSource}/theme.txt";
   };
