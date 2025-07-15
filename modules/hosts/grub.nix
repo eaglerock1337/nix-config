@@ -3,15 +3,14 @@
 let
   themeSource = ./grub; # dir containing theme.txt, png, pf2
 in {
-  # Install theme in /tmp
-  environment.tmp."grub/themes/gruvbox".source = themeSource;
-
   boot.loader.grub = {
     enable = true;
     efiSupport = true;
     gfxmodeEfi = "auto";
     device = "nodev";
-    theme = "/tmp/grub/themes/gruvbox/theme.txt";
+    splashImage = "${themeSource}/grub-background.png";
+    font = "${themeSource}/FiraSans-Regular.pf2";
+    theme = "${themeSource}/theme.txt";
   };
 
   boot.loader.systemd-boot.enable = false;
