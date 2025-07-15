@@ -35,7 +35,6 @@
   };
 
   programs.bash = {
-    enable = true;
     interactiveShellInit = ''
       nr() {
         sudo nixos-rebuild switch --flake ~/git/nix-config#"$(hostname -s)" "$@";
@@ -50,6 +49,7 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     # --- Shell & File Utilities ---
+    bash            # The GNU Bourne Again SHell
     bat             # Better cat with syntax highlighting
     eza             # Better ls
     fd              # Fast alternative to find
