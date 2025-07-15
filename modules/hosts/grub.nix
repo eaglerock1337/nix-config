@@ -27,7 +27,7 @@ in {
     efiSupport = true;
     gfxmodeEfi = "auto";
     device = "nodev";
-    theme = pkgs.nixos-grub2-theme
+    theme = pkgs.nixos-grub2-theme;
     # splashImage = "${gruvboxTheme}/grub-wallpaper.png";
     # font = "${gruvboxTheme}/FiraCode-Regular.pf2";
     # theme = "${gruvboxTheme}/theme.txt";
