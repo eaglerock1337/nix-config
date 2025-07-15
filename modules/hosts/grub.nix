@@ -2,7 +2,10 @@
 
 let
   grubThemePath = ./grub;
-  gruvboxTheme = pkgs.runCommand "grub-theme" {} ''
+  gruvboxTheme = pkgs.runCommand "grub-theme" {
+    inherit grubThemePath;
+  }
+  ''
     mkdir -p $out
     cp -r ${grubThemePath}/* $out/
   '';
