@@ -15,7 +15,7 @@
       la = "exa -la --group-directories-first";   # List all files with eza
       grep = "rg";                                # Use ripgrep as default grep
     };
-  }
+  };
 
   programs.neovim = {
     enable = true;
