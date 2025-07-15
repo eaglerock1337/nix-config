@@ -15,7 +15,7 @@ in {
     efiSupport = true;
     gfxmodeEfi = "auto";
     device = "nodev";
-    theme = ${gruvboxTheme}/theme.txt;
+    theme = "${gruvboxTheme}/theme.txt";
   };
 
   boot.loader.efi.canTouchEfiVariables = true;
