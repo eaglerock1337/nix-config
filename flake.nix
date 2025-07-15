@@ -1,5 +1,6 @@
 {
   description = "eaglerock's NixOS configuration";
+  version = "0.5.0";  # Still in beta
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
