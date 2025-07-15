@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  grubThemePath = "./grub";
+  grubTheme = "./grub/theme.txt";
 in {
   boot.loader.systemd-boot.enable = false;
   boot.loader.grub = {
@@ -9,7 +9,7 @@ in {
     efiSupport = true;
     gfxmodeEfi = "auto";
     device = "/dev/nvme0n1";
-    theme = "${grubThemePath}/theme.txt";
+    theme = builtins.toString grubTheme;
   };
 
   boot.loader.efi.canTouchEfiVariables = true;
