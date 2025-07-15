@@ -23,6 +23,7 @@ sudo nixos-rebuild switch --flake ~/git/nix-config#gibson  # substitute hostname
 #### lxappearance
 
 - Set theme to Gruvbox-Dark
+- Set icons to Gruvbox Plus Icon Pack
 - Set font to Fira Sans Regular 20
 
 ## things to do

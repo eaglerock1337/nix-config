@@ -37,7 +37,7 @@
     # GTK & Theming
     gnome-tweaks
     gruvbox-gtk-theme
-    gruvbox-dark-icons-gtk
+    gruvbox-plus-icons
     lxappearance
     themix-gui
 
