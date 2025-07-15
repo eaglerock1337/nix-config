@@ -36,7 +36,7 @@
           iconTheme = "vscode-icons";
         };
 
-        terminal.integrated.fontSize = 18;
+        terminal.integrated.fontSize = 14;
       };
     };
   };
