@@ -11,12 +11,12 @@ i3lock-color \
   \
   --inside-color=1d202180 \
   --ring-color=458588FF \
-  --line-color=00000000 \
-  --separator-color=00000000 \
+  --line-color=d79921FF \
+  --separator-color=d79921FF \
   \
-  --verif-color=98971aFF \
+  --verif-color=458588FF \
   --wrong-color=cc241dFF \
-  --keyhl-color=98971aFF \
+  --keyhl-color=458588FF \
   --bshl-color=b16286FF \
   --time-color=b16286FF \
   --date-color=b16286FF \
