@@ -11,7 +11,7 @@ let
     phases = [ "installPhase" ];
     installPhase = ''
       mkdir -p $out
-      cp -r * $out
+      cp -a $src/. $out
     '';
 
     # Optional metadata
