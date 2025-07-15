@@ -171,6 +171,10 @@ in {
 
         # Custom Stuff
 
+        # Print screen
+        "${config.xsession.windowManager.i3.config.modifier}+p" = "exec scrot ~/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png"
+        "${config.xsession.windowManager.i3.config.modifier}+Shift+p" = "exec flameshot gui";
+
         # Lock screen
         "${config.xsession.windowManager.i3.config.modifier}+Shift+x" = "exec ~/.local/bin/lock";
 
