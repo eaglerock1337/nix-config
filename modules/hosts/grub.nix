@@ -14,6 +14,6 @@ in {
   };
 
   boot.loader.systemd-boot.enable = false;
-  boot.loader.efi.espMountPoint = "/boot";
+  boot.loader.efi.efiSysMountPoint = "/boot";
   boot.loader.efi.canTouchEfiVariables = true;
 }
