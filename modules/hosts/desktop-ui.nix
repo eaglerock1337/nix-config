@@ -48,7 +48,7 @@
           };
           extraConfig = ''
             position=50% 25%
-            font-name=Fira Sans 14
+            font-name=Fira Sans 24
           '';
         };
       };
