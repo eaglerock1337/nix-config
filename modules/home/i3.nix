@@ -27,6 +27,15 @@ let
   };
   wallpaper = "~/git/nix-config/assets/wallpaper-gibson.png";
 in {
+  # TODO: See if this is needed
+  # xresources = {
+  #   enable = true;
+  #   settings = {
+  #     # bump from 96 to e.g. 144 DPI
+  #     "Xft.dpi" = 144;
+  #   };
+  # };
+
   xsession.windowManager.i3 = {
     enable = true;
     
@@ -232,6 +241,9 @@ in {
       # ];
 
       startup = [
+        {
+          command = "xrandr --output eDP-1 --scale 1.5x1.5 --dpi 144"
+        }
         {
           command = "systemctl --user restart polybar.service";
           always = true;
