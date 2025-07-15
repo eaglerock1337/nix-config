@@ -2,7 +2,7 @@
 
 My collection of Nix config files.
 
-## super quick start
+## quickstart
 
 - Install NixOS
 - Enable SSH key in GitHub (for now)
@@ -11,6 +11,7 @@ My collection of Nix config files.
 - Install modules as needed
 - Add hardware-configuration.nix from installation and install
 - Add to `flake.nix` with home-manager configuration for needed users
+- Finally, simlink the nix-config repo and apply to the system:
 
 ```bash
 sudo mv /etc/nixos /etc/nixos.bak
