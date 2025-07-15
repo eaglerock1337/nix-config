@@ -23,7 +23,7 @@
     themix-gui
     pamixer        # volume control
     brightnessctl  # brightness (optional)
-    i3lock-color   # lock screenF
+    i3lock-color   # lock screen
     imagemagick    # screen blur
     alacritty      # terminal
     fira

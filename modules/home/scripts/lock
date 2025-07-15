@@ -3,20 +3,30 @@
 # Lock screen with Gruvbox colors
 i3lock-color \
   -i ~/git/nix-config/assets/wallpaper-gibson-blur.png \
+  --insidever-color=D7992180 \
+  --ringver-color=D79921FF \
+  \
+  --insidewrong-color=cc241d80 \
+  --ringwrong-color=cc241dFF \
+  \
   --inside-color=1d2021FF \
   --ring-color=458588FF \
   --line-color=00000000 \
   --separator-color=00000000 \
+  \
   --verif-color=98971aFF \
   --wrong-color=cc241dFF \
-  --keyhl-color=d79921FF \
+  --keyhl-color=689d68FF \
   --bshl-color=b16286FF \
-  --time-color=ebdbb2FF \
-  --date-color=ebdbb2FF \
+  --time-color=98971aFF \
+  --date-color=98971aFF \
   --layout-color=ebdbb2FF \
-  --ring-width=8 \
-  --radius=110 \
+  --ring-width=12 \
+  --radius=120 \
+  \
+  --clock \
+  --indicator \
   --time-pos="x+110:h-70" \
   --date-pos="x+110:h-40" \
-  --time-str="%H:%M" \
-  --date-str="%A, %d %B"
+  --time-str="%H:%M:%S" \
+  --date-str="%A, %Y-%m-%d"
