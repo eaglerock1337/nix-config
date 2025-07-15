@@ -1,6 +1,6 @@
 title-text: "NixOS"
 title-font: "FiraSans-Regular.pf2"
-desktop_image: "grub-wallpaper.png"
+desktop-image: "grub-wallpaper.png"
 
 + boot_menu {
   left = 20%
