@@ -45,7 +45,7 @@
           theme = {
             name = "gruvbox-dark";
             package = pkgs.gruvbox-gtk-theme;
-          }
+          };
         };
       };
       gdm.enable = false;
