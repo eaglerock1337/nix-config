@@ -2,7 +2,8 @@
 
 # Lock screen with Gruvbox colors
 i3lock-color \
-  -i ~/git/nix-config/assets/wallpaper-gibson-blur.png \
+  -i ~/git/nix-config/assets/wallpaper-gibson.png \
+  --blur 5 \
   --insidever-color=D7992180 \
   --ringver-color=D79921FF \
   \
@@ -22,7 +23,7 @@ i3lock-color \
   --date-color=98971aFF \
   --layout-color=ebdbb2FF \
   --ring-width=12 \
-  --radius=120 \
+  --radius=250 \
   \
   --clock \
   --indicator \
