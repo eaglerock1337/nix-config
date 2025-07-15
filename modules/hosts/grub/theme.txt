@@ -1,8 +1,8 @@
 title-text: "NixOS Boot Menu"
-title-font: "Fira Sans Regular 30"
-message-font: "Fira Sans Regular 30"
+title-font: "Fira Sans Regular 40"
+message-font: "Fira Sans Regular 40"
 message-color: "#689d68"
-terminal-font: "Fira Code Regular 20"
+terminal-font: "Fira Code Regular 30"
 desktop-image: "grub-wallpaper.png"
 
 + boot_menu {
@@ -10,7 +10,7 @@ desktop-image: "grub-wallpaper.png"
   top = 20%
   width = 60%
   height = 60%
-  item_font = "Fira Code Regular 20"
+  item_font = "Fira Code Regular 30"
   item_color = "#a89984"
   selected_item_color = "#d79921"
 }
