@@ -42,8 +42,10 @@
         background = "../../assets/login.png";
         greeters.gtk = {
           enable = true;
-          theme = "gruvbox-dark";
-          package = pkgs.gruvbox-gtk-theme;
+          theme {
+            name = "gruvbox-dark";
+            package = pkgs.gruvbox-gtk-theme;
+          }
         };
       };
       gdm.enable = false;
