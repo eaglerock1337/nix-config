@@ -1,27 +1,25 @@
 { config, lib, pkgs, ... }:
 
 let
-  grubAssets = "/grub";
-  gruvboxTheme = pkgs.runCommand "grub-theme" {
-    themeTxt = ./. + "${grubAssets}/theme.txt";
-    background = ./. + "${grubAssets}/grub-wallpaper.png";
-    font = ./. + "${grubAssets}/FiraSans-Regular.pf2";
-  } ''
-    mkdir -p "$out"
-    cp "$themeTxt" "$out/theme.txt"
-    cp "$background" "$out/background.png"
-    cp "$font" "$out/converted-font.pf2"
-  '';
+  themeSource = ./grub; # dir containing theme.txt, png, pf2
 in {
-  boot.loader.systemd-boot.enable = false;
+  # Install theme in /etc
+  environment.etc."grub/themes/gruvbox".source = themeSource;
+
+  # Copy to /boot after build
+  boot.postBootCommands = ''
+    mkdir -p /boot/grub/themes/gruvbox
+    cp -r /etc/grub/themes/gruvbox/* /boot/grub/themes/gruvbox/
+  '';
 
   boot.loader.grub = {
     enable = true;
     efiSupport = true;
     gfxmodeEfi = "auto";
     device = "nodev";
-    theme = "${gruvboxTheme}/theme.txt";
+    theme = "/boot/grub/themes/gruvbox/theme.txt";
   };
 
+  boot.loader.systemd-boot.enable = false;
   boot.loader.efi.canTouchEfiVariables = true;
 }
