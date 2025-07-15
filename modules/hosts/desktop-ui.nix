@@ -46,6 +46,10 @@
             name = "Gruvbox-Dark";
             package = pkgs.gruvbox-gtk-theme;
           };
+          extraConfig = ''
+            position=50% 25%
+            font-name=Fira Sans 14
+          '';
         };
       };
       gdm.enable = false;
