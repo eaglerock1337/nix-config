@@ -25,7 +25,7 @@
           tabSize = 2;
           formatOnSave = true;
           fontFamily = "FiraCode Nerd Font";
-          fontSize = 18;
+          fontSize = 14;
           fontLigatures = true;
           inlineSuggest.enabled = true;
           bracketPairColorization.enabled = true;
