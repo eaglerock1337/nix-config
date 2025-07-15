@@ -18,19 +18,19 @@ i3lock-color \
   --wrong-color=cc241dFF \
   --keyhl-color=689d68FF \
   --bshl-color=b16286FF \
-  --time-color=689d68FF \
-  --date-color=689d68FF \
+  --time-color=b16286FF \
+  --date-color=b16286FF \
   --layout-color=ebdbb2FF \
   --ring-width=12 \
   --radius=120 \
   \
   --clock \
   --indicator \
-  --date-pos="w/2:150" \
+  --date-pos="w/2:250" \
   --date-font="Fira Sans" \
-  --date-size=36 \
-  --time-pos="w/2:100" \
+  --date-size=48 \
+  --time-pos="w/2:150" \
   --time-font="Fira Code" \
-  --time-size=60 \
+  --time-size=100 \
   --time-str="%H:%M:%S" \
   --date-str="%A, %Y-%m-%d"
