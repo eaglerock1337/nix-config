@@ -26,11 +26,11 @@ i3lock-color \
   \
   --clock \
   --indicator \
-  --datepos="w/2:h-150" \
-  --datefont="Fira Sans" \
-  --datesize=36 \
-  --timepos="w/2:h-100" \
-  --timefont="Fira Sans" \
-  --timesize=48 \
+  --date-pos="w/2:h-150" \
+  --date-font="Fira Sans" \
+  --date-size=36 \
+  --time-pos="w/2:h-100" \
+  --time-font="Fira Sans" \
+  --time-size=48 \
   --time-str="%H:%M:%S" \
   --date-str="%A, %Y-%m-%d"
