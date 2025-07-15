@@ -9,12 +9,13 @@
     PAGER = "less";   # Set default pager
   };
 
-  programs.bash.enable = true;
-  programs.bash.interactiveShellInit = ''
-    nr() {
-      sudo nixos-rebuild switch --flake ~/git/nix-config#"$(hostname -s)" "$@";
-    }
-  '';
+  programs.bash = {
+    shellAliases = {
+      ll = "exa -l --group-directories-first";    # Use eza for better ls
+      la = "exa -la --group-directories-first";   # List all files with eza
+      grep = "rg";                                # Use ripgrep as default grep
+    };
+  }
 
   programs.neovim = {
     enable = true;

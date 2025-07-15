@@ -34,6 +34,15 @@
     extraGroups = [ "networkmanager" "wheel" ];
   };
 
+  programs.bash = {
+    enable = true;
+    interactiveShellInit = ''
+      nr() {
+        sudo nixos-rebuild switch --flake ~/git/nix-config#"$(hostname -s)" "$@";
+      }
+    '';
+  };
+
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
