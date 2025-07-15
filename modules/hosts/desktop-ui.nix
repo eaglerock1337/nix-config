@@ -20,6 +20,8 @@
     # utilities
     scrot
     flameshot
+    gimp3-with-utilities
+    rpi-imager
 
     # Multimedia
     vlc

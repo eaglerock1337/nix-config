@@ -108,6 +108,11 @@
     man-db
     tldr            # Simplified man pages
     neofetch
+
+    # --- Containerization ---
+    docker_28
+    kubectl
+    k9s
   ];
 
   # Enable the OpenSSH daemon.

@@ -9,6 +9,7 @@
 
   environment.systemPackages = with pkgs; [
     dosbox
+    fuse-emulator
     protonplus
     protontricks
   ];
