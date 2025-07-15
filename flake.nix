@@ -1,6 +1,5 @@
 {
   description = "eaglerock's NixOS configuration";
-  version = "0.5.0";  # Still in beta
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
@@ -10,6 +9,7 @@
 
   outputs = { self, nixpkgs, home-manager, ... } @ inputs: let
     inherit (self) outputs;
+    version = "0.5.0";        # Still in beta
   in {
     nixosConfigurations = {
       silicon = nixpkgs.lib.nixosSystem {
