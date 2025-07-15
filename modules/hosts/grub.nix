@@ -6,8 +6,8 @@ let
     inherit grubThemePath;
   }
   ''
-    mkdir -p $out
-    cp -r ${grubThemePath}/* $out/
+    mkdir -p "$out"
+    cp -r "$grubThemePath/." "$out/"
   '';
 in {
   boot.loader.systemd-boot.enable = false;
