@@ -408,7 +408,7 @@ in {
       "module/battery" = {
         type = "internal/battery";
         battery = "BAT0";
-        adapter = "AC";
+        # adapter = "AC";
         time-format = "%H:%M";
         full-at = 97;
         low-at = 10;
