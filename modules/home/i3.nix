@@ -408,7 +408,7 @@ in {
       "module/battery" = {
         type = "internal/battery";
         battery = "BAT0";
-        adapter = "AC";
+        adapter = "ADP1";
         full-at = 97;
         low-at = 10;
         poll-interval = 5;
@@ -419,7 +419,7 @@ in {
         format-charging-foreground = gruvboxDark.yellow;
         format-charging-padding = 1;
         format-charging = "<animation-charging> <label-charging>";
-        label-charging = "%percentage%%";
+        label-charging = "%percentage%% %time%";
         animation-charging-0 = "󰂆";
         animation-charging-1 = "󰂈";
         animation-charging-2 = "󰂉";
@@ -429,13 +429,12 @@ in {
         format-discharging = "<ramp-capacity> <label-discharging>";
         format-discharging-padding = 1;
         format-discharging-foreground = gruvboxDark.yellow;
-        label-discharging = "%percentage%%";
+        label-discharging = "%percentage%% %time%";
         ramp-capacity-0 = "󰁻";
         ramp-capacity-1 = "󰁽";
         ramp-capacity-2 = "󰁿";
         ramp-capacity-3 = "󰂁";
         ramp-capacity-4 = "󰁹";
-        animation-discharging-framerate = 2000;
         format-low = "󰂃 <label-low>";
         format-low-padding = 1;
         format-low-foreground = gruvboxDark.red;
