@@ -17,7 +17,7 @@ let
     "1" = "1 ";        # Terminal
     "2" = "2 ";        # VSCode
     "3" = "3 ";        # Firefox
-    "4" = "4 ";        # Hexchat
+    "4" = "4 ";        # Chat programs
     "5" = "5 ";        # Steam
     "6" = "6 ";        # Terminals
     "7" = "7 ";        # Chromium
@@ -340,7 +340,7 @@ in {
       "module/xworkspaces" = {
         type = "internal/xworkspaces";
         label-active = "%name%";
-        label-active-background = gruvboxDark.aqua;
+        label-active-background = gruvboxDark.blue;
         label-active-foreground = gruvboxDark.yellow;
         label-active-padding = "1";
         label-occupied = "%name%";
@@ -361,10 +361,11 @@ in {
         type = "internal/network";
         interface = "wlp0s20f3";
         interval = 3;
-        format-foreground = gruvboxDark.green;
         format-connected = "󰖩 <label-connected>";
-        label-connected = "%essid% (%signal:2%%)";
+        label-connected = "%essid% (%signal:2%%) ";
+        label-connected-foreground = gruvboxDark.green;
         format-disconnected = "󰤯 down";
+        label-disconnected-foreground = gruvboxDark.green;
         format-padding = 1;
       };
 
@@ -398,7 +399,7 @@ in {
         type = "internal/fs";
         mount-0 = "/";
         interval = 10;
-        format = " <label>";
+        format-mounted = " <label>";
         format-padding = 1;
         format-foreground = gruvboxDark.green;
         label = "%free:0:2% GiB free";
