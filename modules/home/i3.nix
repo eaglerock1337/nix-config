@@ -402,7 +402,7 @@ in {
         format-mounted = " <label-mounted>";
         format-mounted-padding = 1;
         format-mounted-foreground = gruvboxDark.red;
-        label-mounted = "%mountpoint% %free% Free";
+        label-mounted = "%free% Free";
       };
 
       "module/battery" = {
@@ -411,7 +411,7 @@ in {
         adapter = "AC";
         full-at = 97;
         low-at = 10;
-        interval = 5;
+        poll-interval = 5;
         format-full-padding = 1;
         format-full-foreground = gruvboxDark.green;
         format-full = " <label-full>";
