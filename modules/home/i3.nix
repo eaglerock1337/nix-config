@@ -402,7 +402,7 @@ in {
         format-mounted = " <label-mounted>";
         format-mounted-padding = 1;
         format-mounted-foreground = gruvboxDark.red;
-        label-mounted = "%free% Free";
+        label-mounted = "%used% %percentage_used%%";
       };
 
       "module/battery" = {
