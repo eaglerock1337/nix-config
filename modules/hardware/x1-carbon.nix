@@ -6,6 +6,12 @@
   # Enable firmware updates
   services.fwupd.enable = true;
 
+  services.logind = {
+    lidSwitch = "suspend";
+    lidSwitchDocked = "ignore";
+    lidSwitchExternalPower = "suspend";
+  };
+
   services.power-profiles-daemon.enable = false; # Use TLP instead
 
   # # Power management with TLP (fine-grained) or power-profiles-daemon (auto)
@@ -17,8 +23,8 @@
       USB_AUTOSUSPEND = 1;
       WIFI_PWR_ON_BAT = "on";
       PCIE_ASPM_ON_BAT = "powersupersave";
-      START_CHARGE_THRESH_BAT0 = 40;
-      STOP_CHARGE_THRESH_BAT0 = 80;
+      START_CHARGE_THRESH_BAT0 = 75;
+      STOP_CHARGE_THRESH_BAT0 = 95;
     };
   };
 

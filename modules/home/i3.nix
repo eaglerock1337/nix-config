@@ -374,7 +374,7 @@ in {
         format = " <label>";
         format-padding = 1;
         format-foreground = gruvboxDark.blue;
-        label = "CPU %percentage:2%%";
+        label = "%percentage:2%%";
       };
 
       "module/temperature" = {
@@ -392,7 +392,7 @@ in {
         format = " <label>";
         format-padding = 1;
         format-foreground = gruvboxDark.aqua;
-        label = "RAM %mb_used% %percentage_used%%";
+        label = "%mb_used% %percentage_used%%";
       };
 
       "module/filesystem" = {
@@ -408,7 +408,7 @@ in {
       "module/battery" = {
         type = "internal/battery";
         battery = "BAT0";
-        # adapter = "AC";
+        adapter = "AC";
         time-format = "%H:%M";
         full-at = 98;
         low-at = 8;
@@ -444,6 +444,22 @@ in {
         format-low-padding = 1;
         format-low-foreground = gruvboxDark.red;
         label-low = "%percentage%% %time%";
+      };
+
+      "module/volume" = {
+        type = internal/pulseaudio;
+
+        format-volume = "<ramp-volume> <label-volume>";
+        format-volume-padding = 1;
+        format-volume-foreground = gruvboxDark.yellow;
+
+        format-muted-prefix = "";
+        format-muted-foreground = gruvboxDark.yellow;
+        format-muted-padding = 1;
+
+        ramp-volume-0 = "";
+        ramp-volume-1 = "";
+        ramp-volume-2 = "";
       };
 
       "module/date" = {

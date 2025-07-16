@@ -12,6 +12,7 @@
     fuse-emulator
     protonplus
     protontricks
+    protonup-ng     # GUI for installing/updating Proton versions (including GE)
   ];
 
   nixpkgs.config.allowUnfreePredicate = pkg:
