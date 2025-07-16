@@ -339,15 +339,15 @@ in {
 
       "module/xworkspaces" = {
         type = "internal/xworkspaces";
-        label-active = "%name%";
+        label-active = "%name% ";
         label-active-background = gruvboxDark.blue;
         label-active-foreground = gruvboxDark.yellow;
         label-active-padding = "1";
-        label-occupied = "%name%";
+        label-occupied = "%name% ";
         label-occupied-background = gruvboxDark.bg;
         label-occupied-foreground = gruvboxDark.blue;
         label-occupied-padding = "1";
-        label-empty = "%name%";
+        label-empty = "%name% ";
         label-empty-background = gruvboxDark.bg;
         label-empty-foreground = gruvboxDark.gray;
         label-empty-padding = "1";
@@ -399,7 +399,7 @@ in {
         type = "internal/fs";
         mount-0 = "/";
         interval = 10;
-        format-mounted = " <label>";
+        format-mounted = " <label-mounted>";
         format-padding = 1;
         format-foreground = gruvboxDark.green;
         label-mounted = "%free:0:2% GiB free";
@@ -412,10 +412,12 @@ in {
         full-at = 98;
         format-padding = 1;
         format-foreground = gruvboxDark.red;
+        format-full = " <label-full>";
+        label-full = "%percentage%%";
         format-charging = " <label-charging>";
-        tag-label-charging = "%percentage%% +%consumption%W";
+        label-charging = "%percentage%% +%consumption%W";
         format-discharging = "󱊣 <label-discharging>";
-        tag-label-discharging = "%percentage%% -%consumption%W";
+        label-discharging = "%percentage%% -%consumption%W";
       };
 
       "module/date" = {
