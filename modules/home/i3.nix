@@ -328,7 +328,7 @@ in {
         background = gruvboxDark.bg;
         foreground = gruvboxDark.fg;
         modules-left = "xworkspaces";
-        modules-right = "wlan separator cpu separator temperature separator memory separator filesystem separator battery separator volume separator date";
+        modules-right = "wlan separator cpu separator temperature separator memory separator filesystem separator battery separator date";
       };
 
       "module/separator" = {
