@@ -362,10 +362,10 @@ in {
         interface = "wlp0s20f3";
         interval = 3;
         format-connected = " <label-connected>";
-        label-connected = "%essid% (%signal:2%%) ";
+        label-connected = "%essid% %signal:2%% ";
         label-connected-foreground = gruvboxDark.green;
         format-disconnected = " Down";
-        label-disconnected-foreground = gruvboxDark.green;
+        label-disconnected-foreground = gruvboxDark.red;
         format-padding = 1;
       };
 
@@ -373,7 +373,7 @@ in {
         type = "internal/cpu";
         format = " <label>";
         format-padding = 1;
-        format-foreground = gruvboxDark.red;
+        format-foreground = gruvboxDark.blue;
         label = "CPU %percentage:2%%";
       };
 
@@ -400,8 +400,8 @@ in {
         mount-0 = "/";
         interval = 10;
         format-mounted = " <label-mounted>";
-        format-padding = 1;
-        format-foreground = gruvboxDark.green;
+        format-padding = 2;
+        format-mounted-foreground = gruvboxDark.red;
         label-mounted = "%free:0:2% GiB free";
       };
 
@@ -410,10 +410,12 @@ in {
         battery = "BAT0";
         adapter = "AC";
         full-at = 98;
-        format-padding = 1;
-        format-foreground = gruvboxDark.red;
+        interval = 5;
+        format-padding = 2;
+        format-full-foreground = gruvboxDark.red;
         format-full = " <label-full>";
         label-full = "%percentage%%";
+        format-charging-foreground = gruvboxDark.red;
         format-charging = " <label-charging>";
         label-charging = "%percentage%% +%consumption%W";
         format-discharging = "󱊣 <label-discharging>";
