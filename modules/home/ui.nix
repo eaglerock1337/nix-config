@@ -64,7 +64,6 @@ in {
   systemd.user.services.lock-before-sleep = {
     description = "Lock screen before sleep";
     wantedBy = [ "sleep.target" "suspend.target" ];
-    before = [ "sleep.target" "suspend.target" ];
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "~/.local/bin/lock";
