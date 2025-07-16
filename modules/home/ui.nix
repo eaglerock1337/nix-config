@@ -63,7 +63,9 @@ in {
 
   systemd.user.services.lock-before-sleep = {
     enable = true;
-    description = "Lock screen before sleep";
+    unitConfig = {
+      Description = "Lock screen before sleep";
+    };
     wantedBy = [ "sleep.target" "suspend.target" ];
     serviceConfig = {
       Type = "oneshot";
