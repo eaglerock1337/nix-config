@@ -78,7 +78,7 @@ in {
 
       fonts = {
         names = [ "FiraCode Nerd Font" ];
-        size = 18.0;
+        size = 16.0;
       };
 
       gaps = {
@@ -324,7 +324,7 @@ in {
         width = "100%";
         height = "4%";
         bottom = true;
-        font-0 = "FiraCode Nerd Font:size=18;2";
+        font-0 = "FiraCode Nerd Font:size=16;2";
         background = gruvboxDark.bg;
         foreground = gruvboxDark.fg;
         modules-left = "xworkspaces";
@@ -402,7 +402,7 @@ in {
         format-mounted = " <label-mounted>";
         format-mounted-padding = 1;
         format-mounted-foreground = gruvboxDark.red;
-        label-mounted = "%used% %percentage_used%%";
+        label-mounted = "%free% %percentage_free%%";
       };
 
       "module/battery" = {
@@ -410,8 +410,8 @@ in {
         battery = "BAT0";
         # adapter = "AC";
         time-format = "%H:%M";
-        full-at = 95;
-        low-at = 10;
+        full-at = 98;
+        low-at = 8;
         poll-interval = 5;
 
         format-full-padding = 1;
@@ -449,7 +449,7 @@ in {
       "module/date" = {
         type = "internal/date";
         interval = 1;
-        date = "%Y-%m-%d%";
+        date = "%m-%d-%y";
         time = "%H:%M";
         date-alt = "%A, %B %d %Y";
         time-alt = "%H:%M:%S";
