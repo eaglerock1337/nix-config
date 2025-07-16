@@ -415,19 +415,19 @@ in {
         label-charging = "%percentage%% +%consumption%W";
         format-discharging = "󱊣 <label-discharging>";
         label-discharging = "%percentage%% -%consumption%W";
+      };
 
-        "module/date" = {
-          type = "internal/date";
-          interval = 1;
-          date = "%Y-%m-%d%";
-          time = "%H:%M";
-          date-alt = "%A, %B %d %Y";
-          time-alt = "%H:%M:%S";
-          format = " <label>";
-          format-padding = 1;
-          format-foreground = gruvboxDark.blue;
-          label = "%date% %time%";
-        };
+      "module/date" = {
+        type = "internal/date";
+        interval = 1;
+        date = "%Y-%m-%d%";
+        time = "%H:%M";
+        date-alt = "%A, %B %d %Y";
+        time-alt = "%H:%M:%S";
+        format = " <label>";
+        format-padding = 1;
+        format-foreground = gruvboxDark.blue;
+        label = "%date% %time%";
       };
     };
     script = "polybar mainbar &";
