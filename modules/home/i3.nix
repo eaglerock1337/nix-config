@@ -361,10 +361,10 @@ in {
         type = "internal/network";
         interface = "wlp0s20f3";
         interval = 3;
-        format-connected = "󰖩 <label-connected>";
+        format-connected = " <label-connected>";
         label-connected = "%essid% (%signal:2%%) ";
         label-connected-foreground = gruvboxDark.green;
-        format-disconnected = "󰤯 down";
+        format-disconnected = " Down";
         label-disconnected-foreground = gruvboxDark.green;
         format-padding = 1;
       };
@@ -402,7 +402,7 @@ in {
         format-mounted = " <label>";
         format-padding = 1;
         format-foreground = gruvboxDark.green;
-        label = "%free:0:2% GiB free";
+        label-mounted = "%free:0:2% GiB free";
       };
 
       "module/battery" = {
@@ -413,9 +413,9 @@ in {
         format-padding = 1;
         format-foreground = gruvboxDark.red;
         format-charging = " <label-charging>";
-        label-charging = "%percentage%% +%consumption%W";
+        tag-label-charging = "%percentage%% +%consumption%W";
         format-discharging = "󱊣 <label-discharging>";
-        label-discharging = "%percentage%% -%consumption%W";
+        tag-label-discharging = "%percentage%% -%consumption%W";
       };
 
       "module/date" = {
