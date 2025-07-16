@@ -400,9 +400,9 @@ in {
         mount-0 = "/";
         interval = 10;
         format-mounted = " <label-mounted>";
-        format-padding = 2;
+        format-mounted-padding = 1;
         format-mounted-foreground = gruvboxDark.red;
-        label-mounted = "%free:0:2% GiB free";
+        label-mounted = "%free%/%total%GiB";
       };
 
       "module/battery" = {
@@ -411,15 +411,32 @@ in {
         adapter = "AC";
         full-at = 98;
         interval = 5;
-        format-padding = 2;
-        format-full-foreground = gruvboxDark.red;
+        format-full-padding = 1;
+        format-full-foreground = gruvboxDark.green;
         format-full = " <label-full>";
         label-full = "%percentage%%";
-        format-charging-foreground = gruvboxDark.red;
-        format-charging = " <label-charging>";
-        label-charging = "%percentage%% +%consumption%W";
-        format-discharging = "󱊣 <label-discharging>";
-        label-discharging = "%percentage%% -%consumption%W";
+        format-charging-foreground = gruvboxDark.yellow;
+        format-charging-padding = 1;
+        format-charging = "<animation-charging> <label-charging>";
+        label-charging = "%percentage%%";
+        animation-charging-0 = "󰢟";
+        animation-charging-1 = "󱊤";
+        animation-charging-2 = "󱊥";
+        animation-charging-3 = "󱊦";
+        animation-charging-framerate = 1000;
+        format-discharging = "<animation-discharging> <label-discharging>";
+        format-discharging-padding = 1;
+        format-discharging-foreground = gruvboxDark.yellow;
+        label-discharging = "%percentage%%";
+        animation-discharging-0 = "󱊣";
+        animation-discharging-1 = "󱊢";
+        animation-discharging-2 = "󱊡";
+        animation-discharging-3 = "󰂎";
+        animation-discharging-framerate = 1000;
+        format-low = "󰂃 <label-low>"
+        format-low-padding = 1;
+        format-low-foreground = gruvboxDark.red;
+        label-low = "%percentage%%";
       };
 
       "module/date" = {
