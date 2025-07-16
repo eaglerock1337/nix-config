@@ -392,7 +392,7 @@ in {
         format = " <label>";
         format-padding = 1;
         format-foreground = gruvboxDark.aqua;
-        label = "RAM %free:0:2%GiB";
+        label = "RAM %mb_used%/%mb_free%";
       };
 
       "module/filesystem" = {
@@ -410,13 +410,15 @@ in {
         battery = "BAT0";
         # adapter = "AC";
         time-format = "%H:%M";
-        full-at = 97;
+        full-at = 95;
         low-at = 10;
         poll-interval = 5;
+
         format-full-padding = 1;
         format-full-foreground = gruvboxDark.green;
         format-full = "󰁹 <label-full>";
         label-full = "%percentage%%";
+
         format-charging = "<animation-charging> <label-charging>";
         format-charging-foreground = gruvboxDark.green;
         format-charging-padding = 1;
@@ -427,6 +429,7 @@ in {
         animation-charging-3 = "󰂊";
         animation-charging-4 = "󰂅";
         animation-charging-framerate = 2000;
+
         format-discharging = "<ramp-capacity> <label-discharging>";
         format-discharging-padding = 1;
         format-discharging-foreground = gruvboxDark.yellow;
@@ -436,6 +439,7 @@ in {
         ramp-capacity-2 = "󰁿";
         ramp-capacity-3 = "󰂁";
         ramp-capacity-4 = "󰁹";
+
         format-low = "󰂃 <label-low>";
         format-low-padding = 1;
         format-low-foreground = gruvboxDark.red;
