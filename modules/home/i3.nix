@@ -409,7 +409,7 @@ in {
         type = "internal/battery";
         battery = "BAT0";
         adapter = "AC";
-        time-format = "$H:$M";
+        time-format = "%H:%M";
         full-at = 97;
         low-at = 10;
         poll-interval = 5;
