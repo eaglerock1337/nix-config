@@ -408,7 +408,8 @@ in {
       "module/battery" = {
         type = "internal/battery";
         battery = "BAT0";
-        adapter = "ADP1";
+        adapter = "AC";
+        time-format = "$H:$M";
         full-at = 97;
         low-at = 10;
         poll-interval = 5;
@@ -416,10 +417,10 @@ in {
         format-full-foreground = gruvboxDark.green;
         format-full = "󰁹 <label-full>";
         label-full = "%percentage%%";
-        format-charging-foreground = gruvboxDark.yellow;
-        format-charging-padding = 1;
         format-charging = "<animation-charging> <label-charging>";
-        label-charging = "%percentage%% %time%";
+        format-charging-foreground = gruvboxDark.green;
+        format-charging-padding = 1;
+        label-charging = "%percentage%%";
         animation-charging-0 = "󰂆";
         animation-charging-1 = "󰂈";
         animation-charging-2 = "󰂉";
@@ -438,7 +439,7 @@ in {
         format-low = "󰂃 <label-low>";
         format-low-padding = 1;
         format-low-foreground = gruvboxDark.red;
-        label-low = "%percentage%%";
+        label-low = "%percentage%% %time%";
       };
 
       "module/date" = {
