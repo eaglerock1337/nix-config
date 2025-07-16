@@ -402,14 +402,15 @@ in {
         format-mounted = " <label-mounted>";
         format-mounted-padding = 1;
         format-mounted-foreground = gruvboxDark.red;
-        label-mounted = "%free%/%total%GiB";
+        label-mounted = "%mountpoint% %free% Free";
       };
 
       "module/battery" = {
         type = "internal/battery";
         battery = "BAT0";
         adapter = "AC";
-        full-at = 98;
+        full-at = 97;
+        low-at = 10;
         interval = 5;
         format-full-padding = 1;
         format-full-foreground = gruvboxDark.green;
@@ -423,7 +424,7 @@ in {
         animation-charging-1 = "󱊤";
         animation-charging-2 = "󱊥";
         animation-charging-3 = "󱊦";
-        animation-charging-framerate = 1000;
+        animation-charging-framerate = 2000;
         format-discharging = "<animation-discharging> <label-discharging>";
         format-discharging-padding = 1;
         format-discharging-foreground = gruvboxDark.yellow;
@@ -432,7 +433,7 @@ in {
         animation-discharging-1 = "󱊢";
         animation-discharging-2 = "󱊡";
         animation-discharging-3 = "󰂎";
-        animation-discharging-framerate = 1000;
+        animation-discharging-framerate = 2000;
         format-low = "󰂃 <label-low>";
         format-low-padding = 1;
         format-low-foreground = gruvboxDark.red;
