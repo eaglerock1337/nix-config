@@ -410,7 +410,7 @@ in {
         battery = "BAT0";
         adapter = "AC";
         time-format = "%H:%M";
-        full-at = 98;
+        full-at = 95;
         low-at = 8;
         poll-interval = 5;
 
