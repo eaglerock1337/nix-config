@@ -328,7 +328,7 @@ in {
         background = gruvboxDark.bg;
         foreground = gruvboxDark.fg;
         modules-left = "xworkspaces";
-        modules-right = "wlan separator cpu separator temperature separator memory separator filesystem separator battery separator date";
+        modules-right = "wlan separator cpu separator temperature separator memory separator filesystem separator battery separator volume separator date";
       };
 
       "module/separator" = {
@@ -447,7 +447,7 @@ in {
       };
 
       "module/volume" = {
-        type = internal/pulseaudio;
+        type = "internal/pulseaudio";
 
         format-volume = "<ramp-volume> <label-volume>";
         format-volume-padding = 1;
