@@ -341,11 +341,11 @@ in {
         type = "internal/xworkspaces";
         label-active = "%name% ";
         label-active-background = gruvboxDark.blue;
-        label-active-foreground = gruvboxDark.yellow;
+        label-active-foreground = gruvboxDark.darkgray;
         label-active-padding = "1";
         label-occupied = "%name% ";
         label-occupied-background = gruvboxDark.bg;
-        label-occupied-foreground = gruvboxDark.blue;
+        label-occupied-foreground = gruvboxDark.yellow;
         label-occupied-padding = "1";
         label-empty = "%name% ";
         label-empty-background = gruvboxDark.bg;
