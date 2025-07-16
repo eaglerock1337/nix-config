@@ -62,7 +62,6 @@ in {
   };
 
   systemd.user.services.lock-before-sleep = {
-    enable = true;
     unitConfig = {
       Description = "Lock screen before sleep";
     };
