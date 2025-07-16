@@ -392,7 +392,7 @@ in {
         format = " <label>";
         format-padding = 1;
         format-foreground = gruvboxDark.aqua;
-        label = "RAM %mb_used%/%mb_free%";
+        label = "RAM %mb_used% %percentage_used%%";
       };
 
       "module/filesystem" = {
