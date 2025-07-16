@@ -324,23 +324,24 @@ in {
         width = "100%";
         height = "4%";
         bottom = true;
-        font-0 = "FiraCode Nerd Font:size=24;2";
+        font-0 = "FiraCode Nerd Font:size=18;2";
         background = gruvboxDark.bg;
         foreground = gruvboxDark.fg;
         modules-left = "xworkspaces";
-        modules-right = "cpu separator memory separator wlan separator battery separator date";
+        modules-right = "wlan separator cpu separator temperature separator memory separator filesystem separator battery separator date";
       };
 
       "module/separator" = {
         type = "custom/text";
-        content = " << ";
+        format-foreground = gruvboxDark.purple;
+        content = " 󰄽 ";
       };
 
       "module/xworkspaces" = {
         type = "internal/xworkspaces";
         label-active = "%name%";
-        label-active-background = gruvboxDark.bg;
-        label-active-foreground = gruvboxDark.fg;
+        label-active-background = gruvboxDark.green;
+        label-active-foreground = gruvboxDark.yellow;
         label-active-padding = "1";
         label-occupied = "%name%";
         label-occupied-background = gruvboxDark.bg;
@@ -356,30 +357,51 @@ in {
         label-urgent-padding = "1";
       };
 
-      "module/date" = {
-        type = "internal/date";
-        interval = "1.0";
-        date = "%Y-%m-%d%";
-        time = "%H:%M";
-        date-alt = "%A, %B %d %Y";
-        time-alt = "%H:%M:%S";
-        format = " <label>";
+      "module/wlan" = {
+        type = "internal/network";
+        interface = "wlp0s20f3";
+        interval = 3;
+        format-foreground = gruvboxDark.green;
+        format-connected = "󰖩 <label-connected>";
+        label-connected = "%essid% (%signal:2%%)";
+        format-disconnected = "󰤯 down";
         format-padding = 1;
-        label = "%date% %time%";
       };
 
       "module/cpu" = {
         type = "internal/cpu";
         format = " <label>";
         format-padding = 1;
-        label = "CPU %percentage%%";
+        format-foreground = gruvboxDark.red;
+        label = "CPU %percentage:2%%";
+      };
+
+      "module/temperature" = {
+        type = "internal/temperature";
+        thermal-zone = 0;
+        interval = 5;
+        format = " <label>";
+        format-padding = 1;
+        format-foreground = gruvboxDark.yellow;
+        label = "%temperature:C%°C";
       };
 
       "module/memory" = {
         type = "internal/memory";
         format = " <label>";
         format-padding = 1;
-        label = "RAM %percentage_used%%";
+        format-foreground = gruvboxDark.aqua;
+        label = "RAM %free:0:2% GiB";
+      };
+
+      "module/filesystem" = {
+        type = "internal/fs";
+        mount-0 = "/";
+        interval = 10;
+        format = " <label>";
+        format-padding = 1;
+        format-foreground = gruvboxDark.green;
+        label = "%free:0:2% GiB free";
       };
 
       "module/battery" = {
@@ -388,30 +410,24 @@ in {
         adapter = "AC";
         full-at = 98;
         format-padding = 1;
-        format-charging = " <animation-charging> <label-charging>";
+        format-foreground = gruvboxDark.red;
+        format-charging = " <label-charging>";
         label-charging = "%percentage%% +%consumption%W";
-        animation-charging-0 = "";
-        animation-charging-1 = "";
-        animation-charging-2 = "";
-        animation-charging-3 = "";
-        animation-charging-4 = "";
-        animation-charging-framerate = 500;
-        format-discharging = "🔋 <ramp-capacity> <label-discharging>";
+        format-discharging = "󱊣 <label-discharging>";
         label-discharging = "%percentage%% -%consumption%W";
-        ramp-capacity-0 = "";
-        ramp-capacity-1 = "";
-        ramp-capacity-2 = "";
-        ramp-capacity-3 = "";
-        ramp-capacity-4 = "";
-      };
 
-      "module/wlan" = {
-        type = "internal/network";
-        interface = "wlp0s20f3";
-        format-connected = " <label-connected>";
-        label-connected = "%essid%";
-        format-disconnected = "睊 Disconnected";
-        format-padding = 1;
+        "module/date" = {
+          type = "internal/date";
+          interval = 1;
+          date = "%Y-%m-%d%";
+          time = "%H:%M";
+          date-alt = "%A, %B %d %Y";
+          time-alt = "%H:%M:%S";
+          format = " <label>";
+          format-padding = 1;
+          format-foreground = gruvboxDark.blue;
+          label = "%date% %time%";
+        };
       };
     };
     script = "polybar mainbar &";
