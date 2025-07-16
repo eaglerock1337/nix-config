@@ -362,7 +362,7 @@ in {
         interface = "wlp0s20f3";
         interval = 3;
         format-connected = " <label-connected>";
-        label-connected = "%essid% %signal:2%% ";
+        label-connected = "%essid% %signal%% ";
         format-connected-foreground = gruvboxDark.green;
         format-disconnected = " Down";
         format-disconnected-foreground = gruvboxDark.red;
@@ -374,14 +374,14 @@ in {
         format = " <label>";
         format-padding = 1;
         format-foreground = gruvboxDark.blue;
-        label = "%percentage:2%%";
+        label = "%percentage%%";
       };
 
       "module/temperature" = {
         type = "internal/temperature";
         thermal-zone = 0;
         interval = 5;
-        format = " <label>";
+        format = "<label>";
         format-padding = 1;
         format-foreground = gruvboxDark.yellow;
         label = "%temperature:C%";
@@ -452,10 +452,12 @@ in {
         format-volume = "<ramp-volume> <label-volume>";
         format-volume-padding = 1;
         format-volume-foreground = gruvboxDark.yellow;
+        label-volume = "%percentage%%";
 
-        format-muted-prefix = "";
+        format-muted = " <label-muted>";
         format-muted-foreground = gruvboxDark.yellow;
         format-muted-padding = 1;
+        label-muted = "%percentage%%";
 
         ramp-volume-0 = "";
         ramp-volume-1 = "";
