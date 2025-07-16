@@ -363,9 +363,9 @@ in {
         interval = 3;
         format-connected = " <label-connected>";
         label-connected = "%essid% %signal:2%% ";
-        label-connected-foreground = gruvboxDark.green;
+        format-connected-foreground = gruvboxDark.green;
         format-disconnected = " Down";
-        label-disconnected-foreground = gruvboxDark.red;
+        format-disconnected-foreground = gruvboxDark.red;
         format-padding = 1;
       };
 
@@ -433,7 +433,7 @@ in {
         animation-discharging-2 = "󱊡";
         animation-discharging-3 = "󰂎";
         animation-discharging-framerate = 1000;
-        format-low = "󰂃 <label-low>"
+        format-low = "󰂃 <label-low>";
         format-low-padding = 1;
         format-low-foreground = gruvboxDark.red;
         label-low = "%percentage%%";
