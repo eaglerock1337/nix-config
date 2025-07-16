@@ -334,13 +334,13 @@ in {
       "module/separator" = {
         type = "custom/text";
         format-foreground = gruvboxDark.purple;
-        content = " 󰄽 ";
+        format = "󰄽";
       };
 
       "module/xworkspaces" = {
         type = "internal/xworkspaces";
         label-active = "%name%";
-        label-active-background = gruvboxDark.green;
+        label-active-background = gruvboxDark.aqua;
         label-active-foreground = gruvboxDark.yellow;
         label-active-padding = "1";
         label-occupied = "%name%";
@@ -383,7 +383,7 @@ in {
         format = " <label>";
         format-padding = 1;
         format-foreground = gruvboxDark.yellow;
-        label = "%temperature:C%°C";
+        label = "%temperature:C%";
       };
 
       "module/memory" = {
@@ -391,7 +391,7 @@ in {
         format = " <label>";
         format-padding = 1;
         format-foreground = gruvboxDark.aqua;
-        label = "RAM %free:0:2% GiB";
+        label = "RAM %free:0:2%GiB";
       };
 
       "module/filesystem" = {
