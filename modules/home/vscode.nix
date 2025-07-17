@@ -20,6 +20,7 @@
         github.copilot
         ms-azuretools.vscode-docker
         ms-vscode.cpptools
+        naumovs.color-highlight
       ]) ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
         {
           publisher = "tomphilbin";
@@ -39,6 +40,7 @@
           inlineSuggest.enabled = true;
           bracketPairColorization.enabled = true;
           colorDecorators = true;
+          defaultColorDecorators = true;
         };
 
         git = {
