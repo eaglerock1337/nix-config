@@ -11,6 +11,18 @@
         ms-python.python
         esbenp.prettier-vscode
         dbaeumer.vscode-eslint
+        redhat.vscode-yaml
+        svelte.svelte-vscode
+        yzhang.markdown-all-in-one
+        davidanson.vscode-markdownlint
+        ms-kubernetes-tools.vscode-kubernetes-tools
+        golang.go
+        github.copilot
+        github.copilot-chat
+        ms-azuretools.vscode-docker
+        ms-vscode.cpptools
+        ms-vscode.vscode-typescript
+
       ]) ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
         {
           publisher = "tomphilbin";
@@ -29,7 +41,13 @@
           fontLigatures = true;
           inlineSuggest.enabled = true;
           bracketPairColorization.enabled = true;
+          colorDecorators = true;
         };
+
+        git = {
+          enableSmartCommit = false;
+          confirmSync = false;
+        }
 
         workbench = {
           colorTheme = "Gruvbox Dark (Soft)";
