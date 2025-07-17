@@ -60,13 +60,4 @@ in {
       executable = true;
     };
   };
-
-  systemd.user.services.lock-before-sleep = {
-    unitConfig.Description = "Lock screen before sleep";
-    installConfig.wantedBy = [ "sleep.target" "suspend.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "~/.local/bin/lock";
-    };
-  };
 }

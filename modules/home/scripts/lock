@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Lock screen with Gruvbox colors
-i3lock-color \
+i3lock-color -n \
   -i ~/git/nix-config/assets/wallpaper-gibson-blur.png \
   --scale \
   --insidever-color=D7992180 \

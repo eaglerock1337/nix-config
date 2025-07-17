@@ -33,6 +33,7 @@
     pamixer        # volume control
     brightnessctl  # brightness (optional)
     i3lock-color   # lock screen
+    xss-lock       # lock screen on sleep/suspend
     imagemagick    # screen blur
     alacritty      # terminal
 

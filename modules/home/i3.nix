@@ -247,6 +247,11 @@ in {
       startup = [
         {
           command = "xrandr --output eDP-1 --scale 0.8x0.8 --dpi 144";
+          always = true;
+        }
+        {
+          command = "xss-lock -- ${config.home.homeDirectory}/.local/bin/lock &";
+          always = true;
         }
         {
           command = "systemctl --user restart polybar.service";
