@@ -14,7 +14,7 @@ let
     darkgray = "#1d2021";
   };
   workspaces = {
-    "1" = "1 ";        # Terminal
+    "1" = "1 ";        # Terminals
     "2" = "2 ";        # VSCode
     "3" = "3 ";        # Firefox
     "4" = "4 ";        # Chat programs
