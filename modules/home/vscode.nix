@@ -18,11 +18,8 @@
         ms-kubernetes-tools.vscode-kubernetes-tools
         golang.go
         github.copilot
-        github.copilot-chat
         ms-azuretools.vscode-docker
         ms-vscode.cpptools
-        ms-vscode.vscode-typescript
-
       ]) ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
         {
           publisher = "tomphilbin";
@@ -47,7 +44,7 @@
         git = {
           enableSmartCommit = false;
           confirmSync = false;
-        }
+        };
 
         workbench = {
           colorTheme = "Gruvbox Dark (Soft)";
