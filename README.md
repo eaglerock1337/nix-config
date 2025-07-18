@@ -38,6 +38,7 @@ sudo nixos-rebuild switch --flake ~/git/nix-config#gibson  # substitute hostname
 - Determine direnv-based code solution for my repos
 - Determine baseline preinstalled languages as well (Python, Ruby, etc.)
 - Set up GTK config as home-manager file
+- Set up OS keyring
 
 ### other goals
 

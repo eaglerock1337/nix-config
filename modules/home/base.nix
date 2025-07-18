@@ -17,6 +17,7 @@
 
   # TODO: figure out why this isn't working
   programs.bash = {
+    enable = true;
     shellAliases = {
       ll = "exa -l --group-directories-first";          # Use eza for better ls
       la = "exa -la --group-directories-first";         # List all files with eza
@@ -29,6 +30,7 @@
     enable = true;
     defaultEditor = true;
     vimAlias = true;
+    viAlias = true;
 
     extraConfig = ''
       syntax enable
