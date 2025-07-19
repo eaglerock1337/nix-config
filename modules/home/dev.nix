@@ -20,7 +20,6 @@ in {
     delve # Debugger
 
     # --- Node.js / TypeScript ---
-    node
     # nodejs
     # myNodePackages.npm
     # myNodePackages.typescript
