@@ -20,6 +20,7 @@ in {
     delve # Debugger
 
     # --- Node.js / TypeScript ---
+    node
     # nodejs
     # myNodePackages.npm
     # myNodePackages.typescript
@@ -33,6 +34,7 @@ in {
     rubyPackages_3_4.rubocop
 
     # --- Misc Dev Tools ---
+    gnumake
     direnv
     gh      # GitHub CLI
   ];

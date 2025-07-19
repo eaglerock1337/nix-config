@@ -113,6 +113,9 @@
     docker_28
     kubectl
     k9s
+    kubernetes-helm
+    minikube
+    kind
   ];
 
   # Enable the OpenSSH daemon.

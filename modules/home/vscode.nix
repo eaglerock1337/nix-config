@@ -20,6 +20,7 @@
         github.copilot
         ms-azuretools.vscode-docker
         ms-vscode.cpptools
+        ms-vscode.makefile-tools
       ]) ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
         {
           publisher = "tomphilbin";
