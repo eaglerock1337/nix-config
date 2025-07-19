@@ -63,6 +63,8 @@
     yq              # YAML processor
     sd              # Intuitive sed replacement
     git             # Version control
+    busybox         # Compact utility shell
+    killall         # Kill utility
 
     # --- Editors & Viewers ---
     micro           # Friendly terminal editor
