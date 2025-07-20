@@ -10,13 +10,13 @@ in {
       global = {
         monitor = 0;
         follow = "none";
-        geometry = "300x5-10-30"; # width x max_count -x_offset -y_offset from bottom-right
+        geometry = "300x5-10-40"; # width x max_count -x_offset -y_offset from bottom-right
         origin = "bottom-right";
-        offset = "10x30";
+        offset = "10x40";
         padding = 16;
         horizontal_padding = 16;
         frame_width = 2;
-        frame_color = gruvboxDark.aqua; # Gruvbox aqua for border
+        frame_color = gruvboxDark.bg0Hard;
         separator_color = "frame";
         font = "Fira Sans 10";
         line_height = 4;
@@ -43,8 +43,8 @@ in {
       };
 
       urgency_normal = {
-        background = gruvboxDark.yellow; # Gruvbox yellow
-        foreground = gruvboxDark.bg; # Gruvbox dark background for contrast
+        background = gruvboxDark.blue; # Gruvbox yellow
+        foreground = gruvboxDark.fg; # Gruvbox dark background for contrast
         timeout = 20;
       };
 

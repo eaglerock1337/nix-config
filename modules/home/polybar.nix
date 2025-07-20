@@ -4,7 +4,6 @@ let
   colors = import ./colors.nix;
   gruvboxDark = colors.gruvboxDark;
 in {
-
   # POLYBAR CONFIG
   services.polybar = {
     enable = true;

@@ -47,6 +47,7 @@
     xss-lock       # lock screen on sleep/suspend
     imagemagick    # screen blur
     alacritty      # terminal
+    libnotify
 
     # GTK & Theming
     gnome-tweaks
