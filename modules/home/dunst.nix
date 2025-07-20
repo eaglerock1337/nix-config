@@ -28,7 +28,7 @@ in {
         icon_position = "left";
         min_icon_size = 32;
         max_icon_size = 64;
-        transparency = 0;
+        transparency = 10;
         idle_threshold = 120;
         mouse_left_click = "close_current";
         mouse_middle_click = "do_action";
@@ -37,20 +37,20 @@ in {
       };
 
       urgency_low = {
-        background = gruvboxDark.bg1; # Gruvbox dark gray
-        foreground = gruvboxDark.fg; # Gruvbox light text
-        timeout = 5;
+        background = gruvboxDark.bg2;
+        foreground = gruvboxDark.fg2;
+        timeout = 10;
       };
 
       urgency_normal = {
-        background = gruvboxDark.blue; # Gruvbox yellow
-        foreground = gruvboxDark.fg; # Gruvbox dark background for contrast
+        background = gruvboxDark.fg2;
+        foreground = gruvboxDark.bg2;
         timeout = 20;
       };
 
       urgency_critical = {
-        background = gruvboxDark.red; # Gruvbox red
-        foreground = gruvboxDark.fg; # Gruvbox very light
+        background = gruvboxDark.red;
+        foreground = gruvboxDark.fg2;
         timeout = 0;
       };
     };
