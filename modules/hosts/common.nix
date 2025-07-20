@@ -27,11 +27,11 @@
     LC_TIME = "en_US.UTF-8";
   };
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
+    # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.eaglerock = {
     isNormalUser = true;
     description = "Peter Marks";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [ "networkmanager" "wheel" "docker" ];
   };
 
   programs.bash = {
@@ -112,13 +112,14 @@
     neofetch
 
     # --- Containerization ---
-    docker_28
     kubectl
     k9s
     kubernetes-helm
     minikube
     kind
   ];
+
+  virtualisation.docker.enable = true;
 
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;

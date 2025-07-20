@@ -13,20 +13,31 @@
     i3status
     feh
     rofi
+    rofi-calc
+    rofi-systemd
+    rofi-top
+    rofi-file-browser
+    rofi-network-manager
+    rofi-power-menu
     picom
     xterm
     xfce.thunar
+    dunst
+    nnn
 
     # utilities
     scrot
     flameshot
     gimp3-with-plugins
     rpi-imager
+    arandr
 
     # Multimedia
     vlc
     hexchat
     discord
+    bluez
+    blueman
 
     # Utilities
     playerctl
