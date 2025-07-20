@@ -15,7 +15,6 @@
     ];
   };
 
-  # TODO: figure out why this isn't working
   programs.bash = {
     enable = true;
     shellAliases = {

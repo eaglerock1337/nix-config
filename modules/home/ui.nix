@@ -50,6 +50,7 @@ in {
       };
       window = {
         opacity = 0.8;
+        dynamic_title = true;
       };
     };
   };
