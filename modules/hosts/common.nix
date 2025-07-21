@@ -72,9 +72,7 @@
       fi
 
       # Set window title
-      PROMPT_COMMAND='
-        printf "\033]0;%s@%s: %s\007" "$USER" "$HOSTNAME" "$CWD"
-      '
+      PROMPT_COMMAND='CWD=$PWD/#$HOME/~}; printf "\033]0;%s@%s: %s\007" "$USER" "$HOSTNAME" "$CWD"'
 
       # Show user@host only for SSH sessions
       if [[ -n "$SSH_CONNECTION" ]]; then
