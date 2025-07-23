@@ -23,7 +23,7 @@ sudo nixos-rebuild switch --flake ~/git/nix-config#gibson  # substitute hostname
 
 #### lxappearance
 
-- Set theme to Gruvbox-Dark 
+- Set theme to Gruvbox-Dark
 - Set icons to Gruvbox Plus Icon Pack
 - Set font to Fira Sans Regular 12
 
@@ -33,8 +33,6 @@ sudo nixos-rebuild switch --flake ~/git/nix-config#gibson  # substitute hostname
 - Audit power settings: lock to blank screen to sleep mode...also how to suspend
 - Polybar embellishments - click actions + fix battery display when not charging on AC
 - Corky setup - nice fancy desktop-based system metrics
-- Get TTY sessions working
-- Get more vscode improvements in place (important plugins, desired config settings, etc.)
 - Determine baseline preinstalled languages as well (Python, Ruby, etc.)
 - Set up GTK config as home-manager file
 - Set up OS keyring

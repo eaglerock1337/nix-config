@@ -184,16 +184,6 @@ in {
         # TODO: Enable later
         # # Toggle workspace between monitors
         # "${config.xsession.windowManager.i3.config.modifier}+x" = "move workspace to output right"; 
-
-        # Switch between tty sessions
-        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F1" = "exec --no-startup-id chvt 1";
-        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F2" = "exec --no-startup-id chvt 2";
-        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F3" = "exec --no-startup-id chvt 3";
-        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F4" = "exec --no-startup-id chvt 4";
-        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F5" = "exec --no-startup-id chvt 5";
-        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F6" = "exec --no-startup-id chvt 6";
-        # "${config.xsession.windowManager.i3.config.modifier}+Shift+F7" = "exec --no-startup-id chvt 7";
-
       };
 
       # Resize mode keybindings

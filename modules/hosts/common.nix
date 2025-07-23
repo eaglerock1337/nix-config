@@ -27,7 +27,7 @@
     LC_TIME = "en_US.UTF-8";
   };
 
-    # Define a user account. Don't forget to set a password with ‘passwd’.
+  # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.eaglerock = {
     isNormalUser = true;
     description = "Peter Marks";
