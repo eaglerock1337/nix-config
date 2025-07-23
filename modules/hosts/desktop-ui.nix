@@ -90,7 +90,7 @@
     windowManager.i3.enable = true;
   };
 
-  services.gnome-keyring.enable = true;
+  services.gnome.gnome-keyring.enable = true;
 
   services.displayManager.defaultSession = "none+i3";
 
