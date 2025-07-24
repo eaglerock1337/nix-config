@@ -72,7 +72,8 @@
       fi
 
       # Set window title
-      PROMPT_COMMAND='CWD=$PWD/#$HOME/~}; printf "\033]0;%s@%s: %s\007" "$USER" "$HOSTNAME" "$CWD"'
+      # TODO: fix CWD to properly substitute $HOME with ~
+      PROMPT_COMMAND='CWD=$\{$PWD/#$HOME/~}; printf "\033]0;%s@%s: %s\007" "$USER" "$HOSTNAME" "$PWD"'
 
       # Show user@host only for SSH sessions
       if [[ -n "$SSH_CONNECTION" ]]; then

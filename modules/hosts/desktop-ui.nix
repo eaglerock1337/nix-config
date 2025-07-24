@@ -47,6 +47,7 @@
     xss-lock       # lock screen on sleep/suspend
     imagemagick    # screen blur
     alacritty      # terminal
+    gnome-keyring
     seahorse       # GNOME keyring manager
     libsecret      # GNOME keyring CLI (secret-tool)
     libnotify
@@ -90,11 +91,9 @@
     windowManager.i3.enable = true;
   };
 
-  services.gnome.gnome-keyring.enable = true;
-
   services.displayManager.defaultSession = "none+i3";
 
-  services.pam.services = {
+  security.pam.services = {
     login.enableGnomeKeyring = true;
     lightdm.enableGnomeKeyring = true;
   };

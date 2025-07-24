@@ -64,7 +64,7 @@ in {
 
   systemd.user.services.gnome-keyring-daemon = {
     Unit.Description = "GNOME Keyring";
-    Service.ExecStart = "${pkgs.gnome.gnome-keyring}/bin/gnome-keyring-daemon --start --components=pkcs11,secrets,ssh,gpg";
+    Service.ExecStart = "${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --start --components=pkcs11,secrets,ssh,gpg";
     Install.WantedBy = [ "default.target" ];
   };
 }
