@@ -14,7 +14,7 @@
 
   services.power-profiles-daemon.enable = false; # Use TLP instead
 
-  # # Power management with TLP (fine-grained) or power-profiles-daemon (auto)
+  # Power management with TLP (fine-grained) or power-profiles-daemon (auto)
   services.tlp = {
     enable = true;
     settings = {
@@ -26,6 +26,18 @@
       START_CHARGE_THRESH_BAT0 = 75;
       STOP_CHARGE_THRESH_BAT0 = 95;
     };
+  };
+
+  # Intel optimizations
+  hardware.opengl = {
+    enable = true;
+    extraPackages = with pkgs; [
+      mesa
+      vulkan-loader
+      vulkan-tools
+      vulkan-headers
+      intel-media-driver
+    ];
   };
 
   # Fan and thermal management
