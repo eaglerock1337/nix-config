@@ -19,12 +19,12 @@
     enable = true;
     settings = {
       CPU_SCALING_GOVERNOR_ON_AC = "performance";
-      CPU_SCALING_GOVERNOR_ON_BAT = "fpowersave";
+      CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
       USB_AUTOSUSPEND = 1;
       WIFI_PWR_ON_BAT = "on";
       PCIE_ASPM_ON_BAT = "powersupersave";
       START_CHARGE_THRESH_BAT0 = 75;
-      STOP_CHARGE_THRESH_BAT0 = 95;
+      STOP_CHARGE_THRESH_BAT0 = 85;
     };
   };
 
@@ -74,6 +74,7 @@
     fwupd
     lm_sensors
     brightnessctl
+    linuxPackages.turbostat
   ];
 
   # Optional: systemd tweaks
