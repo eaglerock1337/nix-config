@@ -99,13 +99,13 @@ in {
         battery = "BAT0";
         adapter = "AC";
         time-format = "%H:%M";
-        full-at = 95;
+        full-at = 85;
         low-at = 8;
         poll-interval = 5;
 
         format-full-padding = 1;
         format-full-foreground = gruvboxDark.green;
-        format-full = "󰁹 <label-full>";
+        format-full = "󰁹 Full";
         label-full = "%percentage%%";
 
         format-charging = "<animation-charging> <label-charging>";

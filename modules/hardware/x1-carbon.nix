@@ -69,6 +69,12 @@
     "acpi_call"
   ];
 
+  boot.kernelParams = [
+    "intel_idle.max_cstate=3"
+    "processor.max_cstate=3"
+    "idle=nomwait"
+  ];
+
   environment.systemPackages = with pkgs; [
     powertop
     fwupd
