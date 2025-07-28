@@ -49,11 +49,13 @@
         };
 
         workbench = {
-          colorTheme = "Gruvbox Dark (Soft)";
+          colorTheme = "Gruvbox Dark Medium";
           iconTheme = "vscode-icons";
         };
 
         terminal.integrated.fontSize = 14;
+
+        svelte.enable-ts-plugin = true;
       };
     };
   };
