@@ -42,6 +42,7 @@
     # Utilities
     playerctl
     pamixer        # volume control
+    ncpamixer
     brightnessctl  # brightness (optional)
     i3lock-color   # lock screen
     xss-lock       # lock screen on sleep/suspend

@@ -181,9 +181,8 @@ in {
         "${config.xsession.windowManager.i3.config.modifier}+Shift+minus" = "move scratchpad";
         "${config.xsession.windowManager.i3.config.modifier}+minus" = "scratchpad show";
 
-        # TODO: Enable later
-        # # Toggle workspace between monitors
-        # "${config.xsession.windowManager.i3.config.modifier}+x" = "move workspace to output right"; 
+        # Toggle workspace between monitors
+        "${config.xsession.windowManager.i3.config.modifier}+x" = "move workspace to output right"; 
       };
 
       # Resize mode keybindings
@@ -212,21 +211,24 @@ in {
         "${workspaces."8"}" = [ { class = "^Thunar$"; } ];
       };
 
-      # TODO: Enable later
-      # workspaceOutputAssign = [
-      #   {
-      #     workspace = "9";
-      #     output = "HDMI-1";
-      #   }
-      #   {
-      #     workspace = "10";
-      #     output = "HDMI-1";
-      #   }
-      # ];
+      workspaceOutputAssign = [
+        {
+          workspace = "9";
+          output = "HDMI-1";
+        }
+        {
+          workspace = "10";
+          output = "HDMI-1";
+        }
+      ];
 
       startup = [
         {
           command = "xrandr --output eDP-1 --scale 0.8x0.8 --dpi 144";
+          always = true;
+        }
+        {
+          command = "xrandr --output HDMI-1 --mode 1920x1080 --right-of eDP-1";
           always = true;
         }
         {
@@ -294,11 +296,6 @@ in {
       ];
     };
   };
-
-  # TODO: Enable this command later
-  # {
-  #   command = "xrandr --output HDMI-1 --mode 1920x1080 --right-of eDP-1";
-  # }
 
   xdg.configFile."picom/picom.conf".text = ''
     corner-radius = 10;
