@@ -72,7 +72,10 @@
   boot.kernelParams = [
     "intel_idle.max_cstate=3"
     "processor.max_cstate=3"
-    "idle=nomwait"
+    # "idle=nomwait"
+    "pci=noaer"
+    "pcie_aspm=off"
+    "nvme_core.default_ps_max_latency_us=5500"
   ];
 
   environment.systemPackages = with pkgs; [
