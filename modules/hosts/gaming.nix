@@ -13,6 +13,7 @@
     protonplus
     protontricks
     protonup-ng     # GUI for installing/updating Proton versions (including GE)
+    steam-run
     vulkan-tools
     gamemode
   ];
