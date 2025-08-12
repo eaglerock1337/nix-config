@@ -52,6 +52,7 @@
     seahorse       # GNOME keyring manager
     libsecret      # GNOME keyring CLI (secret-tool)
     libnotify
+    xorg.xkill
 
     # GTK & Theming
     gnome-tweaks
