@@ -97,7 +97,7 @@
     fd              # Fast alternative to find
     ripgrep         # Fast grep (used by many fuzzy finders)
     fzf             # Fuzzy finder
-    du-dust         # Better du
+    dust            # Better du
     duf             # Disk usage/free visualizer
     tree            # Directory tree view
     zoxide          # Smarter cd
@@ -139,7 +139,8 @@
     gnupg
     gnutls
     age
-    pinentry
+    pinentry-curses
+    pinentry-gnome3
     pass            # Standard Unix password manager
 
     # --- Productivity / Enhancements ---

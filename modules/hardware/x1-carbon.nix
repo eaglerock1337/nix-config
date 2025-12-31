@@ -7,9 +7,13 @@
   services.fwupd.enable = true;
 
   services.logind = {
-    lidSwitch = "suspend";
-    lidSwitchDocked = "ignore";
-    lidSwitchExternalPower = "suspend";
+    settings = {
+      Login = {
+        HandleLidSwitch = "suspend";
+        HandleLidSwitchDocked = "ignore";
+        HandleLidSwitchExternalPower = "suspend";
+      };
+    };
   };
 
   services.power-profiles-daemon.enable = false; # Use TLP instead

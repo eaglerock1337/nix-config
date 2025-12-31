@@ -87,11 +87,16 @@
           '';
         };
       };
-      gdm.enable = false;
     };
-    desktopManager.gnome.enable = true;
-    windowManager.i3.enable = true;
   };
+
+  services.displayManager = {
+    gdm.enable = false;
+  };
+
+  services.desktopManager.gnome.enable = true;
+
+  services.xserver.windowManager.i3.enable = true;
 
   services.displayManager.defaultSession = "none+i3";
 
