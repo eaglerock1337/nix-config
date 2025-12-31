@@ -207,6 +207,7 @@ in {
         "${workspaces."3"}" = [ { class = "^firefox$"; } ];
         "${workspaces."4"}" = [ { class = "^Hexchat$"; } { class = "^discord$"; } ];
         "${workspaces."5"}" = [ { class = "^steam$"; } ];
+        "${workspaces."6"}" = [ { class = "^claude$"; } ];
         "${workspaces."7"}" = [ { class = "^Chromium$"; } ];
         "${workspaces."8"}" = [ { class = "^Thunar$"; } ];
       };

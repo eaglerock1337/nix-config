@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, unstable, ... }:
 
 let
   # Optional: Pin the Node version for consistency
@@ -36,6 +36,8 @@ in {
     gnumake
     direnv
     gh      # GitHub CLI
+
+    unstable.claude-code
   ];
 
   # Optional: configure environment variables
