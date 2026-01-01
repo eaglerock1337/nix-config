@@ -6,6 +6,9 @@
   # Enable firmware updates
   services.fwupd.enable = true;
 
+  # SSD health - periodic TRIM (runs weekly by default)
+  services.fstrim.enable = true;
+
   services.logind = {
     settings = {
       Login = {

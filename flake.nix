@@ -32,6 +32,8 @@
           home-manager.useUserPackages = true;
           home-manager.extraSpecialArgs = { inherit unstable; };
           home-manager.users.eaglerock = import ./home/eaglerock.nix;
+          # Back up conflicting files instead of failing
+          home-manager.backupFileExtension = "backup";
         }
         {
           nixpkgs.config.allowUnfreePredicate = pkg:

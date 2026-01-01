@@ -7,7 +7,17 @@
 {
   imports = [ ];
 
-  nix.settings.experimental-features = "nix-command flakes";
+  # Nix settings
+  nix.settings = {
+    experimental-features = "nix-command flakes";
+    # Automatically deduplicate files in the store
+    auto-optimise-store = true;
+    # Disk-pressure based garbage collection fallback
+    # Triggers GC during builds when free space drops below 1GB
+    min-free = "${toString (1 * 1024 * 1024 * 1024)}";
+    # Stops GC when free space reaches 5GB
+    max-free = "${toString (5 * 1024 * 1024 * 1024)}";
+  };
 
   # Set your time zone.
   time.timeZone = "America/New_York";
@@ -38,6 +48,9 @@
     interactiveShellInit = ''
       nr() {
         sudo nixos-rebuild switch --flake ~/git/nix-config#"$(hostname -s)" "$@";
+      }
+      ndr() {
+        sudo nixos-rebuild dry-run --flake ~/git/nix-config#"$(hostname -s)" "$@";
       }
     '';
     promptInit = ''
@@ -160,6 +173,9 @@
     kubernetes-helm
     minikube
     kind
+
+    # --- Nix Tools ---
+    nh              # Nix helper with smarter GC (nh clean all --keep 3)
   ];
 
   virtualisation.docker.enable = true;

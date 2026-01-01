@@ -1,26 +1,29 @@
 { config, pkgs, ... }:
 
-let
-  nerdFont = pkgs.nerdfonts.override { fonts = [ "FiraCode" ]; };
-in {
-  # TODO: Enable GTK theming
-  # gtk = {
-  #   enable = true;
+{
+  # GTK theming - applies Gruvbox consistently to GTK apps
+  gtk = {
+    enable = true;
 
-  #   theme = {
-  #     name = "Gruvbox-dark";
-  #     package = pkgs.gruvbox-gtk-theme;
-  #   };
+    theme = {
+      name = "Gruvbox-Dark";  # Must match exactly what the package provides
+      package = pkgs.gruvbox-gtk-theme;
+    };
 
-  #   font = {
-  #     name = "Fira Sans 16";
-  #   };
+    font = {
+      name = "Fira Sans";
+      size = 12;
+    };
 
-  #   iconTheme = {
-  #     name = "Papirus-Dark";
-  #     package = pkgs.papirus-icon-theme;
-  #   };
-  # };
+    iconTheme = {
+      name = "Gruvbox-Plus-Dark";  # Using icons already installed in desktop-ui.nix
+      package = pkgs.gruvbox-plus-icons;
+    };
+
+    cursorTheme = {
+      name = "Adwaita";
+    };
+  };
 
   # ROFI Config
   programs.rofi = {

@@ -9,6 +9,8 @@ in {
     gfxmodeEfi = "auto";
     device = "nodev";
     theme = themeSource;
+    # Limit boot menu entries to prevent clutter
+    configurationLimit = 20;
   };
 
   boot.loader.systemd-boot.enable = false;

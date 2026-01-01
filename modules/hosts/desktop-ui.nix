@@ -132,4 +132,10 @@
 
   # Install firefox
   programs.firefox.enable = true;
+
+  # XDG portal for proper file dialogs, screen sharing, and Flatpak compatibility
+  xdg.portal = {
+    enable = true;
+    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+  };
 }
