@@ -8,7 +8,7 @@
     nixos-hardware.url = "github:nixos/nixos-hardware/master";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, ... } @ inputs:
+  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, raspberry-pi-nix, nixos-hardware, ... } @ inputs:
   let
     system = "x86_64-linux";
 
@@ -47,12 +47,13 @@
         ];
       };
 
-      hlc-501 = nixpks.lib.nixosSystem {
+      hlc-501 = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
         specialArgs = { inherit inputs; };
         modules = [
-          raspberry-pi-nix.nixosModules.raspberry-pi-5
-          nixos-hardware.nixosModules.raspbery-pi-5
+          raspberry-pi-nix.nixosModules.raspberry-pi
+          raspberry-pi-nix.nixosModules.sd-image
+          nixos-hardware.nixosModules.raspberry-pi-5
           ./hosts/hlc-501/configuration.nix
         ];
       };
