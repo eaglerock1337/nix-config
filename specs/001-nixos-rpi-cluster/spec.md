@@ -17,7 +17,7 @@ functioning 12-node k3s cluster — all from a single `git clone` and a handful 
 point of Phase 1 and is a prerequisite for every other story.
 
 **Independent Test**: Flash SD cards for all 12 nodes, provision with nixos-anywhere,
-verify k3s cluster shows 4 server nodes + 8 agent nodes with `kubectl get nodes`.
+verify k3s cluster shows 4 server nodes (hlc-401–404) + 8 agent nodes (hlc-501–508) with `kubectl get nodes`.
 
 **Acceptance Scenarios**:
 
@@ -67,8 +67,8 @@ modifying existing host configs or module files.
 `hosts/silicon` config is the prototype; the 12 cluster nodes validate the pattern
 at scale.
 
-**Independent Test**: Add `hosts/hlc-402` config importing shared modules, verify
-`nixos-rebuild dry-run --flake .#hlc-402` succeeds without modifying any other file.
+**Independent Test**: Add `hosts/hlc-501` config importing shared modules, verify
+`nixos-rebuild dry-run --flake .#hlc-501` succeeds without modifying any other file.
 
 **Acceptance Scenarios**:
 
@@ -82,7 +82,39 @@ at scale.
 
 ---
 
-### User Story 4 - Maintain Cluster Configuration Over Time (Priority: P4)
+### User Story 4 - Consistent Shell Environment Across Systems (Priority: P3)
+
+An operator SSHs into any managed system and finds a familiar, well-equipped shell
+with the correct user, curated CLI tools, a cluster-branded MOTD, and a quick
+reference for available sysadmin utilities.
+
+**Why this priority**: A consistent operator experience across all nodes reduces
+cognitive load and mistakes. The MOTD and tooling reference serve as living
+documentation. This is foundational infrastructure that every other story benefits
+from.
+
+**Independent Test**: SSH into an HLC node as `bob`, verify MOTD displays the
+HLC ASCII banner with hostname and quote, confirm standard tools are available,
+run the sysadmin reference command to see installed utilities.
+
+**Acceptance Scenarios**:
+
+1. **Given** a provisioned HLC node, **When** the operator SSHs in as `bob`,
+   **Then** the MOTD displays the HLC ASCII art banner, node hostname, and a
+   Bob Ross quote.
+2. **Given** any managed system, **When** the operator runs the sysadmin reference
+   command, **Then** a categorized list of installed CLI tools with brief
+   descriptions is displayed.
+3. **Given** a new cluster type (ecto-1), **When** its config imports the shell
+   module with a different user and MOTD theme, **Then** the shell environment
+   uses `slimer` as user and the ecto-1 splash screen.
+4. **Given** a desktop system, **When** its config imports the shell module,
+   **Then** user `eaglerock` has the same standard utilities without any
+   cluster-specific MOTD.
+
+---
+
+### User Story 5 - Maintain Cluster Configuration Over Time (Priority: P5)
 
 An operator updates NixOS inputs, k3s version, or cluster secrets, and rolls the
 change across all 12 nodes without cluster downtime and without manual imperative steps.
@@ -113,6 +145,8 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
 - What happens when k3s token file is absent on a node at first boot?
 - How does cluster respond if hlc-401 (init server) is temporarily unreachable during
   a rolling update of the other server nodes?
+- What happens if DNS is cut over to a NixOS node before workload migration is
+  complete on the old Debian node? How is traffic drained gracefully?
 
 ## Requirements *(mandatory)*
 
@@ -128,8 +162,9 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
   storage; NVMe MUST NOT be used as the root filesystem.
 - **FR-005**: All cluster secrets (k3s join token) MUST be encrypted at rest in the
   repository and decrypted at runtime using host SSH keys as age recipients.
-- **FR-006**: The k3s control plane MUST use 4-node embedded etcd (all four Pi4
-  server nodes) for high availability; no external etcd is required.
+- **FR-006**: The k3s control plane MUST use 4-node embedded etcd (hlc-401–404,
+  all Pi4 server nodes) for high availability; these nodes also run lightweight
+  workloads. No external etcd is required.
 - **FR-007**: k3s worker nodes (Pi5) MUST join the cluster via the control plane VIP
   or primary server address; agent config MUST NOT hard-code individual server IPs.
 - **FR-008**: The module structure MUST separate cluster-agnostic k8s concerns
@@ -143,6 +178,22 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
   existing SSH key; password authentication MUST be disabled.
 - **FR-012**: Longhorn MUST use NixOS-compatible container images; upstream default
   images that assume glibc paths MUST be overridden via ArgoCD Helm values.
+- **FR-013**: Each system class MUST configure a distinct default user: `bob` for
+  HLC cluster nodes, `eaglerock` for gaming/desktop systems, `slimer` for ecto-1
+  cluster nodes. User config MUST be a shared module parameterized by username.
+- **FR-014**: All systems MUST share a standard shell environment module providing
+  a curated set of sysadmin CLI utilities (e.g. htop, ripgrep, jq, tmux, etc.)
+  and consistent bash/zsh configuration. The module MUST include both: (a) a shell
+  command (e.g. `syshelp`) that prints a categorized, colorized list of installed
+  tools with one-line descriptions, and (b) a markdown reference doc in the repo
+  for onboarding context.
+- **FR-015**: Each cluster MUST display a custom MOTD on SSH login, including
+  cluster name and node hostname. HLC nodes MUST display an ASCII art splash
+  screen replicating the existing Debian MOTD style (ASCII "HLC" banner, Bob Ross
+  quote). The ecto-1 stub MUST use a generic hostname-only banner as placeholder.
+  MOTD MUST be implemented as a parameterized NixOS module, not a static file.
+- **FR-016**: The standard shell utilities module MUST be implemented first for HLC
+  nodes, then generalized for reuse by desktop and future cluster configurations.
 
 ### Key Entities
 
@@ -177,12 +228,26 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
 - **SC-007**: `nixos-rebuild dry-run` for any host succeeds from a clean checkout
   without network access beyond the configured binary caches.
 
+## Clarifications
+
+### Session 2026-04-25
+
+- Q: What is the migration strategy for the existing 12-node Debian cluster? → A: Parallel cluster — stand up NixOS nodes alongside existing Debian cluster, migrate workloads, then decommission old nodes. Must include a plan for DNS cutover and Unifi router/switch reconfiguration (DHCP reservations, VLANs, firewall rules) to avoid downtime during the transition.
+- Q: Should standard shell environment (users, MOTD, shell utilities, sysadmin tooling) be in this feature spec? → A: Yes, include as first-class requirements. Prioritize HLC cluster implementation first, then generalize for other systems (gaming/ecto-1).
+- Q: Are Pi4 workers being replaced by Pi5s or kept alongside? → A: Replace — all 8 Pi4 workers (hlc-301–308) are decommissioned. 8 new Pi5s (hlc-501–508) with NVMe replace them. Cluster remains 12 nodes: 4 Pi4 control plane (hlc-401–404, embedded etcd + lightweight workloads) + 8 Pi5 workers (hlc-501–508, NVMe/Longhorn storage).
+- Q: What form should the sysadmin tool reference take? → A: Both — a shell command (e.g. `syshelp`) that prints a categorized, colorized list of installed utilities with one-line descriptions, plus a markdown doc in the repo for onboarding context.
+- Q: What theme/branding should the ecto-1 stub MOTD use? → A: Generic placeholder — simple hostname banner with no theme until ecto-1 is fully implemented.
+
 ## Assumptions
 
 - The operator's workstation (gibson, Ryzen 9 5950X, NixOS) is the build machine;
   all cross-compilation and image builds run there.
 - Network infrastructure (Unifi, DHCP server at 10.23.50.x subnet) is already in
   place and will receive static DHCP reservations per the PREP.md address plan.
+- The existing Debian-based HLC cluster will remain running during NixOS provisioning.
+  New NixOS nodes will use separate IPs/hostnames initially; DNS and DHCP will be
+  cut over per-node once validated. A migration runbook covering DNS, DHCP, and Unifi
+  switch port config is in scope for planning.
 - The `raspberry-pi-nix` flake input (or equivalent) provides working aarch64-linux
   NixOS images for both RPi 4 and RPi 5; no custom kernel patches are in scope.
 - Mobile/GUI desktop environment config for `silicon` (the operator's laptop/desktop)
