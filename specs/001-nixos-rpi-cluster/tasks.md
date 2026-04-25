@@ -51,11 +51,12 @@ correct PS1 prompt, MOTD, and curated sysadmin tools.
 **Independent Test**: SSH into hlc-401 as `bob`; verify PS1 shows `[bob@hlc-401:~]$` in
 green, MOTD shows HLC ASCII banner + Bob Ross quote + hostname, and `syshelp` lists tools.
 
-- [ ] T008 [US4] Create `modules/shell/common.nix` — bash defaults: `programs.bash.enable = true`, history size/ignoredups settings via `programs.bash.shellInit`, inputrc settings for arrow-key history search, common aliases (`ll`, `la`, `grep --color=auto`)
-- [ ] T009 [P] [US4] Create `modules/shell/prompt.nix` — PS1 module with option `shell.prompt.hostColor` (ANSI escape code string, default green `\[\033[32m\]`); sets `programs.bash.promptInit` to produce `[user@<colored-hostname>:~/path (git-branch)]$ ` format; uses `__git_ps1` from `pkgs.git` for branch display; root suffix `#`, user suffix `$`; red prompt on non-zero exit code via `PROMPT_COMMAND`
+- [ ] T008 [US4] Create `modules/shell/common.nix` — bash defaults: `programs.bash.enable = true`; history size/ignoredups settings and common aliases (`ll`, `la`, `grep --color=auto`) via `programs.bash.interactiveShellInit` (NOT `shellInit` — must not pollute non-interactive script contexts); inputrc settings for arrow-key history search
+- [ ] T009 [P] [US4] Create `modules/shell/prompt.nix` — PS1 module with option `shell.prompt.hostColor` (ANSI escape code string, default green `\[\033[32m\]`); sets `programs.bash.promptInit` using a **single** `PROMPT_COMMAND` function that: (1) captures `$?` immediately as first line, (2) calls `__git_ps1` to populate `GIT_PS1` var, (3) sets PS1 to `[user@<colored-hostname>:~/path (git-branch)]$ ` with red color if exit code non-zero, normal color otherwise; root suffix `#`, user suffix `$`; add `pkgs.git` to `environment.systemPackages` for `__git_ps1`; do NOT assign `PROMPT_COMMAND` twice (second assignment silently drops git branch)
 - [ ] T010 [P] [US4] Create `modules/shell/utilities.nix` — `environment.systemPackages` with curated sysadmin tools (alphabetically sorted): `curl`, `dnsutils`, `ethtool`, `fd`, `file`, `git`, `htop`, `iotop`, `jq`, `lsof`, `mtr`, `ncdu`, `nmap`, `pciutils`, `ripgrep`, `tcpdump`, `tmux`, `tree`, `usbutils`, `wget`; plus `pkgs.writeShellScriptBin "syshelp"` that prints colorized categorized output (categories: Network, Storage, Process, Search, Data, Dev)
 - [ ] T011 [US4] Create `modules/cluster/hlc/motd.nix` — sets `cluster.motd.enable = true`, `cluster.motd.clusterName = "Happy Little Cloud"`, `cluster.motd.asciiArt` with the multi-line ASCII "HLC" banner art (replicate the existing Debian MOTD style), `cluster.motd.tagline` with a Bob Ross quote (fixed: "We don't make mistakes, just happy little accidents."), `cluster.motd.attribution = "~ Bob Ross"`
 - [ ] T012 [US4] Verify `modules/shell/utilities.nix` `syshelp` script: each tool category line must be colorized (ANSI bold for category header, plain for entries), each entry must include a one-line description, and the script must exit 0; test locally with `nix-instantiate --eval` or build a test package
+- [ ] T028 [P] [US4] Create `docs/syshelp-reference.md` — markdown reference doc required by FR-014; mirror the same categories and one-line descriptions used in the `syshelp` script (Network, Storage, Process, Search, Data, Dev); include a usage section and a note on adding tools; this doc is for onboarding context and stays in sync with `modules/shell/utilities.nix`
 
 ---
 
@@ -68,7 +69,7 @@ over SSH with `nixos-rebuild switch --target-host`.
 
 ### 4a: Refactor existing hlc-501
 
-- [ ] T013 [US1] Refactor `hosts/hlc-501/configuration.nix` to use shared modules: remove inline `users.users.bob` block and replace with `users.operator.username = "bob"; users.operator.sshKeys = ["<key>"];`; import `modules/hardware/rpi5.nix`, `modules/users/operator.nix`, `modules/shell/common.nix`, `modules/shell/prompt.nix`, `modules/shell/utilities.nix`, `modules/motd/default.nix`, `modules/cluster/hlc/motd.nix`; keep `raspberry-pi-nix.board`, `networking.hostName`, `networking.useDHCP`, `services.openssh.enable`, `system.stateVersion`
+- [ ] T013 [US1] Refactor `hosts/hlc-501/configuration.nix` to use shared modules: remove inline `users.users.bob` block and replace with `users.operator.username = "bob"; users.operator.sshKeys = ["<key>"];`; import `modules/hardware/rpi5.nix`, `modules/users/operator.nix`, `modules/shell/common.nix`, `modules/shell/prompt.nix`, `modules/shell/utilities.nix`, `modules/motd/default.nix`, `modules/cluster/hlc/motd.nix`; set `shell.prompt.hostColor = "\[\033[36m\]"` (cyan — worker node); keep `raspberry-pi-nix.board`, `networking.hostName`, `networking.useDHCP`, `services.openssh.enable`, `system.stateVersion`; NOTE: `useDHCP = true` is intentional for Phase A only — a DHCP reservation for hlc-501's MAC must exist in Unifi for stable remote access; Phase B will add static IP config
 
 ### 4b: Pi4 control-plane host configs (parallelizable)
 
@@ -89,8 +90,8 @@ over SSH with `nixos-rebuild switch --target-host`.
 
 ### 4d: Flake wiring
 
-- [ ] T025 [US1] Update `flake.nix`: add helper `let mkHlcNode = { hostname, system ? "aarch64-linux", extraModules ? [] }: nixpkgs.lib.nixosSystem { inherit system; specialArgs = { inherit inputs; }; modules = [ raspberry-pi-nix.nixosModules.raspberry-pi raspberry-pi-nix.nixosModules.sd-image ./hosts/${hostname}/configuration.nix ] ++ extraModules; };` then add `nixosConfigurations` entries for hlc-401 through hlc-404 (adding `nixos-hardware.nixosModules.raspberry-pi-4`) and hlc-502 through hlc-508 (adding `nixos-hardware.nixosModules.raspberry-pi-5`); update existing `hlc-501` entry to use the helper pattern
-- [ ] T026 [US1] Add Makefile with targets: `dry-run HOST=`: `nixos-rebuild dry-run --flake .#$(HOST)`; `dry-run-all`: loop dry-run over all 12 hosts; `update-node HOST= IP=`: `nixos-rebuild switch --flake .#$(HOST) --target-host bob@$(IP) --use-remote-sudo`; `build-image-rpi4`: `nix build .#nixosConfigurations.hlc-401.config.system.build.sdImage`; `build-image-rpi5`: `nix build .#nixosConfigurations.hlc-501.config.system.build.sdImage`
+- [ ] T025 [US1] Update `flake.nix`: add helper using correct Nix path concatenation (NOT string interpolation): `let mkHlcNode = { hostname, system ? "aarch64-linux", extraModules ? [] }: nixpkgs.lib.nixosSystem { inherit system; specialArgs = { inherit inputs; }; modules = [ raspberry-pi-nix.nixosModules.raspberry-pi raspberry-pi-nix.nixosModules.sd-image (./hosts + "/${hostname}/configuration.nix") ] ++ extraModules; };` — note `./hosts + "/${hostname}/configuration.nix"` (path concat) NOT `./hosts/${hostname}/configuration.nix` (string, not a path, causes eval error); add `nixosConfigurations` entries for hlc-401 through hlc-404 (passing `extraModules = [ nixos-hardware.nixosModules.raspberry-pi-4 ]`) and hlc-502 through hlc-508 (passing `extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ]`); update existing `hlc-501` entry to use the helper pattern
+- [ ] T026 [US1] Add `Makefile` with the following targets: `dry-run HOST=` → `nixos-rebuild dry-run --flake .#$(HOST)`; `dry-run-all` → loop dry-run over all 12 hosts; `update-node HOST= IP=` → `nixos-rebuild switch --flake .#$(HOST) --target-host bob@$(IP) --use-remote-sudo`; `build-image-rpi4` → `nix build .#nixosConfigurations.hlc-401.config.system.build.sdImage`; `build-image-rpi5` → `nix build .#nixosConfigurations.hlc-501.config.system.build.sdImage`; `flash-image MODEL= DEV=` → decompress and `dd` the built image to `$(DEV)` (use `zstdcat result/sd-image/*.img.zst | sudo dd of=$(DEV) bs=4M status=progress`); stub-only comments for `provision`, `update-cluster`, `encrypt-secret` targets with `# Phase B/C — not yet implemented` so FR-010 is visibly tracked
 
 ### 4e: Validation
 
@@ -137,7 +138,7 @@ Within Phase 4:
 → T001 → T002 → T004/T005 → T006 → T007 → T008 → T009 → T011 → T013 → T025 (for hlc-501 only) → flash SD → SSH in
 
 **Full Phase A** (all 12 hosts evaluating):
-→ Complete all tasks T001–T027 in dependency order
+→ Complete all tasks T001–T028 in dependency order
 
 ## Scope Boundary
 
