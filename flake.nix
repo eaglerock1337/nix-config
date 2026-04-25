@@ -26,6 +26,22 @@
           ];
       };
     };
+
+    # Helper for HLC cluster nodes — wraps nixpkgs.lib.nixosSystem with the
+    # raspberry-pi-nix modules and the host's configuration.nix.
+    # Path concatenation (./hosts + "/${hostname}/...") produces a Nix path,
+    # whereas string interpolation would produce a string and cause eval errors.
+    mkHlcNode = { hostname, extraModules ? [] }:
+      nixpkgs.lib.nixosSystem {
+        system = "aarch64-linux";
+        specialArgs = { inherit inputs; };
+        modules = [
+          raspberry-pi-nix.nixosModules.raspberry-pi
+          raspberry-pi-nix.nixosModules.sd-image
+          (./hosts + "/${hostname}/configuration.nix")
+        ] ++ extraModules;
+      };
+
   in {
     nixosConfigurations = {
       silicon = nixpkgs.lib.nixosSystem {
@@ -52,15 +68,56 @@
         ];
       };
 
-      hlc-501 = nixpkgs.lib.nixosSystem {
-        system = "aarch64-linux";
-        specialArgs = { inherit inputs; };
-        modules = [
-          raspberry-pi-nix.nixosModules.raspberry-pi
-          raspberry-pi-nix.nixosModules.sd-image
-          nixos-hardware.nixosModules.raspberry-pi-5
-          ./hosts/hlc-501/configuration.nix
-        ];
+      # HLC control-plane nodes (Pi4, bcm2711)
+      hlc-401 = mkHlcNode {
+        hostname = "hlc-401";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-4 ];
+      };
+      hlc-402 = mkHlcNode {
+        hostname = "hlc-402";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-4 ];
+      };
+      hlc-403 = mkHlcNode {
+        hostname = "hlc-403";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-4 ];
+      };
+      hlc-404 = mkHlcNode {
+        hostname = "hlc-404";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-4 ];
+      };
+
+      # HLC worker nodes (Pi5, bcm2712)
+      hlc-501 = mkHlcNode {
+        hostname = "hlc-501";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ];
+      };
+      hlc-502 = mkHlcNode {
+        hostname = "hlc-502";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ];
+      };
+      hlc-503 = mkHlcNode {
+        hostname = "hlc-503";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ];
+      };
+      hlc-504 = mkHlcNode {
+        hostname = "hlc-504";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ];
+      };
+      hlc-505 = mkHlcNode {
+        hostname = "hlc-505";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ];
+      };
+      hlc-506 = mkHlcNode {
+        hostname = "hlc-506";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ];
+      };
+      hlc-507 = mkHlcNode {
+        hostname = "hlc-507";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ];
+      };
+      hlc-508 = mkHlcNode {
+        hostname = "hlc-508";
+        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ];
       };
     };
   };

@@ -13,9 +13,9 @@
     "cgroup_enable=cpuset"
   ];
 
-  # Required for device tree overlays on Pi5; without this, many peripherals
-  # (including PCIe/NVMe) may not initialise correctly.
-  hardware.raspberry-pi."5".apply-overlays-dtmerge.enable = true;
+  # Note: hardware.raspberry-pi."5".apply-overlays-dtmerge is needed for PCIe/NVMe
+  # but is not available at the current nixos-hardware pin. Re-enable in Phase B
+  # when NVMe passthrough is configured for Longhorn storage.
 
   imports = [ inputs.nixos-hardware.nixosModules.raspberry-pi-5 ];
 }

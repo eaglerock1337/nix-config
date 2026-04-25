@@ -69,33 +69,33 @@ over SSH with `nixos-rebuild switch --target-host`.
 
 ### 4a: Refactor existing hlc-501
 
-- [ ] T013 [US1] Refactor `hosts/hlc-501/configuration.nix` to use shared modules: remove inline `users.users.bob` block and replace with `users.operator.username = "bob"; users.operator.sshKeys = ["<key>"];`; import `modules/hardware/rpi5.nix`, `modules/users/operator.nix`, `modules/shell/common.nix`, `modules/shell/prompt.nix`, `modules/shell/utilities.nix`, `modules/motd/default.nix`, `modules/cluster/hlc/motd.nix`; set `shell.prompt.hostColor = "\[\033[36m\]"` (cyan — worker node); keep `raspberry-pi-nix.board`, `networking.hostName`, `networking.useDHCP`, `services.openssh.enable`, `system.stateVersion`; NOTE: `useDHCP = true` is intentional for Phase A only — a DHCP reservation for hlc-501's MAC must exist in Unifi for stable remote access; Phase B will add static IP config
+- [x] T013 [US1] Refactor `hosts/hlc-501/configuration.nix` to use shared modules: remove inline `users.users.bob` block and replace with `users.operator.username = "bob"; users.operator.sshKeys = ["<key>"];`; import `modules/hardware/rpi5.nix`, `modules/users/operator.nix`, `modules/shell/common.nix`, `modules/shell/prompt.nix`, `modules/shell/utilities.nix`, `modules/motd/default.nix`, `modules/cluster/hlc/motd.nix`; set `shell.prompt.hostColor = "\[\033[36m\]"` (cyan — worker node); keep `raspberry-pi-nix.board`, `networking.hostName`, `networking.useDHCP`, `services.openssh.enable`, `system.stateVersion`; NOTE: `useDHCP = true` is intentional for Phase A only — a DHCP reservation for hlc-501's MAC must exist in Unifi for stable remote access; Phase B will add static IP config
 
 ### 4b: Pi4 control-plane host configs (parallelizable)
 
-- [ ] T014 [P] [US1] Create `hosts/hlc-401/configuration.nix` — thin config: import `modules/hardware/rpi4.nix` + all shared shell/user/motd modules; set `networking.hostName = "hlc-401"`, `networking.interfaces.eth0.ipv4.addresses = [{address="10.23.50.41"; prefixLength=24;}]`, `networking.defaultGateway = "10.23.50.1"`, `networking.nameservers = ["10.23.50.1"]`, `users.operator.username = "bob"`, `users.operator.sshKeys = ["<gibson-pubkey>"]`, `shell.prompt.hostColor = "\[\033[32m\]"` (green, server), `services.openssh.enable = true`, `system.stateVersion = "25.11"`
-- [ ] T015 [P] [US1] Create `hosts/hlc-402/configuration.nix` — identical structure to hlc-401 with `networking.hostName = "hlc-402"`, IP `10.23.50.42`
-- [ ] T016 [P] [US1] Create `hosts/hlc-403/configuration.nix` — `networking.hostName = "hlc-403"`, IP `10.23.50.43`
-- [ ] T017 [P] [US1] Create `hosts/hlc-404/configuration.nix` — `networking.hostName = "hlc-404"`, IP `10.23.50.44`
+- [x] T014 [P] [US1] Create `hosts/hlc-401/configuration.nix` — thin config: import `modules/hardware/rpi4.nix` + all shared shell/user/motd modules; set `networking.hostName = "hlc-401"`, `networking.interfaces.eth0.ipv4.addresses = [{address="10.23.50.41"; prefixLength=24;}]`, `networking.defaultGateway = "10.23.50.1"`, `networking.nameservers = ["10.23.50.1"]`, `users.operator.username = "bob"`, `users.operator.sshKeys = ["<gibson-pubkey>"]`, `shell.prompt.hostColor = "\[\033[32m\]"` (green, server), `services.openssh.enable = true`, `system.stateVersion = "25.11"`
+- [x] T015 [P] [US1] Create `hosts/hlc-402/configuration.nix` — identical structure to hlc-401 with `networking.hostName = "hlc-402"`, IP `10.23.50.42`
+- [x] T016 [P] [US1] Create `hosts/hlc-403/configuration.nix` — `networking.hostName = "hlc-403"`, IP `10.23.50.43`
+- [x] T017 [P] [US1] Create `hosts/hlc-404/configuration.nix` — `networking.hostName = "hlc-404"`, IP `10.23.50.44`
 
 ### 4c: Pi5 worker host configs (parallelizable)
 
-- [ ] T018 [P] [US1] Create `hosts/hlc-502/configuration.nix` — import `modules/hardware/rpi5.nix` + shared modules; `networking.hostName = "hlc-502"`, IP `10.23.50.52`, `users.operator.username = "bob"`, `shell.prompt.hostColor = "\[\033[36m\]"` (cyan, worker), `services.openssh.enable = true`, `system.stateVersion = "25.11"`
-- [ ] T019 [P] [US1] Create `hosts/hlc-503/configuration.nix` — `networking.hostName = "hlc-503"`, IP `10.23.50.53`
-- [ ] T020 [P] [US1] Create `hosts/hlc-504/configuration.nix` — `networking.hostName = "hlc-504"`, IP `10.23.50.54`
-- [ ] T021 [P] [US1] Create `hosts/hlc-505/configuration.nix` — `networking.hostName = "hlc-505"`, IP `10.23.50.55`
-- [ ] T022 [P] [US1] Create `hosts/hlc-506/configuration.nix` — `networking.hostName = "hlc-506"`, IP `10.23.50.56`
-- [ ] T023 [P] [US1] Create `hosts/hlc-507/configuration.nix` — `networking.hostName = "hlc-507"`, IP `10.23.50.57`
-- [ ] T024 [P] [US1] Create `hosts/hlc-508/configuration.nix` — `networking.hostName = "hlc-508"`, IP `10.23.50.58`
+- [x] T018 [P] [US1] Create `hosts/hlc-502/configuration.nix` — import `modules/hardware/rpi5.nix` + shared modules; `networking.hostName = "hlc-502"`, IP `10.23.50.52`, `users.operator.username = "bob"`, `shell.prompt.hostColor = "\[\033[36m\]"` (cyan, worker), `services.openssh.enable = true`, `system.stateVersion = "25.11"`
+- [x] T019 [P] [US1] Create `hosts/hlc-503/configuration.nix` — `networking.hostName = "hlc-503"`, IP `10.23.50.53`
+- [x] T020 [P] [US1] Create `hosts/hlc-504/configuration.nix` — `networking.hostName = "hlc-504"`, IP `10.23.50.54`
+- [x] T021 [P] [US1] Create `hosts/hlc-505/configuration.nix` — `networking.hostName = "hlc-505"`, IP `10.23.50.55`
+- [x] T022 [P] [US1] Create `hosts/hlc-506/configuration.nix` — `networking.hostName = "hlc-506"`, IP `10.23.50.56`
+- [x] T023 [P] [US1] Create `hosts/hlc-507/configuration.nix` — `networking.hostName = "hlc-507"`, IP `10.23.50.57`
+- [x] T024 [P] [US1] Create `hosts/hlc-508/configuration.nix` — `networking.hostName = "hlc-508"`, IP `10.23.50.58`
 
 ### 4d: Flake wiring
 
-- [ ] T025 [US1] Update `flake.nix`: add helper using correct Nix path concatenation (NOT string interpolation): `let mkHlcNode = { hostname, system ? "aarch64-linux", extraModules ? [] }: nixpkgs.lib.nixosSystem { inherit system; specialArgs = { inherit inputs; }; modules = [ raspberry-pi-nix.nixosModules.raspberry-pi raspberry-pi-nix.nixosModules.sd-image (./hosts + "/${hostname}/configuration.nix") ] ++ extraModules; };` — note `./hosts + "/${hostname}/configuration.nix"` (path concat) NOT `./hosts/${hostname}/configuration.nix` (string, not a path, causes eval error); add `nixosConfigurations` entries for hlc-401 through hlc-404 (passing `extraModules = [ nixos-hardware.nixosModules.raspberry-pi-4 ]`) and hlc-502 through hlc-508 (passing `extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ]`); update existing `hlc-501` entry to use the helper pattern
-- [ ] T026 [US1] Add `Makefile` with the following targets: `dry-run HOST=` → `nixos-rebuild dry-run --flake .#$(HOST)`; `dry-run-all` → loop dry-run over all 12 hosts; `update-node HOST= IP=` → `nixos-rebuild switch --flake .#$(HOST) --target-host bob@$(IP) --use-remote-sudo`; `build-image-rpi4` → `nix build .#nixosConfigurations.hlc-401.config.system.build.sdImage`; `build-image-rpi5` → `nix build .#nixosConfigurations.hlc-501.config.system.build.sdImage`; `flash-image MODEL= DEV=` → decompress and `dd` the built image to `$(DEV)` (use `zstdcat result/sd-image/*.img.zst | sudo dd of=$(DEV) bs=4M status=progress`); stub-only comments for `provision`, `update-cluster`, `encrypt-secret` targets with `# Phase B/C — not yet implemented` so FR-010 is visibly tracked
+- [x] T025 [US1] Update `flake.nix`: add helper using correct Nix path concatenation (NOT string interpolation): `let mkHlcNode = { hostname, system ? "aarch64-linux", extraModules ? [] }: nixpkgs.lib.nixosSystem { inherit system; specialArgs = { inherit inputs; }; modules = [ raspberry-pi-nix.nixosModules.raspberry-pi raspberry-pi-nix.nixosModules.sd-image (./hosts + "/${hostname}/configuration.nix") ] ++ extraModules; };` — note `./hosts + "/${hostname}/configuration.nix"` (path concat) NOT `./hosts/${hostname}/configuration.nix` (string, not a path, causes eval error); add `nixosConfigurations` entries for hlc-401 through hlc-404 (passing `extraModules = [ nixos-hardware.nixosModules.raspberry-pi-4 ]`) and hlc-502 through hlc-508 (passing `extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ]`); update existing `hlc-501` entry to use the helper pattern
+- [x] T026 [US1] Add `Makefile` with the following targets: `dry-run HOST=` → `nixos-rebuild dry-run --flake .#$(HOST)`; `dry-run-all` → loop dry-run over all 12 hosts; `update-node HOST= IP=` → `nixos-rebuild switch --flake .#$(HOST) --target-host bob@$(IP) --use-remote-sudo`; `build-image-rpi4` → `nix build .#nixosConfigurations.hlc-401.config.system.build.sdImage`; `build-image-rpi5` → `nix build .#nixosConfigurations.hlc-501.config.system.build.sdImage`; `flash-image MODEL= DEV=` → decompress and `dd` the built image to `$(DEV)` (use `zstdcat result/sd-image/*.img.zst | sudo dd of=$(DEV) bs=4M status=progress`); stub-only comments for `provision`, `update-cluster`, `encrypt-secret` targets with `# Phase B/C — not yet implemented` so FR-010 is visibly tracked
 
 ### 4e: Validation
 
-- [ ] T027 [US1] Run `make dry-run-all` and fix any evaluation errors; document any `raspberry-pi-nix` compatibility issues with NixOS 25.11 in `specs/001-nixos-rpi-cluster/research.md` under a new R-010 entry
+- [x] T027 [US1] Run `make dry-run-all` and fix any evaluation errors; document any `raspberry-pi-nix` compatibility issues with NixOS 25.11 in `specs/001-nixos-rpi-cluster/research.md` under a new R-010 entry
 
 ---
 

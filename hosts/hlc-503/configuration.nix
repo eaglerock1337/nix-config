@@ -1,6 +1,4 @@
-# hlc-501 — Pi5 worker node (existing, refactored to use shared modules)
-# Uses DHCP intentionally in Phase A; a DHCP reservation for hlc-501's MAC must
-# exist in Unifi for stable remote access. Phase B adds static IP via disko.
+# hlc-503 — Pi5 worker node
 { ... }:
 
 {
@@ -14,9 +12,14 @@
     ../../modules/cluster/hlc/motd.nix
   ];
 
-  networking.hostName = "hlc-501";
-  # DHCP intentional for Phase A — Unifi reservation provides stable address
-  networking.useDHCP = true;
+  networking.hostName = "hlc-503";
+  networking.useDHCP = false;
+  networking.interfaces.eth0.ipv4.addresses = [{
+    address = "10.23.50.53";
+    prefixLength = 24;
+  }];
+  networking.defaultGateway = "10.23.50.1";
+  networking.nameservers = [ "10.23.50.1" ];
 
   users.operator.username = "bob";
   users.operator.sshKeys = [

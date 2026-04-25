@@ -251,3 +251,22 @@ building the attrset. Same pattern for `home-manager.users.${cfg.username}`.
 - Avoid `mkMerge`/conditional logic on the username to prevent infinite recursion
 - Keep option in `options`, consume only in `config`
 - Replace inline user definitions in existing host configs (e.g., `hlc-501`)
+
+---
+
+## R-010: raspberry-pi-nix + nixos-hardware NixOS 25.11 Compatibility
+
+**Finding**: Two conflicts encountered during Phase A dry-run validation (2026-04-25).
+
+**Issue 1 — Pi4 bootloader conflict**:
+`nixos-hardware.nixosModules.raspberry-pi-4` sets `boot.loader.generic-extlinux-compatible.enable = true`,
+conflicting with `raspberry-pi-nix`'s u-boot bootloader which requires it `false`.
+**Fix**: Added `boot.loader.generic-extlinux-compatible.enable = lib.mkForce false` in `modules/hardware/rpi4.nix`.
+
+**Issue 2 — Pi5 dtmerge option missing**:
+`hardware.raspberry-pi."5".apply-overlays-dtmerge.enable` does not exist at the pinned
+`nixos-hardware` commit (`2096f3f`). The option was introduced later.
+**Fix**: Removed the option from `modules/hardware/rpi5.nix` for Phase A. Re-enable in Phase B
+when configuring NVMe/PCIe for Longhorn — by then the flake.lock pin should be updated.
+
+**Status**: All 12 hosts pass `nixos-rebuild dry-run` after both fixes.
