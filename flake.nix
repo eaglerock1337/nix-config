@@ -6,6 +6,11 @@
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     raspberry-pi-nix.url = "github:nix-community/raspberry-pi-nix";
     nixos-hardware.url = "github:nixos/nixos-hardware/master";
+    # Phase B: sops-nix for secrets management, disko for declarative disk layout
+    sops-nix.url = "github:mic92/sops-nix";
+    sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+    disko.url = "github:nix-community/disko";
+    disko.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, raspberry-pi-nix, nixos-hardware, ... } @ inputs:

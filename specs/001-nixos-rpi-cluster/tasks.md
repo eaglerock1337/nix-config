@@ -19,9 +19,9 @@ and US4 (shell environment). US2, US3, US5 and plan Phases B–E are deferred.
 
 **Purpose**: Establish the new directory layout without touching existing configs.
 
-- [ ] T001 Create module directories: `modules/cluster/hlc/`, `modules/cluster/ecto1/`, `modules/k8s/`, `modules/storage/`, `modules/users/`, `modules/shell/`, `modules/motd/`
-- [ ] T002 Create host directories: `hosts/hlc-401/`, `hosts/hlc-402/`, `hosts/hlc-403/`, `hosts/hlc-404/`, `hosts/hlc-502/` through `hosts/hlc-508/` (hlc-501 already exists)
-- [ ] T003 Add `sops-nix` and `disko` inputs to `flake.nix` (inputs only — no nixosConfigurations yet); run `nix flake update` to lock
+- [x] T001 Create module directories: `modules/cluster/hlc/`, `modules/cluster/ecto1/`, `modules/k8s/`, `modules/storage/`, `modules/users/`, `modules/shell/`, `modules/motd/`
+- [x] T002 Create host directories: `hosts/hlc-401/`, `hosts/hlc-402/`, `hosts/hlc-403/`, `hosts/hlc-404/`, `hosts/hlc-502/` through `hosts/hlc-508/` (hlc-501 already exists)
+- [x] T003 Add `sops-nix` and `disko` inputs to `flake.nix` (inputs only — no nixosConfigurations yet); run `nix flake update` to lock
 
 **Checkpoint**: Directory skeleton exists. `git status` shows new empty dirs and updated flake.lock.
 
@@ -34,10 +34,10 @@ until these exist.
 
 **⚠️ CRITICAL**: All Phase 3–4 tasks depend on this phase being complete.
 
-- [ ] T004 Create `modules/hardware/rpi4.nix` — Pi4 board config: `raspberry-pi-nix.board = "bcm2711"`, cgroup kernel params (`cgroup_memory=1 cgroup_enable=memory cgroup_enable=cpuset`), firmware settings; import `nixos-hardware.nixosModules.raspberry-pi-4` if available
-- [ ] T005 Create `modules/hardware/rpi5.nix` — Pi5 board config: `raspberry-pi-nix.board = "bcm2712"`, same cgroup params, import `nixos-hardware.nixosModules.raspberry-pi-5`; add `hardware.raspberry-pi."5".apply-overlays-dtmerge.enable = true` per nixos-hardware docs
-- [ ] T006 Create `modules/users/operator.nix` — parameterized NixOS module with options: `users.operator.username` (string), `users.operator.sshKeys` (list of strings), `users.operator.extraGroups` (list, default `["wheel"]`); config block sets `users.users.${cfg.username}` with `isNormalUser = true`, `openssh.authorizedKeys.keys`, groups; also sets `security.sudo.wheelNeedsPassword = false`
-- [ ] T007 Create `modules/motd/default.nix` — parameterized MOTD module with options: `cluster.motd.enable` (bool), `cluster.motd.clusterName` (str, default ""), `cluster.motd.asciiArt` (lines, default ""), `cluster.motd.tagline` (str, default ""), `cluster.motd.attribution` (str, default ""); config writes `environment.etc."motd".text` using `config.networking.hostName` interpolation
+- [x] T004 Create `modules/hardware/rpi4.nix` — Pi4 board config: `raspberry-pi-nix.board = "bcm2711"`, cgroup kernel params (`cgroup_memory=1 cgroup_enable=memory cgroup_enable=cpuset`), firmware settings; import `nixos-hardware.nixosModules.raspberry-pi-4` if available
+- [x] T005 Create `modules/hardware/rpi5.nix` — Pi5 board config: `raspberry-pi-nix.board = "bcm2712"`, same cgroup params, import `nixos-hardware.nixosModules.raspberry-pi-5`; add `hardware.raspberry-pi."5".apply-overlays-dtmerge.enable = true` per nixos-hardware docs
+- [x] T006 Create `modules/users/operator.nix` — parameterized NixOS module with options: `users.operator.username` (string), `users.operator.sshKeys` (list of strings), `users.operator.extraGroups` (list, default `["wheel"]`); config block sets `users.users.${cfg.username}` with `isNormalUser = true`, `openssh.authorizedKeys.keys`, groups; also sets `security.sudo.wheelNeedsPassword = false`
+- [x] T007 Create `modules/motd/default.nix` — parameterized MOTD module with options: `cluster.motd.enable` (bool), `cluster.motd.clusterName` (str, default ""), `cluster.motd.asciiArt` (lines, default ""), `cluster.motd.tagline` (str, default ""), `cluster.motd.attribution` (str, default ""); config writes `environment.etc."motd".text` using `config.networking.hostName` interpolation
 
 **Checkpoint**: `nix eval .#nixosModules` (or dry-run a test host) shows these modules load without errors.
 
