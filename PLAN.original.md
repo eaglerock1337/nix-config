@@ -2,16 +2,19 @@
 
 ## Context
 
-Expanding nix-config from single laptop (silicon) to 12-node RPi k3s cluster:
+Expanding the nix-config repo from a single laptop (silicon) to a 12-node Raspberry Pi k3s cluster:
 
 - **4x RPi 4** (hlc-401 to hlc-404): k3s server role — HA embedded etcd, ingress, general workloads
 - **8x RPi 5** (hlc-501 to hlc-508): k3s agent role — workloads, Longhorn storage via NVMe
 
-Storage: SD card = /boot + fallback live OS. Two 64GB USB3 drives = mdadm RAID 1 main OS disk. RPi 5s: 1TB NVMe for Longhorn PV storage.
+Storage intent: SD card = /boot + fallback live OS. Two 64GB USB3 drives = mdadm RAID 1 main OS
+disk. RPi 5s also have 1TB NVMe for Longhorn PV storage.
 
-Deployment: nixos-anywhere (boots SD, installs to USB RAID over SSH). Secrets: sops-nix + age keys. App management: ArgoCD app-of-apps + Helm. TLS: cert-manager on marks.dev.
+Deployment: nixos-anywhere (boots from SD, installs to USB RAID over SSH). Secrets: sops-nix
+with age keys. App management: ArgoCD app-of-apps with Helm. TLS: cert-manager on marks.dev.
 
-Future cluster ecto-1 (Ryzen 9, x86_64, 4 nodes, all etcd, NVMe root + HDD bulk) shares k8s module layer, own cluster module dir.
+Future cluster ecto-1 (Ryzen 9, x86_64, 4 nodes, all etcd, NVMe root + HDD bulk) shares the
+k8s module layer but has its own cluster module directory.
 
 ---
 
@@ -88,11 +91,12 @@ modules/
 - `services.openssh` with `PasswordAuthentication = false`
 - User `bob`: `isNormalUser`, `wheel`, SSH key (eaglerock's key from gibson)
 - `security.sudo.wheelNeedsPassword = false`
-- CLI packages (common.nix minus GUI: ripgrep, eza, bat, fd, htop, btop, tmux, kubectl, k9s, helm, git, curl, wget, age, jq, etc.)
+- CLI package set (same as common.nix minus GUI: ripgrep, eza, bat, fd, htop, btop, tmux,
+  kubectl, k9s, helm, git, curl, wget, age, jq, etc.)
 - Bash functions `nr`/`ndr` for local rebuilds
 - sops: `sops.age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"]`
-- MOTD: placeholder systemd motd unit → `/etc/motd-template` — design TBD
-- home-manager wired for bob: `home-manager.users.bob = import ../../home/bob.nix`
+- MOTD: placeholder systemd motd unit pointing to `/etc/motd-template` — design TBD
+- home-manager wired up for bob: `home-manager.users.bob = import ../../home/bob.nix`
 
 ### `home/bob.nix` + `modules/home/cluster.nix`
 
@@ -101,14 +105,14 @@ Bob's home-manager config (cluster-appropriate, no GUI):
 - Imports `modules/home/cluster.nix`
 - `home.username = "bob"`, `home.homeDirectory = "/home/bob"`, `stateVersion = "25.11"`
 
-`modules/home/cluster.nix`:
+`modules/home/cluster.nix` provides:
 
-- Neovim + gruvbox (no GUI plugins)
+- Neovim with gruvbox (without GUI plugins)
 - Bash aliases: `ll`, `la`, `k` (kubectl), `kns`, `kctx`, `h` (helm)
-- tmux + Gruvbox theme
+- tmux config with Gruvbox theme
 - `programs.direnv.enable = true`
 - `home.sessionVariables`: EDITOR, KUBECONFIG
-- Same Gruvbox bash prompt as silicon (SSH-aware coloring built in)
+- Same Gruvbox bash prompt as silicon (SSH-aware coloring already built in)
 
 ### `modules/hlc/rpi4.nix`
 
@@ -134,7 +138,7 @@ boot.kernelParams = [ "cgroup_enable=cpuset" "cgroup_memory=1" "cgroup_enable=me
 SD card (`/dev/mmcblk0`):
 
 - 512MB FAT32 `/boot` partition
-- Remaining space: ext4, unmounted (fallback live OS intact)
+- Remaining space: ext4, unmounted (fallback live OS left intact)
 
 ### `modules/hlc/disko/usb-raid.nix`
 
@@ -148,7 +152,9 @@ Two USB drives (`/dev/sda` + `/dev/sdb`):
 
 ### `modules/k8s/k3s/server.nix`
 
-HA embedded etcd across all Pi 4 server nodes. `clusterInit = true` on hlc-401, `serverAddr` → hlc-401 on remaining three — k3s auto-forms 4-node embedded etcd cluster, no separate etcd needed.
+Implements HA embedded etcd across all Pi 4 server nodes. With `clusterInit = true` on hlc-401
+and `serverAddr` pointing to hlc-401 on the remaining three, k3s automatically forms a 4-node
+embedded etcd cluster — no separate etcd deployment needed.
 
 ```nix
 services.k3s = {
@@ -182,7 +188,8 @@ networking.firewall.allowedUDPPorts = [ 8472 51820 ];
 - `services.openiscsi.enable = true`
 - `services.openiscsi.name = "iqn.2024-01.dev.marks:${config.networking.hostName}"`
 - `environment.systemPackages = with pkgs; [ nfs-utils cryptsetup ]`
-- Note: Longhorn needs NixOS-compatible container images. Override via ArgoCD Helm values using `ghcr.io/duckfullstop/nixos-longhorn-manager`.
+- Note: Longhorn requires NixOS-compatible container images. Override via ArgoCD Helm values
+  using `ghcr.io/duckfullstop/nixos-longhorn-manager`.
 
 ---
 
@@ -233,19 +240,19 @@ Refactor existing `hosts/hlc-501/configuration.nix` to match.
 
 ## Secrets Setup (sops-nix)
 
-One file per cluster — k3s token same across all nodes:
+One file per cluster — the k3s token is the same across all nodes:
 
 - `secrets/hlc.yaml` — single encrypted file for all HLC nodes, contains `k3s-token`
 - Recipients: admin age key + all 12 node host ed25519 keys
-- If role-specific secrets emerge: split into `secrets/hlc-servers.yaml` / `secrets/hlc-agents.yaml`
+- If role-specific secrets emerge later, split into `secrets/hlc-servers.yaml` / `secrets/hlc-agents.yaml`
 
-Each host config:
+Each host config points to the same file:
 
 ```nix
 sops.defaultSopsFile = ../../secrets/hlc.yaml;
 ```
 
-`.sops.yaml` at repo root:
+`.sops.yaml` at repo root declares recipients:
 
 ```yaml
 creation_rules:
@@ -258,7 +265,7 @@ creation_rules:
         # ... all 12 nodes
 ```
 
-One-time setup:
+User setup steps (one-time):
 
 1. `age-keygen -o ~/.config/sops/age/keys.txt`
 2. Add pubkey to `.sops.yaml` admin recipients
@@ -291,32 +298,35 @@ One-time setup:
 
 ### NixOS updates
 
-k3s version pinned to nixpkgs revision in `flake.lock`. To update both NixOS and k3s:
+k3s version is pinned to the nixpkgs revision in `flake.lock`. To update both NixOS and k3s:
 
 ```bash
 make update          # nix flake update — bumps all inputs including nixpkgs
 make update-cluster  # nixos-rebuild switch on all 12 nodes sequentially
 ```
 
-Update servers before agents. `update-cluster-pi4` runs first, then `update-cluster-pi5`. k3s tolerates one-version skew between server and agent — brief mixed-version state during rolling updates is safe.
+Update servers before agents. The `update-cluster-pi4` target runs first, then `update-cluster-pi5`.
+k3s has a one-version skew tolerance between server and agent, so brief mixed-version state during
+rolling updates is safe.
 
 ### k3s token
 
-**k3s token cannot change after cluster creation without full reset.** Choose carefully before provisioning first node. See cluster reset below if needed.
+**The k3s token cannot be changed after cluster creation without a full reset.** Choose it carefully
+before provisioning the first node. See cluster reset procedure below if needed.
 
 ### Stopping k3s cleanly
 
-`systemctl stop k3s` alone does not stop containerd or CNI networking. Use:
+`systemctl stop k3s` alone does not stop containerd or CNI networking. Use the provided script:
 
 ```bash
 sudo k3s-killall.sh   # available at /run/current-system/sw/bin/k3s-killall.sh
 ```
 
-Or reboot the node.
+Or simply reboot the node.
 
 ### Cluster reset (full wipe)
 
-Use when changing token or recovering broken state. Run on **all nodes**:
+Use this when changing the token or recovering from a broken state. Run on **all nodes**:
 
 1. Set `services.k3s.enable = false` in config, `make update-cluster`
 2. Dismount kubelet and delete k3s data:

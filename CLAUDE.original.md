@@ -1,6 +1,6 @@
 # Claude Code Context - nix-config
 
-Personal NixOS config repo. Declarative, reproducible Linux system.
+This is a personal NixOS configuration repository for managing a declarative, reproducible Linux system.
 
 ## Project Overview
 
@@ -37,15 +37,15 @@ assets/             # Wallpapers, images
 
 ### Key Patterns
 
-1. **Flakes**: Nix flakes for reproducibility. All deps locked in `flake.lock`.
+1. **Flakes**: Uses Nix flakes for reproducibility. All dependencies locked in `flake.lock`.
 
-2. **Modular design**: One concern per module. Import in host or home config as needed.
+2. **Modular design**: Each module focuses on one concern. Import modules in host config or home config as needed.
 
-3. **Home-manager integration**: User env via home-manager, integrated into NixOS config.
+3. **Home-manager integration**: User environment managed via home-manager, integrated into NixOS config.
 
 4. **Stable + unstable**: Most packages from stable (25.11), specific packages from unstable when needed.
 
-5. **Gruvbox everywhere**: Use `modules/home/colors.nix` for color values.
+5. **Gruvbox everywhere**: Use `modules/home/colors.nix` for color values to maintain consistency.
 
 ## Coding Conventions
 
@@ -53,26 +53,26 @@ assets/             # Wallpapers, images
 - **Comments**: Explain "why" not "what"
 - **Module files**: One concern per file
 - **Package lists**: Alphabetically sorted when practical
-- **Unfree packages**: Explicit allowlist. No new ones without discussion.
+- **Unfree packages**: Explicitly allowlisted, avoid adding new ones without discussion
 
 ## Available Agents
 
-- **nixy-boi** (`.claude/agents/nixy-boi.md`): NixOS expert for system mgmt, troubleshooting, learning. Friendly SRE, always dry-runs before changes.
+- **nixy-boi** (`.claude/agents/nixy-boi.md`): NixOS expert for system management, troubleshooting, and learning. Friendly SRE personality, always dry-runs before changes.
 
 ## Safety Notes
 
-- Always dry-run before applying
-- Hardware modules (power/thermal) — careful
-- Boot config changes need extra scrutiny
-- Test big changes with `nixos-rebuild build-vm` when feasible
+- Always dry-run before applying changes
+- Be careful with hardware modules (power/thermal settings)
+- Boot configuration changes need extra scrutiny
+- Test significant changes with `nixos-rebuild build-vm` when feasible
 
 ## Approach
 
-- Think before acting. Read files before writing code.
-- Concise output, thorough reasoning.
-- Prefer edit over full rewrite.
-- No re-read unless file may have changed.
-- Test before declaring done.
+- Think before acting. Read existing files before writing code.
+- Be concise in output but thorough in reasoning.
+- Prefer editing over rewriting whole files.
+- Do not re-read files you have already read unless the file may have changed.
+- Test your code before declaring done.
 - No sycophantic openers or closing fluff.
-- Simple, direct solutions.
-- User instructions override this file.
+- Keep solutions simple and direct.
+- User instructions always override this file.
