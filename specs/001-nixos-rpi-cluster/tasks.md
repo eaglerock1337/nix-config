@@ -147,27 +147,9 @@ login), document for Phase 7 reintroduction.
 
 ### 4b: Rewrite work-set host configs to minimal shape (parallelizable)
 
-Canonical minimal shape (per host, ~13 lines incl. workaround comment):
-
-```nix
-{ ... }: {
-  raspberry-pi-nix.board = "bcm2711";   # bcm2712 for Pi5
-  networking.hostName = "hlc-NNN";
-  networking.useDHCP = true;
-  services.openssh.enable = true;
-  # NOTE: PasswordAuthentication left at default (true) per WORKAROUNDS W-003;
-  # closes at Phase 7f T091.
-  users.users.bob = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = [ "<gibson-rsa-pubkey from main:hosts/hlc-501/configuration.nix>" ];
-  };
-  security.sudo.wheelNeedsPassword = false;   # WORKAROUNDS W-002
-  system.stateVersion = "25.11";
-}
-```
-
-The pubkey is the existing RSA key from `main` branch `hosts/hlc-501/configuration.nix` (the `eaglerock@gibson` key). Use the literal string for now; centralization deferred to Phase 7a (operator module).
+Canonical shape is defined once at the top of this file (§ Canonical
+minimal host-config shape). Each task below writes that shape with the
+host-specific hostname and board ID substituted.
 
 - [ ] T023 [P] [US1] Rewrite `hosts/hlc-401/configuration.nix` to minimal shape with `board = "bcm2711"`, hostname `hlc-401`. Note: hlc-401 is the cluster bootstrap node (k3s `clusterInit = true`) but k3s configuration is deferred — Phase 4 minimal shape only.
 - [ ] T024 [P] [US1] Rewrite `hosts/hlc-501/configuration.nix` to minimal shape, board `bcm2712`, hostname `hlc-501`
@@ -177,7 +159,7 @@ The pubkey is the existing RSA key from `main` branch `hosts/hlc-501/configurati
 - [ ] T028 [P] [US1] Rewrite `hosts/hlc-505/configuration.nix` — hostname `hlc-505`, board `bcm2712`
 - [ ] T029 [P] [US1] Rewrite `hosts/hlc-506/configuration.nix` — hostname `hlc-506`, board `bcm2712`
 - [ ] T030 [P] [US1] Rewrite `hosts/hlc-507/configuration.nix` — hostname `hlc-507`, board `bcm2712`
-- [ ] T031 [US1] Verify `hosts/hlc-508/configuration.nix` matches the minimal shape (already written in T015 for triage flash); reconcile if drift
+- [ ] T031 [P] [US1] Rewrite `hosts/hlc-508/configuration.nix` — hostname `hlc-508`, board `bcm2712`. (This is also the recovery image for the previously-bricked hlc-508 — Phase 4 baseline IS the recovery config, no separate triage flash needed.)
 
 ### 4c: Decommissioned-set host configs — minimal shape, dry-run only
 
@@ -189,8 +171,9 @@ Constitution v1.1.0 § Cluster Topology forbids flashing/switching these. Config
 
 ### 4d: Flake wiring + dry-run gate
 
-- [ ] T035 [US1] Refactor `flake.nix` `nixosConfigurations` block: remove all `extraModules = []` debug entries and `# DEBUG:` comments; ensure all 12 host nixosConfigurations use a uniform helper (e.g., `mkHlcNode`) wiring `raspberry-pi-nix.nixosModules.raspberry-pi`, `raspberry-pi-nix.nixosModules.sd-image`, the per-board `nixos-hardware` module, and the host's own `configuration.nix`. No per-host module-list divergence.
+- [ ] T035 [US1] Refactor `flake.nix` `nixosConfigurations` block: remove all `extraModules = []` debug entries and `# DEBUG:` comments (already gone after revert; sanity-check); ensure all 12 host nixosConfigurations use a uniform helper (e.g., `mkHlcNode`) wiring `raspberry-pi-nix.nixosModules.raspberry-pi`, `raspberry-pi-nix.nixosModules.sd-image`, the per-board `nixos-hardware` module, and the host's own `configuration.nix`. No per-host module-list divergence.
 - [ ] T036 [US1] Add `WORK_SET = hlc-401 hlc-501 hlc-502 hlc-503 hlc-504 hlc-505 hlc-506 hlc-507 hlc-508` and `DECOM_SET = hlc-402 hlc-403 hlc-404` variables to `Makefile`; `HLC_HOSTS = $(WORK_SET) $(DECOM_SET)` for dry-run-all only
+- [ ] T036a [US1] In `flake.nix`, add a top-level `let`-binding `operatorPubkey = "ssh-rsa AAAA...eaglerock@gibson"` (literal RSA key from `main:hosts/hlc-501/configuration.nix`); pass via `specialArgs = { inherit operatorPubkey; ... }` to every `nixosSystem` call in `mkHlcNode`. Update each host config (T023–T034) to take `operatorPubkey` in its function signature and use `openssh.authorizedKeys.keys = [ operatorPubkey ]`. Single source of truth; eliminates the literal-string-in-9-files anti-pattern. Closes analyze finding N6.
 - [ ] T037 [US1] `make dry-run-all` — must exit 0 for all 12 hosts (work-set + decom-set). If any host fails, fix before proceeding.
 
 ### 4e: Canary build + flash + boot — one Pi4 + one Pi5
@@ -198,23 +181,22 @@ Constitution v1.1.0 § Cluster Topology forbids flashing/switching these. Config
 - [ ] T038 [US1] `make build HOST=hlc-401` — full toplevel build must succeed (gates flashing)
 - [ ] T039 [US1] `make build HOST=hlc-501` — full toplevel build must succeed
 - [ ] T040 [US1] `make build-image HOST=hlc-401`; `make flash-image HOST=hlc-401 DEV=<sd>`; rack the SD; power on; wait for DHCP lease
-- [ ] T041 [US1] `make smoke-test HOST=hlc-401 IP=<dhcp-ip>` — must exit 0; append IP to `docs/cluster-ips.txt`. If hangs/fails, **STOP**, return to Phase 3.
+- [ ] T041 [US1] `make smoke-test HOST=hlc-401 IP=<dhcp-ip>` — must exit 0; append IP to `docs/cluster-ips.txt`. If hangs/fails, **STOP** and invoke optional Phase 3 (T012–T014).
 - [ ] T042 [US1] Same flow for hlc-501: `make build-image`; `make flash-image`; rack; power; `make smoke-test`; append IP
 - [ ] T043 [US1] **First canary remote-update test**: edit `hosts/hlc-501/configuration.nix` to add `environment.systemPackages = [ pkgs.htop ];` (and switch fn signature to `{ pkgs, ... }:`); run `make canary HOST=hlc-501 IP=<ip>`; must exit 0. This validates the canary loop on real hardware before mass rollout.
 - [ ] T044 [US1] Roll back the htop test: `make rollback HOST=hlc-501 IP=<ip>`; remove `environment.systemPackages` from the file. Smoke-test still green.
 
 ### 4f: Roll to remaining 7 work-set Pi5 nodes
 
-Pair Pi5 builds. Smoke-test after each. (hlc-508 already online from T017; reflash with the canonical config from T031 if needed.)
+Per-node: `make build` → `make build-image` → `make flash-image DEV=...` → rack → power → `make smoke-test` → append IP. hlc-508 included here as a regular flash (the canonical config from T031 is its recovery image).
 
-- [ ] T045 [US1] hlc-502: `make build`; flash; boot; smoke-test; append IP
+- [ ] T045 [US1] hlc-502: build → flash → boot → smoke-test; append IP
 - [ ] T046 [US1] hlc-503: same flow; append IP
 - [ ] T047 [US1] hlc-504: same flow; append IP
 - [ ] T048 [US1] hlc-505: same flow; append IP
 - [ ] T049 [US1] hlc-506: same flow; append IP
 - [ ] T050 [US1] hlc-507: same flow; append IP
-- [ ] T051 [US1] hlc-508: re-flash with the now-flake-tracked `hosts/hlc-508/configuration.nix` (T031) so in-rack image matches git; smoke-test; confirm IP in docs/cluster-ips.txt
-- [ ] T052 [US1] (Skipped — no further work-set Pi5 nodes; hlc-401 covered in T040–T041)
+- [ ] T051 [US1] hlc-508: same flow (this is also the recovery flash for the previously-bricked node); append IP
 
 ### 4g: Phase A1 exit gate
 
