@@ -270,3 +270,39 @@ conflicting with `raspberry-pi-nix`'s u-boot bootloader which requires it `false
 when configuring NVMe/PCIe for Longhorn — by then the flake.lock pin should be updated.
 
 **Status**: All 12 hosts pass `nixos-rebuild dry-run` after both fixes.
+
+---
+
+## R-011: SSH-hang Root Cause (Phase A0 triage — TODO)
+
+**Status**: Open. To be filled in by the Phase A0 triage task.
+
+**Symptom (observed 2026-04-26)**: hlc-501 boots, gets DHCP lease, accepts the
+TCP connection on :22, completes the SSH key-auth handshake, but the
+interactive shell never reaches a usable prompt — the operator's terminal
+hangs indefinitely. `ssh bob@host -- true` (non-PTY) was reported by the
+on-host `ForceCommand strace` debug to also exhibit the issue. hlc-508,
+running an even more minimal config, dropped off the network entirely after
+a config revert and is currently unreachable.
+
+**Suspected layers** (to verify in A0 triage, in order of likelihood):
+1. `programs.bash.promptInit` / `PROMPT_COMMAND` chain in
+   `modules/shell/prompt.nix` — a shell-startup hang manifests exactly as
+   "auth succeeds, prompt never arrives." The PROMPT_COMMAND function calls
+   `__git_ps1`, sourced from git's contrib; if the source path is wrong at
+   eval time the shell may stall.
+2. `services.openssh.settings` block formerly in `modules/users/operator.nix`
+   (`ClientAliveInterval`, `MaxStartups`, `UseDns = false`, etc.). Already
+   removed on the working copy; confirm whether removal helped or whether
+   it's coincidental with hlc-508 going dark.
+3. `etc/motd` / dynamic MOTD — large static MOTD is benign; a script in a
+   PAM-driven dynamic-motd path that blocks would not be.
+4. `nixos-hardware.raspberry-pi-5` interaction with `raspberry-pi-nix` at the
+   pinned commits — unlikely to manifest as a shell-only hang, but in scope
+   because hlc-508 went fully offline.
+
+**Action**: Reproduce in `nixos-rebuild build-vm --flake .#hlc-501` from the
+current branch HEAD. Bisect the diff `main..HEAD` per `hosts/hlc-501/` and
+the four `modules/{users,shell,motd,cluster}/` subtrees. Record the first
+commit/line that introduces the hang. Update this section with the finding
+before Phase C reintroduces the offending module.

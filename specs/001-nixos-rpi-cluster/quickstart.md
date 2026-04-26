@@ -1,143 +1,178 @@
 # Quickstart: NixOS RPi Cluster Foundation
 
-**Feature**: 001-nixos-rpi-cluster | **Date**: 2026-04-25
+**Feature**: 001-nixos-rpi-cluster | **Plan reset**: 2026-04-26
+
+> This quickstart matches the **reset plan** (plan.md, 2026-04-26). The previous
+> quickstart described the failed Phase A flow (shared shell/MOTD modules, 12
+> hosts in one push). It is replaced by the canary-driven baseline-first flow
+> below. Phase C+ usage (sops, disko, k3s, ArgoCD) returns to this doc once
+> those phases are planned.
 
 ## Prerequisites
 
-- **Build host**: gibson (Ryzen 9 5950X, NixOS) with:
-  - `boot.binfmt.emulatedSystems = [ "aarch64-linux" ];` enabled
-  - Admin age key generated: `age-keygen -o ~/.config/sops/age/keys.txt`
-- **Hardware per node (Pi4 control plane)**:
-  - Raspberry Pi 4, MicroSD card, 2× 64GB USB 3.2 drives (RAID1 root)
-- **Hardware per node (Pi5 worker)**:
-  - Raspberry Pi 5, MicroSD card, 2× 64GB USB 3.2 drives (RAID1 root), 1× Corsair MP600 Micro 1TB NVMe (Longhorn PVs)
-- **Network**: Unifi-managed subnet at `10.23.50.0/24` with DHCP reservations per data-model
+- **Build host**: gibson (Ryzen 9 5950X, NixOS) with `boot.binfmt.emulatedSystems = [ "aarch64-linux" ];`.
+- **Hardware**: 12× Raspberry Pi (4× Pi4, 8× Pi5), 12× MicroSD, headless rack with
+  Unifi-managed `10.23.50.0/24` subnet. DHCP reservations for all 12 MACs.
+- **Operator SSH key** present in `flake.nix`-derived host configs (hard-coded in
+  Phase A; refactored in Phase C).
 
-## Phase A: Get Nodes Online (Minimal Sync Path)
+## Phase A0: Triage — recover bricked nodes
 
-This is the fastest path to having NixOS nodes you can `nixos-rebuild switch` over SSH.
-
-### 1. Clone and switch to feature branch
+If you are reading this for the first time after a known-bad deploy, **start
+here**. Do not proceed to A1 until A0 exits clean.
 
 ```bash
-git clone <repo-url> && cd nix-config
-git checkout 001-nixos-rpi-cluster
+# Reproduce ssh-hang in a VM (no rack risk):
+nixos-rebuild build-vm --flake .#hlc-501
+./result/bin/run-*-vm     # then try `ssh bob@<vm-ip>` — should hang same as rack node
+
+# Bisect the modules->hosts diff vs. main:
+git diff main..HEAD -- hosts/ modules/
 ```
 
-### 2. Build SD card images
+Reflash the bricked rack node with the **main-branch minimal config** under its
+hostname:
 
 ```bash
-# One image per Pi model — takes a while with QEMU emulation
-make build-image-rpi4
-make build-image-rpi5
+git checkout main -- hosts/hlc-501/configuration.nix     # template
+# Edit copy: rename hostname to hlc-508, change board if Pi4, save under hosts/hlc-508/
+make build-image HOST=hlc-508
+make flash-image HOST=hlc-508 DEV=/dev/sdX
+# Re-rack SD; power-cycle node; confirm:
+make smoke-test HOST=hlc-508 IP=10.23.50.58
 ```
 
-### 3. Flash and boot
+Record the root cause in `research.md` § R-011.
 
-```bash
-# Flash to MicroSD (adjust /dev/sdX)
-make flash-image MODEL=rpi4 DEV=/dev/sdX
-# Insert SD card, power on Pi, wait for DHCP lease
+## Phase A1: Baseline — get all 12 nodes online
+
+### 1. Confirm host configs are minimal
+
+Each `hosts/hlc-NNN/configuration.nix` should be ~12 lines:
+
+```nix
+{ ... }: {
+  raspberry-pi-nix.board = "bcm2711";   # bcm2712 for Pi5 (hlc-501–508)
+  networking.hostName = "hlc-NNN";
+  networking.useDHCP = true;
+  services.openssh.enable = true;
+  users.users.bob = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" ];
+    openssh.authorizedKeys.keys = [ "<gibson pubkey>" ];
+  };
+  security.sudo.wheelNeedsPassword = false;
+  system.stateVersion = "25.11";
+}
 ```
 
-### 4. Verify SSH access
+No imports. No shared modules. No SSH hardening. No prompt. No MOTD.
+
+### 2. Eval-check all 12 hosts
 
 ```bash
-ssh bob@10.23.50.41    # hlc-401 (first control node)
-# Should see HLC ASCII MOTD, PS1 prompt: [bob@hlc-401:~]$
+make dry-run-all
 ```
 
-### 5. Iterate configuration remotely
+Must exit 0.
+
+### 3. Build canary images
 
 ```bash
-# From gibson, after editing modules:
-nixos-rebuild dry-run --flake .#hlc-401 --target-host bob@10.23.50.41 --use-remote-sudo
-nixos-rebuild switch --flake .#hlc-401 --target-host bob@10.23.50.41 --use-remote-sudo
+make build HOST=hlc-401          # full toplevel — catches things dry-run misses
+make build HOST=hlc-501
 ```
 
-### 6. Validate all hosts evaluate
+### 4. Flash + boot the two canaries
 
 ```bash
-# Dry-run all 12 hosts (no network needed, just evaluates the config)
-for host in hlc-40{1..4} hlc-50{1..8}; do
-  echo "--- $host ---"
-  nixos-rebuild dry-run --flake .#$host 2>&1 | tail -1
+make flash-image HOST=hlc-401 DEV=/dev/sdX
+make flash-image HOST=hlc-501 DEV=/dev/sdY
+# Insert SDs, power on Pis, wait for DHCP lease.
+```
+
+### 5. Smoke-test the canaries
+
+```bash
+make smoke-test HOST=hlc-401 IP=10.23.50.41
+make smoke-test HOST=hlc-501 IP=10.23.50.51
+```
+
+Smoke-test must pass: ping, non-PTY ssh, PTY ssh-to-prompt within 5s.
+If either fails → STOP, return to A0.
+
+### 6. Roll to remaining 10 nodes
+
+One Pi4 + one Pi5 at a time. Smoke-test after each.
+
+### Exit gate
+
+```bash
+for h in hlc-40{1..4} hlc-50{1..8}; do
+  make smoke-test HOST=$h IP=$(make ip HOST=$h);
 done
 ```
 
-## Phase B: Full Provisioning (After Phase A works)
+All 12 green.
 
-### 7. Provision to USB RAID
-
-```bash
-# Provision single node via nixos-anywhere (installs to USB RAID1)
-make provision HOST=hlc-401 IP=10.23.50.41
-# Node reboots to USB RAID root filesystem
-```
-
-### 8. Collect host keys and set up secrets
+## Phase A2: Remote-update validation
 
 ```bash
-# After each node boots from RAID:
-ssh-keyscan -t ed25519 10.23.50.41 | ssh-to-age >> .sops.yaml
-# Re-encrypt secrets with new recipients:
-sops updatekeys secrets/hlc.yaml
+# Trivial change — add htop to one host's environment.systemPackages:
+$EDITOR hosts/hlc-401/configuration.nix
+make canary HOST=hlc-401 IP=10.23.50.41
+# canary = build → switch --target-host → smoke-test → auto-rollback on failure
+
+# Verify rollback path:
+nixos-rebuild switch --rollback --flake .#hlc-401 --target-host bob@10.23.50.41 --use-remote-sudo
+make smoke-test HOST=hlc-401 IP=10.23.50.41
 ```
 
-### 9. Rebuild with secrets
+Repeat once on a Pi5. Document the loop. Phase A complete.
+
+## Phase B: Static IPs + host-key inventory
+
+After A2 passes. Move from DHCP reservations to declared static IPs in nix
+(`networking.interfaces.eth0.ipv4.addresses`). Still no shared modules. One
+canary, smoke-test, rollout. After: collect each node's
+`/etc/ssh/ssh_host_ed25519_key.pub` and record in `data-model.md` for later
+sops-nix age recipients.
+
+## Phase C: Layered module reintroduction (one at a time)
+
+For each of (operator, shell/common, shell/prompt, shell/utilities, motd,
+ssh-hardening):
 
 ```bash
-make update-node HOST=hlc-401
-# Node now has decrypted k3s token at /run/secrets/k3s-token
+# 1. Add module file under modules/
+# 2. Import in ONE canary host (hlc-404 recommended)
+make build HOST=hlc-404
+make canary HOST=hlc-404 IP=10.23.50.44
+
+# 3. Manual interactive ssh — must reach prompt within 5s:
+ssh bob@10.23.50.44
+
+# 4. If green, roll to remaining 11; smoke-test all.
+# 5. Commit. One module per commit. Never bundle.
 ```
 
-## Phase C: Cluster Bring-Up
+`shell/prompt.nix` is the highest-risk module (suspected ssh-hang origin). Test
+interactive PTY shell explicitly before rolling out.
 
-### 10. Start k3s cluster
+## Phase D / E
 
-```bash
-# Provision in order:
-# 1. hlc-401 (init server, bootstraps etcd)
-# 2. hlc-402, hlc-403, hlc-404 (join etcd)
-# 3. hlc-501 through hlc-508 (join as agents)
-make update-cluster
-```
+Disko/USB-RAID/sops/k3s/ArgoCD. Out of scope for this quickstart until Phase D
+is planned.
 
-### 11. Verify cluster
+## Make targets (Phase A1 set)
 
-```bash
-ssh bob@10.23.50.41
-kubectl get nodes    # All 12 should show Ready
-```
-
-## Adding a New Host
-
-```bash
-# 1. Create host directory
-mkdir -p hosts/hlc-NEW
-# 2. Create thin configuration.nix importing shared modules
-# 3. Add nixosConfiguration to flake.nix
-# 4. Dry-run: nixos-rebuild dry-run --flake .#hlc-NEW
-# No existing files need modification.
-```
-
-## Key Make Targets
-
-| Target | Description |
-|--------|-------------|
-| `make build-image-rpi4` | Build Pi4 SD card image |
-| `make build-image-rpi5` | Build Pi5 SD card image |
-| `make flash-image MODEL=rpi4 DEV=/dev/sdX` | Flash image to MicroSD |
-| `make provision HOST=hlc-401 IP=10.23.50.41` | nixos-anywhere provisioning |
-| `make update-node HOST=hlc-401` | Rebuild single node |
-| `make update-cluster` | Rolling update all nodes |
-| `make encrypt-secret` | Re-encrypt secrets after key changes |
-| `make dry-run HOST=hlc-401` | Dry-run for single host |
-| `make dry-run-all` | Dry-run all hosts |
-
-## Useful Shell Commands (available on all nodes)
-
-| Command | Description |
-|---------|-------------|
-| `syshelp` | Print categorized list of installed sysadmin tools |
-| `kubectl get nodes` | Check cluster node status (server nodes only) |
+| Target | Purpose |
+|---|---|
+| `make dry-run HOST=hlc-NNN` | Eval one host (cheap) |
+| `make dry-run-all` | Eval all 12 |
+| `make build HOST=hlc-NNN` | Full toplevel build (gates flashing) |
+| `make build-image HOST=hlc-NNN` | SD card image |
+| `make flash-image HOST=hlc-NNN DEV=/dev/sdX` | Flash SD |
+| `make smoke-test HOST=hlc-NNN IP=<ip>` | Reachability + PTY ssh check |
+| `make canary HOST=hlc-NNN IP=<ip>` | Build + switch + smoke-test + auto-rollback |
+| `make update-node HOST=hlc-NNN IP=<ip>` | Plain switch (use only after canary on other nodes greenlit the change) |
