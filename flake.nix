@@ -27,6 +27,11 @@
       };
     };
 
+    # Single source of truth for the cluster operator's SSH public key.
+    # Passed into every HLC nixosSystem via specialArgs so host configs
+    # reference it as `operatorPubkey` instead of duplicating the literal.
+    operatorPubkey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC2MfZmJMxQx3NGjPn92I1/n7pBTne/0aw0xVvgebFriN1UMKcEQagG3QzmM/4+zj001UGNKFK7FOlnTx6b8dz2mEC/ejYFG6R2Vtd6coxShjQDL2Nw3B/FMfky+jOBQ7viyODEiPhQlrO2FrQcd0BgjzHPvH0qtu12Ej2bo27abkIpyCEJyLf/xFKIyZ/RyFWaF8FOA4tpXpXvNa73QijvymMk2gY2HuLQVGYGPAVsLBEUbmAV7oN3inPcbawmjAgV5X23AoMr9F5pZbxdmZ61FUwWvaBjRdTopgfkI1RXZ52P27CJTjC3ndmlSgfV2Ht1iQ9VQmY5ShxFET9Wr6jz eaglerock@gibson";
+
     # Helper for HLC cluster nodes — wraps nixpkgs.lib.nixosSystem with the
     # raspberry-pi-nix modules and the host's configuration.nix.
     # Path concatenation (./hosts + "/${hostname}/...") produces a Nix path,
@@ -34,7 +39,7 @@
     mkHlcNode = { hostname, extraModules ? [] }:
       nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
-        specialArgs = { inherit inputs; };
+        specialArgs = { inherit inputs operatorPubkey; };
         modules = [
           raspberry-pi-nix.nixosModules.raspberry-pi
           raspberry-pi-nix.nixosModules.sd-image
@@ -68,25 +73,39 @@
         ];
       };
 
-      # HLC control-plane nodes (Pi4, bcm2711)
+      # HLC control-plane nodes (Pi4, bcm2711).
+      # nixos-hardware raspberry-pi-4 sets generic-extlinux-compatible.enable=true,
+      # which conflicts with raspberry-pi-nix's u-boot bootloader — force it off.
       hlc-401 = mkHlcNode {
         hostname = "hlc-401";
-        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-4 ];
+        extraModules = [
+          nixos-hardware.nixosModules.raspberry-pi-4
+          { boot.loader.generic-extlinux-compatible.enable = nixpkgs.lib.mkForce false; }
+        ];
       };
       hlc-402 = mkHlcNode {
         hostname = "hlc-402";
-        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-4 ];
+        extraModules = [
+          nixos-hardware.nixosModules.raspberry-pi-4
+          { boot.loader.generic-extlinux-compatible.enable = nixpkgs.lib.mkForce false; }
+        ];
       };
       hlc-403 = mkHlcNode {
         hostname = "hlc-403";
-        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-4 ];
+        extraModules = [
+          nixos-hardware.nixosModules.raspberry-pi-4
+          { boot.loader.generic-extlinux-compatible.enable = nixpkgs.lib.mkForce false; }
+        ];
       };
       hlc-404 = mkHlcNode {
         hostname = "hlc-404";
-        extraModules = [ nixos-hardware.nixosModules.raspberry-pi-4 ];
+        extraModules = [
+          nixos-hardware.nixosModules.raspberry-pi-4
+          { boot.loader.generic-extlinux-compatible.enable = nixpkgs.lib.mkForce false; }
+        ];
       };
 
-      # HLC worker nodes (Pi5, bcm2712)
+      # HLC worker nodes (Pi5, bcm2712).
       hlc-501 = mkHlcNode {
         hostname = "hlc-501";
         extraModules = [ nixos-hardware.nixosModules.raspberry-pi-5 ];

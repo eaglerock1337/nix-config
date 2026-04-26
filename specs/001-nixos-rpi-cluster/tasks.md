@@ -82,9 +82,9 @@ path is a documented subset.
 
 ## Phase 1: Setup (Repository hygiene & tooling skeleton)
 
-- [ ] T001 Stash or revert remaining uncommitted Phase-A WIP on the working tree (any leftover after the constitution commit). Check `git status`; if not clean, commit revert as `chore(cluster): clean working tree before tasks reset` so subsequent host-config rewrites diff cleanly.
-- [ ] T002 [P] Create `scripts/` directory at repo root for shell helpers introduced by reset plan
-- [ ] T003 [P] Verify `.gitignore` covers `result*` symlinks (Nix build outputs); append if missing
+- [X] T001 Stash or revert remaining uncommitted Phase-A WIP on the working tree (any leftover after the constitution commit). Check `git status`; if not clean, commit revert as `chore(cluster): clean working tree before tasks reset` so subsequent host-config rewrites diff cleanly.
+- [X] T002 [P] Create `scripts/` directory at repo root for shell helpers introduced by reset plan
+- [X] T003 [P] Verify `.gitignore` covers `result*` symlinks (Nix build outputs); append if missing
 
 **Checkpoint**: `git status` clean. `make dry-run-all` still passes for current modules. No new feature work yet.
 
@@ -94,14 +94,14 @@ path is a documented subset.
 
 **⚠️ BLOCKS Phase 4 *canary loop*** (T043+, Phase 5+, Phase 7+). Does NOT block the Phase 4 first-flash sequence — that uses existing main-branch `make build-image` + `make flash-image` + manual `ssh` (per Fastest-path note). Operator MAY run Phase 2 in parallel with the first SD flash.
 
-- [ ] T004 Create `scripts/smoke-test.sh` — POSIX shell. Args: `<host> <ip>`. Steps: (1) `ssh-keygen -R "$ip" >/dev/null 2>&1` to purge stale host key (reflashed nodes generate new keys); (2) `ping -c1 -W2 "$ip"`; (3) `ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new bob@$ip true`; (4) `timeout 10 ssh -tt -o BatchMode=yes bob@$ip 'echo HELLO_$(hostname) && exit'` for PTY validation; (5) `ssh -o BatchMode=yes bob@$ip 'sudo -n true' 2>/dev/null` to confirm `--use-remote-sudo` will work (requires `wheelNeedsPassword = false` per W-002); stderr suppressed so a config-drift password prompt does not spam operator terminal. Exit non-zero with descriptive error on any step failure. `chmod +x`.
-- [ ] T005 Add `make smoke-test HOST=hlc-NNN IP=<ip>` target to `Makefile` invoking `scripts/smoke-test.sh $(HOST) $(IP)`; both vars required
-- [ ] T006 Add `make build HOST=hlc-NNN` target to `Makefile` running `nix build .#nixosConfigurations.$(HOST).config.system.build.toplevel -L --no-link`
-- [ ] T007 Add `make canary HOST=hlc-NNN IP=<ip>` target: (1) `make build`; (2) `nixos-rebuild switch --flake .#$(HOST) --target-host bob@$(IP) --use-remote-sudo`; (3) `make smoke-test`; (4) on smoke-test fail, run `nixos-rebuild switch --rollback --flake .#$(HOST) --target-host bob@$(IP) --use-remote-sudo` then exit non-zero
-- [ ] T008 Add `make rollback HOST=hlc-NNN IP=<ip>` target: `nixos-rebuild switch --rollback ...` then `make smoke-test`
-- [ ] T009 Add `make ip HOST=hlc-NNN` helper target: `@grep -w '^$(HOST)' docs/cluster-ips.txt | cut -f2`. Used by smoke-test loops once `docs/cluster-ips.txt` is populated.
-- [ ] T010 Add `make smoke-test-all` target looping over work-set hosts only (`hlc-401 hlc-501..508`), reading IPs from `docs/cluster-ips.txt`; do NOT include hlc-402/403/404 (decommissioned-set)
-- [ ] T011 Update `make help` block in `Makefile` to document new targets under "Phase A safety" heading; also document the work-set vs decommissioned-set distinction in a comment near the `HLC_HOSTS` variable
+- [X] T004 Create `scripts/smoke-test.sh` — POSIX shell. Args: `<host> <ip>`. Steps: (1) `ssh-keygen -R "$ip" >/dev/null 2>&1` to purge stale host key (reflashed nodes generate new keys); (2) `ping -c1 -W2 "$ip"`; (3) `ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new bob@$ip true`; (4) `timeout 10 ssh -tt -o BatchMode=yes bob@$ip 'echo HELLO_$(hostname) && exit'` for PTY validation; (5) `ssh -o BatchMode=yes bob@$ip 'sudo -n true' 2>/dev/null` to confirm `--use-remote-sudo` will work (requires `wheelNeedsPassword = false` per W-002); stderr suppressed so a config-drift password prompt does not spam operator terminal. Exit non-zero with descriptive error on any step failure. `chmod +x`.
+- [X] T005 Add `make smoke-test HOST=hlc-NNN IP=<ip>` target to `Makefile` invoking `scripts/smoke-test.sh $(HOST) $(IP)`; both vars required
+- [X] T006 Add `make build HOST=hlc-NNN` target to `Makefile` running `nix build .#nixosConfigurations.$(HOST).config.system.build.toplevel -L --no-link`
+- [X] T007 Add `make canary HOST=hlc-NNN IP=<ip>` target: (1) `make build`; (2) `nixos-rebuild switch --flake .#$(HOST) --target-host bob@$(IP) --use-remote-sudo`; (3) `make smoke-test`; (4) on smoke-test fail, run `nixos-rebuild switch --rollback --flake .#$(HOST) --target-host bob@$(IP) --use-remote-sudo` then exit non-zero
+- [X] T008 Add `make rollback HOST=hlc-NNN IP=<ip>` target: `nixos-rebuild switch --rollback ...` then `make smoke-test`
+- [X] T009 Add `make ip HOST=hlc-NNN` helper target: `@grep -w '^$(HOST)' docs/cluster-ips.txt | cut -f2`. Used by smoke-test loops once `docs/cluster-ips.txt` is populated.
+- [X] T010 Add `make smoke-test-all` target looping over work-set hosts only (`hlc-401 hlc-501..508`), reading IPs from `docs/cluster-ips.txt`; do NOT include hlc-402/403/404 (decommissioned-set)
+- [X] T011 Update `make help` block in `Makefile` to document new targets under "Phase A safety" heading; also document the work-set vs decommissioned-set distinction in a comment near the `HLC_HOSTS` variable
 
 **Checkpoint**: `make help` shows new targets. `make build HOST=hlc-501` and `make smoke-test` invoke without syntax errors.
 
@@ -141,9 +141,9 @@ login), document for Phase 7 reintroduction.
 
 ### 4a: Canonical minimal shape (workaround tracking)
 
-- [ ] T020 [US1] Open `WORKAROUNDS.md` (create if absent) and add entry `W-001`: inline host configs duplicate ~12 lines across 9 work-set hosts (defers Principle III); exit condition = Phase 7 module reintroduction complete; target phase = current /speckit-plan cycle Phases 7a–7f
-- [ ] T021 [US1] Add entry `W-002` to `WORKAROUNDS.md`: `security.sudo.wheelNeedsPassword = false` in baseline (defers eventual passwordless-via-key+sops state); exit condition = secrets management + sops-nix integration deployed; target phase = future feature spec for Phase D
-- [ ] T022 [US1] Add entry `W-003` to `WORKAROUNDS.md`: `PasswordAuthentication = true` (NixOS 25.11 default; FR-011 violation window) — kept as short-term fallback per operator decision so a node that breaks `authorized_keys` is not bricked; exit condition = T091 SSH hardening rolled out across all work-set nodes; target phase = Phase 7f. Code comments in baseline host configs reference this entry.
+- [X] T020 [US1] Open `WORKAROUNDS.md` (create if absent) and add entry `W-001`: inline host configs duplicate ~12 lines across 9 work-set hosts (defers Principle III); exit condition = Phase 7 module reintroduction complete; target phase = current /speckit-plan cycle Phases 7a–7f
+- [X] T021 [US1] Add entry `W-002` to `WORKAROUNDS.md`: `security.sudo.wheelNeedsPassword = false` in baseline (defers eventual passwordless-via-key+sops state); exit condition = secrets management + sops-nix integration deployed; target phase = future feature spec for Phase D
+- [X] T022 [US1] Add entry `W-003` to `WORKAROUNDS.md`: `PasswordAuthentication = true` (NixOS 25.11 default; FR-011 violation window) — kept as short-term fallback per operator decision so a node that breaks `authorized_keys` is not bricked; exit condition = T091 SSH hardening rolled out across all work-set nodes; target phase = Phase 7f. Code comments in baseline host configs reference this entry.
 
 ### 4b: Rewrite work-set host configs to minimal shape (parallelizable)
 
@@ -151,30 +151,30 @@ Canonical shape is defined once at the top of this file (§ Canonical
 minimal host-config shape). Each task below writes that shape with the
 host-specific hostname and board ID substituted.
 
-- [ ] T023 [P] [US1] Rewrite `hosts/hlc-401/configuration.nix` to minimal shape with `board = "bcm2711"`, hostname `hlc-401`. Note: hlc-401 is the cluster bootstrap node (k3s `clusterInit = true`) but k3s configuration is deferred — Phase 4 minimal shape only.
-- [ ] T024 [P] [US1] Rewrite `hosts/hlc-501/configuration.nix` to minimal shape, board `bcm2712`, hostname `hlc-501`
-- [ ] T025 [P] [US1] Rewrite `hosts/hlc-502/configuration.nix` — hostname `hlc-502`, board `bcm2712`
-- [ ] T026 [P] [US1] Rewrite `hosts/hlc-503/configuration.nix` — hostname `hlc-503`, board `bcm2712`
-- [ ] T027 [P] [US1] Rewrite `hosts/hlc-504/configuration.nix` — hostname `hlc-504`, board `bcm2712`
-- [ ] T028 [P] [US1] Rewrite `hosts/hlc-505/configuration.nix` — hostname `hlc-505`, board `bcm2712`
-- [ ] T029 [P] [US1] Rewrite `hosts/hlc-506/configuration.nix` — hostname `hlc-506`, board `bcm2712`
-- [ ] T030 [P] [US1] Rewrite `hosts/hlc-507/configuration.nix` — hostname `hlc-507`, board `bcm2712`
-- [ ] T031 [P] [US1] Rewrite `hosts/hlc-508/configuration.nix` — hostname `hlc-508`, board `bcm2712`. (This is also the recovery image for the previously-bricked hlc-508 — Phase 4 baseline IS the recovery config, no separate triage flash needed.)
+- [X] T023 [P] [US1] Rewrite `hosts/hlc-401/configuration.nix` to minimal shape with `board = "bcm2711"`, hostname `hlc-401`. Note: hlc-401 is the cluster bootstrap node (k3s `clusterInit = true`) but k3s configuration is deferred — Phase 4 minimal shape only.
+- [X] T024 [P] [US1] Rewrite `hosts/hlc-501/configuration.nix` to minimal shape, board `bcm2712`, hostname `hlc-501`
+- [X] T025 [P] [US1] Rewrite `hosts/hlc-502/configuration.nix` — hostname `hlc-502`, board `bcm2712`
+- [X] T026 [P] [US1] Rewrite `hosts/hlc-503/configuration.nix` — hostname `hlc-503`, board `bcm2712`
+- [X] T027 [P] [US1] Rewrite `hosts/hlc-504/configuration.nix` — hostname `hlc-504`, board `bcm2712`
+- [X] T028 [P] [US1] Rewrite `hosts/hlc-505/configuration.nix` — hostname `hlc-505`, board `bcm2712`
+- [X] T029 [P] [US1] Rewrite `hosts/hlc-506/configuration.nix` — hostname `hlc-506`, board `bcm2712`
+- [X] T030 [P] [US1] Rewrite `hosts/hlc-507/configuration.nix` — hostname `hlc-507`, board `bcm2712`
+- [X] T031 [P] [US1] Rewrite `hosts/hlc-508/configuration.nix` — hostname `hlc-508`, board `bcm2712`. (This is also the recovery image for the previously-bricked hlc-508 — Phase 4 baseline IS the recovery config, no separate triage flash needed.)
 
 ### 4c: Decommissioned-set host configs — minimal shape, dry-run only
 
 Constitution v1.1.0 § Cluster Topology forbids flashing/switching these. Configs exist so flake evaluates and so future decommission day is one edit away.
 
-- [ ] T032 [P] [US1] Rewrite `hosts/hlc-402/configuration.nix` to minimal shape, hostname `hlc-402`, board `bcm2711`. Add header comment: `# DECOMMISSIONED-SET — currently Debian. Do NOT flash or nixos-rebuild switch this host. See constitution v1.1.0 § Cluster Topology.`
-- [ ] T033 [P] [US1] Rewrite `hosts/hlc-403/configuration.nix` similarly, hostname `hlc-403`
-- [ ] T034 [P] [US1] Rewrite `hosts/hlc-404/configuration.nix` similarly, hostname `hlc-404`
+- [X] T032 [P] [US1] Rewrite `hosts/hlc-402/configuration.nix` to minimal shape, hostname `hlc-402`, board `bcm2711`. Add header comment: `# DECOMMISSIONED-SET — currently Debian. Do NOT flash or nixos-rebuild switch this host. See constitution v1.1.0 § Cluster Topology.`
+- [X] T033 [P] [US1] Rewrite `hosts/hlc-403/configuration.nix` similarly, hostname `hlc-403`
+- [X] T034 [P] [US1] Rewrite `hosts/hlc-404/configuration.nix` similarly, hostname `hlc-404`
 
 ### 4d: Flake wiring + dry-run gate
 
-- [ ] T035 [US1] Refactor `flake.nix` `nixosConfigurations` block: remove all `extraModules = []` debug entries and `# DEBUG:` comments (already gone after revert; sanity-check); ensure all 12 host nixosConfigurations use a uniform helper (e.g., `mkHlcNode`) wiring `raspberry-pi-nix.nixosModules.raspberry-pi`, `raspberry-pi-nix.nixosModules.sd-image`, the per-board `nixos-hardware` module, and the host's own `configuration.nix`. No per-host module-list divergence.
-- [ ] T036 [US1] Add `WORK_SET = hlc-401 hlc-501 hlc-502 hlc-503 hlc-504 hlc-505 hlc-506 hlc-507 hlc-508` and `DECOM_SET = hlc-402 hlc-403 hlc-404` variables to `Makefile`; `HLC_HOSTS = $(WORK_SET) $(DECOM_SET)` for dry-run-all only
-- [ ] T036a [US1] In `flake.nix`, add a top-level `let`-binding `operatorPubkey = "ssh-rsa AAAA...eaglerock@gibson"` (literal RSA key from `main:hosts/hlc-501/configuration.nix`); pass via `specialArgs = { inherit operatorPubkey; ... }` to every `nixosSystem` call in `mkHlcNode`. Update each host config (T023–T034) to take `operatorPubkey` in its function signature and use `openssh.authorizedKeys.keys = [ operatorPubkey ]`. Single source of truth; eliminates the literal-string-in-9-files anti-pattern. Closes analyze finding N6.
-- [ ] T037 [US1] `make dry-run-all` — must exit 0 for all 12 hosts (work-set + decom-set). If any host fails, fix before proceeding.
+- [X] T035 [US1] Refactor `flake.nix` `nixosConfigurations` block: remove all `extraModules = []` debug entries and `# DEBUG:` comments (already gone after revert; sanity-check); ensure all 12 host nixosConfigurations use a uniform helper (e.g., `mkHlcNode`) wiring `raspberry-pi-nix.nixosModules.raspberry-pi`, `raspberry-pi-nix.nixosModules.sd-image`, the per-board `nixos-hardware` module, and the host's own `configuration.nix`. No per-host module-list divergence.
+- [X] T036 [US1] Add `WORK_SET = hlc-401 hlc-501 hlc-502 hlc-503 hlc-504 hlc-505 hlc-506 hlc-507 hlc-508` and `DECOM_SET = hlc-402 hlc-403 hlc-404` variables to `Makefile`; `HLC_HOSTS = $(WORK_SET) $(DECOM_SET)` for dry-run-all only
+- [X] T036a [US1] In `flake.nix`, add a top-level `let`-binding `operatorPubkey = "ssh-rsa AAAA...eaglerock@gibson"` (literal RSA key from `main:hosts/hlc-501/configuration.nix`); pass via `specialArgs = { inherit operatorPubkey; ... }` to every `nixosSystem` call in `mkHlcNode`. Update each host config (T023–T034) to take `operatorPubkey` in its function signature and use `openssh.authorizedKeys.keys = [ operatorPubkey ]`. Single source of truth; eliminates the literal-string-in-9-files anti-pattern. Closes analyze finding N6.
+- [X] T037 [US1] `make dry-run-all` — must exit 0 for all 12 hosts (work-set + decom-set). If any host fails, fix before proceeding.
 
 ### 4e: Canary build + flash + boot — one Pi4 + one Pi5
 
