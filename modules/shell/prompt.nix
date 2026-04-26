@@ -34,8 +34,14 @@ in {
       # Two separate PROMPT_COMMAND assignments would silently overwrite each other.
       __set_ps1() {
         local exit_code=$?
-        local git_branch
-        git_branch=$(command -v __git_ps1 &>/dev/null && __git_ps1 " (%s)" || true)
+        local git_branch=""
+        # Guard: __git_ps1 walks up the FS tree on every prompt. If sourced
+        # but PWD is on a slow/stale mount it can stall the prompt — only
+        # call when the function is actually defined, and never let its
+        # exit status overwrite the captured exit_code above.
+        if declare -F __git_ps1 >/dev/null 2>&1; then
+          git_branch=$(__git_ps1 " (%s)" 2>/dev/null || true)
+        fi
 
         local host_color=${cfg.hostColor}
         local prompt_color

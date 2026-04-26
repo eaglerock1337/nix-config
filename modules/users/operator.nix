@@ -35,5 +35,19 @@ in {
 
     # Passwordless sudo for wheel — nodes are SSH-key-only anyway
     security.sudo.wheelNeedsPassword = false;
+
+    # SSH hardening: prevent hung sessions from cascading and exhausting
+    # MaxSessions/MaxStartups slots. Without ClientAlive, a stuck shell
+    # holds its slot indefinitely; a few hung sessions block all new logins.
+    services.openssh.settings = {
+      ClientAliveInterval = 30;
+      ClientAliveCountMax = 3;
+      LoginGraceTime = 20;
+      MaxSessions = 20;
+      MaxStartups = "30:30:60";
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+      UseDns = false;
+    };
   };
 }
