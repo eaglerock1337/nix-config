@@ -6,7 +6,7 @@
 
 ### ClusterNode
 
-A physical Raspberry Pi with a declared role in the k3s cluster.
+Physical Raspberry Pi with declared role in k3s cluster.
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
@@ -41,7 +41,7 @@ A physical Raspberry Pi with a declared role in the k3s cluster.
 
 ### StorageLayout
 
-Per-node storage tier configuration.
+Per-node storage tier config.
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
@@ -57,7 +57,7 @@ Per-node storage tier configuration.
 
 ### ClusterSecret
 
-Encrypted value stored in the repository, decryptable at runtime.
+Encrypted value in repo, decryptable at runtime.
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
@@ -77,12 +77,11 @@ Bootable NixOS image for initial node provisioning.
 | outputPath | path | `result/sd-image/*.img.zst` | Build output (zstd-compressed) |
 | contents | list | firmware, kernel, initramfs, base NixOS | What's on the SD card |
 
-Only two images are needed — one per Pi model. All control nodes share the Pi4 image;
-all workers share the Pi5 image.
+Two images needed — one per Pi model. Control nodes share Pi4 image; workers share Pi5 image.
 
 ### OperatorUser
 
-Parameterized system user for a given system class.
+Parameterized system user for given system class.
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
@@ -99,7 +98,7 @@ Parameterized system user for a given system class.
 
 ### MOTDConfig
 
-Parameterized message-of-the-day configuration.
+Parameterized message-of-the-day config.
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|

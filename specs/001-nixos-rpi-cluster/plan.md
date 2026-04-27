@@ -1,25 +1,25 @@
 # Implementation Plan: NixOS RPi Cluster Foundation
 
 **Branch**: `001-nixos-rpi-cluster` | **Date**: 2026-04-26 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-nixos-rpi-cluster/spec.md`
+**Input**: Feature spec from `/specs/001-nixos-rpi-cluster/spec.md`
 
 > **Spec clarification round 4 (2026-04-26)**: Shell module baseline revised. MVP testing
-> phase uses default bash prompt + standard tool packages only (no custom PS1, no syshelp,
-> no custom bashrc). Styled PS1, syshelp, and bashrc customization deferred to Phase C
+> phase use default bash prompt + standard tool packages only (no custom PS1, no syshelp,
+> no custom bashrc). Styled PS1, syshelp, bashrc customization deferred to Phase C
 > stable testing. kitty TERM=xterm-kitty incompatibility documented as known limitation.
 >
 > **Spec clarification round 2 (2026-04-26)**: Updated spec.md with 10 clarifications
 > covering FR-002/003/004/006/007/010/011 provisioning sequence, storage partitioning,
-> NVMe model specification, lightweight workload definition, agent discovery deferral,
-> and SSH key provisioning method. Plan structure remains valid; no phase reordering required.
+> NVMe model spec, lightweight workload definition, agent discovery deferral,
+> SSH key provisioning method. Plan structure still valid; no phase reorder needed.
 
 ## Summary
 
-Provision and bring online 9 HLC work-set nodes (hlc-401 Pi4 + hlc-501–508 Pi5) with
-NixOS 25.11 using baseline OS boot from SD card, provisioning via nixos-anywhere with
+Provision + bring online 9 HLC work-set nodes (hlc-401 Pi4 + hlc-501–508 Pi5) with
+NixOS 25.11. Baseline OS boot from SD card, provision via nixos-anywhere with
 bob user + SSH keys configured by provisioning tool, RAID1 USB boot verified before
-workloads, and Pi5 NVMe (Corsair MP600 1TB) dedicated to Longhorn storage. Validate
-workstation-push and on-device-git update paths before proceeding to cluster software.
+workloads, Pi5 NVMe (Corsair MP600 1TB) dedicated to Longhorn storage. Validate
+workstation-push and on-device-git update paths before cluster software.
 
 ## Technical Context
 
@@ -30,8 +30,8 @@ build host gibson is x86_64-linux with `boot.binfmt.emulatedSystems = [ "aarch64
 (Pi4/Pi5), `home-manager`. Phase D+: `disko`, `sops-nix`, `nixos-anywhere`.
 
 **Storage**: Phase A–B: SD card boot only. Phase D: USB RAID1 root (mdadm) + verify
-before workload placement. Pi5 nodes: Corsair MP600 Micro 1TB NVMe per node, at least
-one partition reserved for Longhorn (OpenEBS/Longhorn choice deferred pending tech research).
+before workload placement. Pi5 nodes: Corsair MP600 Micro 1TB NVMe per node, ≥1
+partition reserved for Longhorn (OpenEBS/Longhorn choice deferred pending tech research).
 
 **Testing**: `nix build` on canary before roll. `make smoke-test` post-deploy. `nixos-rebuild
 build-vm` for shell/boot changes (aarch64 feasibility TBD).
@@ -39,19 +39,19 @@ build-vm` for shell/boot changes (aarch64 feasibility TBD).
 **Target Platform**: 1× Pi4/bcm2711 (hlc-401) + 8× Pi5/bcm2712 (hlc-501–508), headless.
 Build host: gibson. Decommissioned-set (hlc-402–404): configs evaluate only.
 
-**Project Type**: NixOS configuration repo (flake-based, multi-host).
+**Project Type**: NixOS config repo (flake-based, multi-host).
 
 **Constraints**:
 - No console access. SSH must survive every change.
 - Pre-deploy full build gate on canary, smoke-test mandatory before roll.
 - Baseline OS with SSH open required on Pi before nixos-anywhere invocation.
-- Password prompts acceptable in provisioning flow if documented as workarounds.
+- Password prompts OK in provisioning flow if documented as workarounds.
 - RAID1 redundancy verified before production workloads placed.
 - Pi5 lightweight workload definition: CPU/memory bounded by Pi4 hardware limits.
-- Agent discovery mechanism (VIP vs DNS vs hardcoded IP) deferred; requires deliberation.
+- Agent discovery mechanism (VIP vs DNS vs hardcoded IP) deferred; needs deliberation.
 - bob SSH authorized_keys hardcoded in NixOS module for MVP; sops migration planned.
 - kitty terminal (TERM=xterm-kitty) not in default NixOS terminfo; use alacritty or
-  `TERM=xterm-256color ssh` when connecting from a kitty session (known limitation).
+  `TERM=xterm-256color ssh` when connecting from kitty session (known limitation).
 
 ## Constitution Check
 
@@ -62,7 +62,7 @@ Build host: gibson. Decommissioned-set (hlc-402–404): configs evaluate only.
 |---|---|---|
 | I. Declarative Configuration | ✅ | All state in Nix. No imperative changes permitted. |
 | II. Reproducibility via Flakes | ✅ | `flake.lock` pins every input. |
-| III. Modular Design | ⚠️ deferred (legal under Principle V) | Host configs remain minimal (no shared modules) through Phase A. Shared modules reintroduced one at a time in Phase C, each with canary gate. Logged in WORKAROUNDS.md as W-001; exit condition = Phase C complete. |
+| III. Modular Design | ⚠️ deferred (legal under Principle V) | Host configs stay minimal (no shared modules) through Phase A. Shared modules reintroduced one at a time in Phase C, each with canary gate. Logged in WORKAROUNDS.md as W-001; exit condition = Phase C complete. |
 | IV. Safety-First Changes | ✅ | Canary deploy + smoke-test mandatory for every runtime change. Auto-rollback on smoke-test failure. |
 | V. Pragmatic Phasing | ✅ | Phase A workarounds (passwordless wheel W-002, PasswordAuthentication default W-003, inline host configs W-001) all logged with exit conditions. |
 | VI. Minimal & Explicit Footprint | ✅ | Phase A footprint minimal; packages alphabetically sorted when added. |
@@ -120,16 +120,16 @@ scripts/
 └── smoke-test.sh               # ping + non-PTY ssh + interactive PTY ssh check
 ```
 
-**Structure Decision**: Phase A retains minimal inline host configs (no shared modules).
-Module reintroduction in Phase C follows strict one-module-at-a-time canary discipline.
+**Structure Decision**: Phase A keep minimal inline host configs (no shared modules).
+Module reintroduction in Phase C follow strict one-module-at-a-time canary discipline.
 Shell module baseline for MVP = standard tool packages only, default bash prompt.
 
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |---|---|---|
-| Principle III deferred for Phase A: work-set host configs inline minimal config instead of shared module | Prior attempt (Phase 0) bundled shared modules + 12 hosts; result was garbled PS1 and unreachable nodes. Minimal inline configs give zero inter-host blast radius and make regressions attributable to individual changes. Principle V explicitly authorizes this with WORKAROUNDS.md tracking. | The "correct" shared-module pattern is what we're iterating toward in Phase C; restoring it before the baseline is stable repeats the mistake. |
-| `make canary` wraps `nixos-rebuild switch --target-host` with pre-build + smoke-test + auto-rollback | Headless Pi nodes cannot be recovered without physical access when SSH is broken. The canary wrapper auto-rollbacks a failed switch. | Plain `nixos-rebuild switch` is what was used when a node dropped off the network in the prior iteration. |
+| Principle III deferred for Phase A: work-set host configs inline minimal config instead of shared module | Prior attempt (Phase 0) bundled shared modules + 12 hosts; result garbled PS1 + unreachable nodes. Minimal inline configs give zero inter-host blast radius and make regressions attributable to individual changes. Principle V explicitly authorizes this with WORKAROUNDS.md tracking. | "Correct" shared-module pattern is what we iterate toward in Phase C; restoring before baseline stable repeats mistake. |
+| `make canary` wraps `nixos-rebuild switch --target-host` with pre-build + smoke-test + auto-rollback | Headless Pi nodes cannot recover without physical access when SSH broken. Canary wrapper auto-rollbacks failed switch. | Plain `nixos-rebuild switch` is what was used when node dropped off network in prior iteration. |
 
 ---
 
@@ -137,12 +137,12 @@ Shell module baseline for MVP = standard tool packages only, default bash prompt
 
 ### Phase A0 — Triage & strip to baseline
 
-**Goal**: Resolve immediate blockers and ensure all host configs are stripped to
+**Goal**: Resolve immediate blockers + ensure all host configs stripped to
 pure NixOS defaults — no custom shell modules, no prompt customization.
 
 **A0.1 — Strip shell modules from host configs (workstation only)**
 
-Any `hosts/hlc-NNN/configuration.nix` that currently imports `modules/shell/prompt.nix`,
+Any `hosts/hlc-NNN/configuration.nix` currently importing `modules/shell/prompt.nix`,
 `modules/shell/common.nix`, or any custom shell module must have those imports removed.
 
 Target baseline for every work-set host config (~12 lines):
@@ -186,11 +186,11 @@ make smoke-test HOST=hlc-401 IP=10.23.50.41
 make smoke-test HOST=hlc-501 IP=10.23.50.51
 ```
 
-If hlc-401 is still unreachable: check DHCP MAC, confirm Pi4 image (bcm2711 board),
-verify Unifi switch port, try a different SD card. Smoke-test must pass for BOTH before
+If hlc-401 still unreachable: check DHCP MAC, confirm Pi4 image (bcm2711 board),
+verify Unifi switch port, try different SD card. Smoke-test must pass for BOTH before
 proceeding.
 
-**A0 exit gate**: `make smoke-test` passes for hlc-401 and hlc-501; both nodes show
+**A0 exit gate**: `make smoke-test` passes for hlc-401 + hlc-501; both nodes show
 default bash prompt on interactive SSH.
 
 ---
@@ -199,7 +199,7 @@ default bash prompt on interactive SSH.
 
 **Prerequisites**: A0 exit gate passes.
 
-**Goal**: All 9 work-set nodes have a curated set of sysadmin tool packages available.
+**Goal**: All 9 work-set nodes have curated set of sysadmin tool packages.
 Default bash prompt — no PS1 customization. No syshelp. No custom bashrc.
 
 Add `environment.systemPackages` directly inline in each host configuration.nix:
@@ -214,15 +214,15 @@ environment.systemPackages = with pkgs; [
 ];
 ```
 
-Packages alphabetically sorted per Principle VI. Add/remove from this list based on
-what is actually needed for triage work (YAGNI — keep it lean).
+Packages alphabetically sorted per Principle VI. Add/remove from list based on
+what actually needed for triage work (YAGNI — keep lean).
 
 Deployment sequence (canary-first):
 1. hlc-501 — canary deploy, smoke-test, interactive SSH check.
 2. hlc-401 — canary deploy, smoke-test, interactive SSH check.
-3. hlc-502 through hlc-508 and hlc-402/403/404 — roll out; smoke-test after each work-set node.
+3. hlc-502 through hlc-508 + hlc-402/403/404 — roll out; smoke-test after each work-set node.
 
-**Note**: `git` is the most important package here — enables on-device config pulls
+**Note**: `git` most important package — enables on-device config pulls
 (Phase A2 fallback path test).
 
 **A1 exit gate**: All 9 work-set nodes pass `make smoke-test`; interactive SSH shows
@@ -238,13 +238,13 @@ default bash prompt; `htop`, `git`, `jq`, `ripgrep`, `tmux` available.
 
 **A2.1 — Workstation push path (primary)**
 
-For one Pi4 (hlc-401) and one Pi5 (hlc-501):
-1. Make a trivial config change (add a comment or bump a package).
+For one Pi4 (hlc-401) + one Pi5 (hlc-501):
+1. Make trivial config change (add comment or bump package).
 2. `make canary HOST=<host> IP=<ip>` — forward deploy + smoke-test.
 3. `nixos-rebuild switch --rollback --target-host bob@<host>` — rollback + smoke-test.
-4. Forward deploy again to restore to current config.
+4. Forward deploy again to restore current config.
 
-Confirms `update-node` and `--rollback` both work reliably.
+Confirms `update-node` + `--rollback` both work reliably.
 
 **A2.2 — On-device git fallback path (secondary)**
 
@@ -257,11 +257,11 @@ sudo nixos-rebuild switch --flake .#hlc-501
 ```
 
 Expected behavior:
-- Nix evaluation runs locally on the Pi (slow but tolerable for occasional use).
-- A full build may OOM on Pi4 (4GB RAM) for large closures — if OOM occurs, document
-  in `research.md` as `R-013: On-device rebuild RAM limits`; Pi5 (8GB) should handle it.
-  Pi4 on-device is for eval/dry-run only.
-- This path is NOT used for routine updates.
+- Nix evaluation runs locally on Pi (slow but tolerable for occasional use).
+- Full build may OOM on Pi4 (4GB RAM) for large closures — if OOM, document
+  in `research.md` as `R-013: On-device rebuild RAM limits`; Pi5 (8GB) should handle.
+  Pi4 on-device for eval/dry-run only.
+- Path NOT used for routine updates.
 
 **A2.3 — Quickstart revision**
 
@@ -272,8 +272,8 @@ Rewrite `specs/001-nixos-rpi-cluster/quickstart.md` to reflect:
 - Direct SSH: `ssh bob@<hostname>.marks.dev` (no Makefile target).
 - kitty users: `TERM=xterm-256color ssh bob@<hostname>` or use alacritty.
 
-**A2 exit gate**: At least one Pi4 and one Pi5 complete forward + rollback canary
-cycle; on-device rebuild attempted and result documented in `research.md`.
+**A2 exit gate**: At least one Pi4 + one Pi5 complete forward + rollback canary
+cycle; on-device rebuild attempted + result documented in `research.md`.
 
 ---
 
@@ -288,7 +288,7 @@ Still inline (no shared module). Add `networking.interfaces.eth0.ipv4.addresses`
 `networking.defaultGateway`, `networking.nameservers` directly in each host config.
 Canary on hlc-501 first, smoke-test, roll to remaining 8.
 
-Collect `ssh_host_ed25519_key.pub` from each node during this phase and record in
+Collect `ssh_host_ed25519_key.pub` from each node during this phase + record in
 `data-model.md` (SSH host key column, conversion to age pubkey via `ssh-to-age`).
 
 **B exit gate**: All 9 nodes reachable on static IPs; host pubkeys in `data-model.md`.
@@ -299,8 +299,8 @@ Collect `ssh_host_ed25519_key.pub` from each node during this phase and record i
 
 **Prerequisites**: B exit gate passes.
 
-**Goal**: Reintroduce shell customization and remaining modules one at a time using
-the proven canary-gate process. Retire Principle III deferral (W-001).
+**Goal**: Reintroduce shell customization + remaining modules one at a time using
+proven canary-gate process. Retire Principle III deferral (W-001).
 
 Module order (one canary cycle per module, hlc-501 as canary):
 1. `modules/users/operator.nix` — parameterized `bob` user (without SSH hardening).
@@ -329,7 +329,7 @@ Deferred. Plan in detail at `/speckit-plan` time after C exits green.
 
 ### Phase E — k3s, ArgoCD, Longhorn
 
-Deferred. Plan after Phase D. ArgoCD bootstrap is a one-time manual `kubectl apply`;
+Deferred. Plan after Phase D. ArgoCD bootstrap is one-time manual `kubectl apply`;
 Longhorn NixOS compatibility documented in `research.md` R-006.
 
 ---
@@ -337,12 +337,12 @@ Longhorn NixOS compatibility documented in `research.md` R-006.
 ## Phase 0: Outline & Research
 
 **Existing `research.md` is current** for Phase D+ (raspberry-pi-nix, disko,
-nixos-anywhere, k3s, sops-nix, Longhorn). No new tech introduced in Phases A–C.
+nixos-anywhere, k3s, sops-nix, Longhorn). No new tech in Phases A–C.
 
 **New research items to add**:
-- **R-011**: SSH-hang root cause — update to reflect current status: nodes are reachable;
+- **R-011**: SSH-hang root cause — update to reflect current status: nodes reachable;
   PS1 bug root-caused to `prompt.nix` `\033` vs `\e`; deferred to Phase C. Mark status
-  as "deferred" not "resolved."
+  "deferred" not "resolved."
 - **R-012**: Silicon PS1 style — capture exact PS1 format/visual structure from silicon
   before implementing Phase C prompt.nix.
 - **R-013**: On-device rebuild RAM limits — document Pi4 vs Pi5 behavior during Phase A2.
@@ -354,7 +354,7 @@ nixos-anywhere, k3s, sops-nix, Longhorn). No new tech introduced in Phases A–C
 ## Phase 1: Design & Contracts
 
 **Data model**: `data-model.md` accurately reflects node topology, IPs, storage.
-No structural changes needed. SSH host key column to be populated in Phase B.
+No structural changes needed. SSH host key column populated in Phase B.
 
 **Contracts**: N/A — internal config repo.
 
