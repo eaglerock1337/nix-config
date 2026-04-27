@@ -15,8 +15,8 @@
 
 **Goal**: Unblock remaining work — fix garbled PS1 on hlc-501, restore hlc-401 reachability.
 
-- [ ] T001 Fix `\033` → `\e` and remove wrapping double-quotes in `modules/shell/prompt.nix`
-- [ ] T002 Validate fix: `nixos-rebuild dry-run --flake .#hlc-501` then `nix build .#nixosConfigurations.hlc-501.config.system.build.toplevel`
+- [x] T001 Fix `\033` → `\e` and remove wrapping double-quotes in `modules/shell/prompt.nix`
+- [x] T002 Validate fix: `nixos-rebuild dry-run --flake .#hlc-501` then `nix build .#nixosConfigurations.hlc-501.config.system.build.toplevel`
 - [ ] T003 Deploy fixed prompt to hlc-501: `make canary HOST=hlc-501 IP=10.23.50.51`; confirm PS1 correct via interactive SSH
 - [ ] T004 Triage hlc-401 unreachability (DHCP/MAC, image mismatch, SD card, switch port); reflash Pi4 image if needed
 - [ ] T005 Confirm A0 exit gate: `make smoke-test HOST=hlc-501` passes; hlc-401 reachable via ping and SSH

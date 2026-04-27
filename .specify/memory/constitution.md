@@ -1,65 +1,33 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0
-Bump rationale: MINOR — two new principles added (V Pragmatic Phasing,
-re-numbered Minimal & Explicit Footprint to VI), one new section
-(Cluster Topology & Phasing), Principle III softened with deferral
-clause, Principle IV strengthened with mandatory canary + smoke-test
-during transition. No principle removed; no backward-incompatible
-governance redefinition.
+Version change: 1.1.0 → 1.2.0
+Bump rationale: MINOR — new principle added (VII. Standardized Build & Test Workflow);
+Safety & Change Management section updated with Makefile-first guidance and host
+capability table. No existing principles removed or redefined.
 
-Modified principles:
-  - III. Modular Design — added "deferrable during baseline/transition;
-    non-negotiable in refinement" qualifier with WORKAROUNDS.md tracking
-    requirement
-  - IV. Safety-First Changes — strengthened: canary deploy +
-    post-deploy smoke-test mandatory for any change touching a node
-    that is not already validated in CI/build-vm; explicit until prior
-    art is fully reintegrated
+Modified principles: none
 
 Added principles:
-  - V. Pragmatic Phasing (NEW) — short-term workarounds permitted if
-    logged in WORKAROUNDS.md with an exit condition
+  - VII. Standardized Build & Test Workflow (NEW) — Makefile as canonical test
+    interface; host capability awareness (gibson vs silicon vs cluster nodes);
+    gibson NixOS management deferred to future project.
 
-Renumbered:
-  - V. Minimal & Explicit Footprint → VI. Minimal & Explicit Footprint
-
-Added sections:
-  - Cluster Topology & Phasing — defines work-set (hlc-401, hlc-501–508)
-    vs decommissioned-set (hlc-402–404 Debian, untouched until parity),
-    4-node etcd choice (acknowledged non-ideal, accepted)
+Modified sections:
+  - Safety & Change Management — gate sequence updated to reference Makefile
+    targets; host capability table added.
 
 Removed sections: none
 
 Templates checked:
-  - .specify/templates/plan-template.md ✅ aligned (Constitution Check
-    section is generic; principle numbering update propagates only via
-    plan files that name principles by number — Phase A1 plan.md uses
-    names not numbers, no edit needed)
-  - .specify/templates/spec-template.md ✅ aligned (FR/SC neutral)
+  - .specify/templates/plan-template.md ✅ aligned (Testing field is generic;
+    no principle numbering references)
+  - .specify/templates/spec-template.md ✅ aligned (no principle refs)
   - .specify/templates/tasks-template.md ✅ aligned (no principle refs)
-  - specs/001-nixos-rpi-cluster/plan.md ⚠ pending — Constitution Check
-    table references principle numbers I–V; needs minor edit to add
-    Principle V (Pragmatic Phasing) and renumber Minimal Footprint as
-    VI in the table only, plus a row mentioning the Cluster Topology
-    section's work-set rule
-  - specs/001-nixos-rpi-cluster/tasks.md ⚠ pending — Phase 4 task list
-    (T017–T028) addresses all 12 hosts; per new Cluster Topology
-    section, hlc-402/403/404 are decommissioned-set and MUST NOT be
-    flashed/booted until decommission day. Tasks need scoping to
-    work-set (9 hosts: hlc-401, hlc-501–508) for the active rollout,
-    with the 3 control-plane decommission-set hosts deferred to a new
-    Phase B' (decommission + reflash) inserted between current Phases
-    6 and 7 — or kept as flake-evaluating-only host configs that never
-    get flashed in this cycle.
-  - WORKAROUNDS.md ⚠ pending creation — required by Principle V
 
 Deferred TODOs:
-  - WORKAROUNDS.md ledger file does not yet exist; will be created at
-    first workaround entry (the passwordless-sudo and
-    PasswordAuthentication-default workarounds for Phase A1 are the
-    likely first entries).
+  - Principle VII will be revised when gibson receives NixOS system management
+    (tracked as a separate project, not in scope for feature 001).
 -->
 
 # nix-config Constitution
@@ -100,10 +68,9 @@ Once the cluster reaches refinement, this principle is non-negotiable.
 
 ### IV. Safety-First Changes (NON-NEGOTIABLE)
 
-Every config change MUST be validated with `sudo nixos-rebuild dry-run --flake .#<host>`
-before applying. Changes to boot config, hardware modules (power/thermal), or
-kernel parameters MUST additionally be tested with `nixos-rebuild build-vm`
-when feasible.
+Every config change MUST be validated before applying. Changes to boot config,
+hardware modules (power/thermal), or kernel parameters MUST additionally be
+tested with `nixos-rebuild build-vm` when feasible.
 
 **Canary requirement (cluster-transition phase, until prior art is fully
 reintegrated)**: Any change that touches a cluster host's runtime state MUST
@@ -154,6 +121,32 @@ Packages MUST be alphabetically sorted in lists. Unfree packages MUST be on
 the explicit allowlist — no new additions without documented justification and
 discussion. YAGNI applies: no pre-emptive abstractions or speculative modules.
 Start simple; add complexity only when the need is demonstrated.
+
+### VII. Standardized Build & Test Workflow
+
+All build and test operations MUST use Makefile targets as the canonical
+interface. Direct CLI invocation of `nix build`, `nixos-rebuild`, or
+`smoke-test.sh` is permitted during interactive triage; scripts, agents, and
+any automated workflow MUST invoke Makefile targets to ensure a consistent,
+documented interface.
+
+**Host capability awareness**: Available commands differ by host. Commands MUST
+be selected based on the executing host:
+
+| Host | Role | Available | Not available |
+|------|------|-----------|---------------|
+| `gibson` | build host (x86_64) | `nix`, `nix build`, Makefile targets | `nixos-rebuild` (NixOS not yet installed — future project) |
+| `silicon` | laptop (x86_64 NixOS) | `nix`, `nixos-rebuild`, Makefile targets | — |
+| cluster nodes | aarch64 NixOS | `nix`, `nixos-rebuild` | Makefile (not cloned) |
+
+When executing on `gibson`, use `nix build
+.#nixosConfigurations.<host>.config.system.build.toplevel` for build
+validation in place of `sudo nixos-rebuild dry-run`. Makefile targets already
+abstract this distinction and MUST be preferred for any scripted or
+agent-driven invocation.
+
+This principle MUST be revisited when gibson receives NixOS system management
+(tracked as a separate project outside the current feature scope).
 
 ## Cluster Topology & Phasing
 
@@ -206,16 +199,19 @@ After decommission of 402–404 and reflash to NixOS:
 
 ## Safety & Change Management
 
-All changes follow this gate sequence:
+All changes follow this gate sequence. **Use Makefile targets** — they encode
+host-correct commands and are the documented interface (Principle VII):
 
-1. `dry-run` — verify closure diff looks correct
-2. `build` — full toplevel build (`nix build
-   .#nixosConfigurations.<host>.config.system.build.toplevel`); catches
-   evaluation-passed-but-build-fails errors that `dry-run` misses
-3. `build-vm` — required for boot/kernel/hardware changes when feasible
-4. **Canary deploy** — switch on a single node; auto-rollback on smoke-test
-   failure (Principle IV)
-5. **Smoke test** — reachability + interactive-PTY ssh + sudo round-trip
+1. `make dry-run HOST=<host>` — verify closure diff (runs `nix build` on
+   gibson; `nixos-rebuild dry-run` where available)
+2. `make build HOST=<host>` — full toplevel build; catches evaluation-passed-
+   but-build-fails errors that dry-run misses
+3. `make build-vm HOST=<host>` — required for boot/kernel/hardware changes
+   when feasible
+4. **`make canary HOST=<host> IP=<ip>`** — switch on a single node;
+   auto-rollback on smoke-test failure (Principle IV)
+5. **`make smoke-test HOST=<host>`** — reachability + interactive-PTY ssh
+   + sudo round-trip
 6. Roll to remaining work-set nodes serially; smoke-test after each
 7. Tag commit at each phase exit gate for `git bisect` recovery
 
@@ -223,8 +219,8 @@ Boot config and hardware module edits require extra scrutiny before apply.
 Rollback via NixOS boot menu generations is always available, but the goal
 is never to need it.
 
-For the decommissioned-set (hlc-402–404), gate 4 onward MUST NOT execute.
-Only `dry-run` is permitted, to confirm the host configs evaluate.
+For the decommissioned-set (hlc-402–404), gates 4 onward MUST NOT execute.
+Only `make dry-run` (or equivalent `nix build` on gibson) is permitted.
 
 ## Coding Standards
 
@@ -278,4 +274,4 @@ principles before declaring work complete. Pull requests that introduce
 new workarounds MUST include the corresponding ledger entry in the same
 commit (or earlier in the branch history).
 
-**Version**: 1.1.0 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-04-26
+**Version**: 1.2.0 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-04-26

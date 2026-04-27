@@ -6,14 +6,14 @@
 
 let
   cfg = config.shell.prompt;
-  reset  = ''"\[\033[0m\]"'';
-  red    = ''"\[\033[31m\]"'';
-  bold   = ''"\[\033[1m\]"'';
+  reset  = ''\[\e[0m\]'';
+  red    = ''\[\e[31m\]'';
+  bold   = ''\[\e[1m\]'';
 in {
   options.shell.prompt = {
     hostColor = lib.mkOption {
       type = lib.types.str;
-      default = ''"\[\033[32m\]"'';  # green — suits server/control-plane nodes
+      default = ''\[\e[32m\]'';  # green — suits server/control-plane nodes
       description = "ANSI escape code for hostname color in the PS1 prompt.";
     };
   };
