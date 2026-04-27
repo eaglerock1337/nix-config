@@ -198,7 +198,7 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
   cluster nodes. User config MUST be a shared module parameterized by username.
 - **FR-014**: All systems MUST share a standard shell environment module providing
   a curated set of sysadmin CLI utilities (e.g. htop, ripgrep, jq, tmux, git, etc.)
-  and consistent bash/zsh configuration. The module MUST include both: (a) a shell
+  and consistent bash configuration (bash is canonical; zsh is out of scope). The module MUST include both: (a) a shell
   command (e.g. `syshelp`) that prints a categorized, colorized list of installed
   tools with one-line descriptions, and (b) a markdown reference doc in the repo
   for onboarding context. The shell prompt (PS1) MUST match the `silicon` system's
@@ -246,6 +246,12 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
   without network access beyond the configured binary caches.
 
 ## Clarifications
+
+### Session 2026-04-26 (Round 3)
+
+- Q: Which shell is canonical for cluster nodes? → A: Bash only; zsh out of scope for cluster nodes.
+- Q: Does ecto-1 stub require dry-run validation for MVP? → A: No. Spec structure must support future ecto-1 inclusion; no stub files or dry-run required for MVP.
+- Q: Does SC-004 ("no changes to existing files") conflict with flake.nix wiring? → A: Accepted exception. Host config file + flake.nix entry is the required pattern and satisfies SC-004 intent.
 
 ### Session 2026-04-26 (Round 2)
 
