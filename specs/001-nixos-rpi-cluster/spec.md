@@ -198,12 +198,13 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
   cluster nodes. User config MUST be a shared module parameterized by username.
 - **FR-014**: All systems MUST share a standard shell environment module providing
   a curated set of sysadmin CLI utilities (e.g. htop, ripgrep, jq, tmux, git, etc.)
-  and consistent bash configuration (bash is canonical; zsh is out of scope). The module MUST include both: (a) a shell
-  command (e.g. `syshelp`) that prints a categorized, colorized list of installed
-  tools with one-line descriptions, and (b) a markdown reference doc in the repo
-  for onboarding context. The shell prompt (PS1) MUST match the `silicon` system's
-  styled prompt, adapted for the cluster username (`bob`) and node hostname. `git`
-  MUST be included in the standard tool set to support on-device config pulls.
+  and bash as canonical shell (zsh is out of scope). For MVP testing phase, the module
+  uses default bash prompt with no custom PS1 styling, no syshelp command, and no
+  custom bashrc — pure NixOS defaults plus tool packages. The styled PS1 (matching
+  `silicon`'s prompt, adapted for user `bob` and cluster hostnames), `syshelp`
+  command, and markdown reference doc are deferred to stable testing phase after SSH
+  connectivity is verified across all nodes. `git` MUST be included for on-device
+  config pulls.
 - **FR-015**: Each cluster MUST display a custom MOTD on SSH login, including
   cluster name and node hostname. HLC nodes MUST display an ASCII art splash
   screen replicating the existing Debian MOTD style (ASCII "HLC" banner, Bob Ross
@@ -246,6 +247,10 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
   without network access beyond the configured binary caches.
 
 ## Clarifications
+
+### Session 2026-04-26 (Round 4)
+
+- Q: What baseline should shell module provide for MVP testing after PS1/kitty issues found? → A: Basic — default bash prompt, standard tool packages (htop, git, jq, tmux, ripgrep, etc.), no custom PS1 styling. PS1 styling, syshelp, and custom bashrc deferred to stable testing phase after SSH connectivity verified.
 
 ### Session 2026-04-26 (Round 3)
 
@@ -306,6 +311,9 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
   substituting `ghcr.io/duckfullstop/nixos-longhorn-manager` via Helm values.
 - The k3s token is chosen before provisioning node 1 and does not change during
   the cluster lifetime without a full reset procedure.
+- Kitty terminal (TERM=xterm-kitty) is not in the default NixOS terminfo database on
+  nodes; operators using kitty must either install kitty terminfo on nodes or connect
+  with `TERM=xterm-256color`. This is a known limitation, not a bug to fix in Phase 1.
 - All Pi5 NVMe drives (Corsair MP600 Micro 1TB; already purchased) are unformatted
   before provisioning and will be managed entirely by Longhorn; no pre-partitioning
   required from the operator.

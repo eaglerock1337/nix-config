@@ -275,7 +275,7 @@ when configuring NVMe/PCIe for Longhorn — by then the flake.lock pin should be
 
 ## R-011: SSH Hang / PS1 Garble Root Cause
 
-**Status**: Partially resolved (2026-04-26). SSH hang resolved; PS1 garble identified.
+**Status**: Partially resolved (2026-04-26). SSH hang resolved; PS1 fix deferred to Phase C.
 
 **Original symptom (prior iteration)**: hlc-501 accepted TCP/22 and key auth but
 interactive shell never reached a usable prompt. hlc-508 went fully offline after a
@@ -286,10 +286,13 @@ config revert.
 SSH hang is no longer reproducible. Suspected culprit was `services.openssh.settings`
 block (`ClientAliveInterval`, `MaxStartups`, `UseDns`) that has since been removed.
 
-**Remaining issue — PS1 garble**: hlc-501's interactive prompt prints ANSI escape
-sequences as literal text, e.g. `[033[1m][[033[0m]bob@[033[36m]hlc-501...`.
+**Additional finding (2026-04-26)**: hlc-504 passes smoke test. Reachable via alacritty
+on silicon (SSH'd through to marks.dev VLAN). Not reachable from kitty on gibson — root
+cause is `TERM=xterm-kitty` not present in NixOS default terminfo database. Workaround:
+use alacritty, or `TERM=xterm-256color ssh bob@<host>`. This is a known limitation
+(documented in spec Assumptions), not a bug to fix in Phase A.
 
-**Root cause identified**: `modules/shell/prompt.nix` has two interacting bugs:
+**Remaining issue — PS1 garble**: `modules/shell/prompt.nix` has two interacting bugs:
 
 1. Color variables use `\033` in Nix multi-line strings (`''...''`):
    ```nix
@@ -299,17 +302,17 @@ sequences as literal text, e.g. `[033[1m][[033[0m]bob@[033[36m]hlc-501...`.
    is never emitted; terminal sees `033[0m` as literal ASCII.
 
 2. Color variable values include wrapping double-quotes (`".."`). When Nix interpolates
-   them into the bash `promptInit` string, the result is broken bash quoting:
-   `PS1=""\[\033[1m\]"[...]"` — adjacent quoted/unquoted segments technically
-   concatenate in bash but produce confusing output and prevent correct byte encoding.
+   them into the bash `promptInit` string, the result is broken bash quoting.
 
-**Fix**: In `modules/shell/prompt.nix`:
+**Fix (deferred to Phase C)**: In `modules/shell/prompt.nix`:
 - Replace `\033[` with `\e[` in all color variable definitions.
 - Remove wrapping double-quotes from color variable values.
 - Example: `reset = ''\[\e[0m\]'';` (no outer quotes; `\e` renders as ESC in PS1).
 
-**Action**: Apply fix in Phase A0, step 1. Validate with `dry-run` + full build +
-interactive SSH before deploying to hlc-501 canary.
+**Deferral rationale**: Phase A0 strategy is to strip prompt.nix from host configs
+entirely and use default bash prompt. PS1 module is reintroduced in Phase C after
+SSH connectivity is verified as stable across all nodes. This eliminates the risk of
+the PS1 bug causing another unreachable-node incident during baseline establishment.
 
-**hlc-401**: Unreachable after reflash. Triage in Phase A0, step 3. Probable causes:
-DHCP MAC mismatch, wrong board image (Pi4 vs Pi5), or hardware/SD card issue.
+**hlc-401**: Unreachable during prior iteration. Triage in Phase A0, step 3. Probable
+causes: DHCP MAC mismatch, wrong board image (Pi4 vs Pi5), or hardware/SD card issue.
