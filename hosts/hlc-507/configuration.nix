@@ -1,4 +1,4 @@
-{ operatorPubkey, ... }: {
+{ pkgs, operatorPubkey, ... }: {
   raspberry-pi-nix.board = "bcm2712";
   networking.hostName = "hlc-507";
   networking.useDHCP = true;
@@ -12,5 +12,12 @@
     openssh.authorizedKeys.keys = [ operatorPubkey ];
   };
   security.sudo.wheelNeedsPassword = false; # WORKAROUNDS W-002
+  environment.systemPackages = with pkgs; [
+    git
+    htop
+    jq
+    ripgrep
+    tmux
+  ];
   system.stateVersion = "25.11";
 }

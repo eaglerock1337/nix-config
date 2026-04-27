@@ -24,9 +24,9 @@
 > All 12 host configs are already at minimal baseline (no shell/prompt/motd imports).
 > Verify before touching hardware.
 
-- [ ] T001 Verify all 12 `hosts/hlc-NNN/configuration.nix` files have no shell/prompt/motd module imports; run `make dry-run-all` — must exit 0
+- [X] T001 Verify all 12 `hosts/hlc-NNN/configuration.nix` files have no shell/prompt/motd module imports; run `make dry-run-all` — must exit 0
 - [ ] T002 [P] Capture silicon's current PS1 string via `ssh silicon 'echo "$PS1"'`; add as `R-012` entry in `specs/001-nixos-rpi-cluster/research.md` (needed before Phase C prompt.nix fix)
-- [ ] T003 [P] Verify `WORKAROUNDS.md` entries W-001 (Principle III deferral), W-002 (passwordless wheel), W-003 (PasswordAuthentication default) are present with correct exit conditions
+- [X] T003 [P] Verify `WORKAROUNDS.md` entries W-001 (Principle III deferral), W-002 (passwordless wheel), W-003 (PasswordAuthentication default) are present with correct exit conditions
 
 ---
 
@@ -55,16 +55,16 @@
 
 ### A1 — Standard tool packages
 
-- [ ] T010 [P] [US1] Add `environment.systemPackages = with pkgs; [ git htop jq ripgrep tmux ];` (alphabetically sorted) inline to `hosts/hlc-401/configuration.nix`
-- [ ] T011 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-501/configuration.nix`
-- [ ] T012 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-502/configuration.nix`
-- [ ] T013 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-503/configuration.nix`
-- [ ] T014 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-504/configuration.nix`
-- [ ] T015 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-505/configuration.nix`
-- [ ] T016 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-506/configuration.nix`
-- [ ] T017 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-507/configuration.nix`
-- [ ] T018 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-508/configuration.nix`
-- [ ] T019 [US1] Run `make dry-run-all` after all T010–T018 complete — must exit 0
+- [X] T010 [P] [US1] Add `environment.systemPackages = with pkgs; [ git htop jq ripgrep tmux ];` (alphabetically sorted) inline to `hosts/hlc-401/configuration.nix`
+- [X] T011 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-501/configuration.nix`
+- [X] T012 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-502/configuration.nix`
+- [X] T013 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-503/configuration.nix`
+- [X] T014 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-504/configuration.nix`
+- [X] T015 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-505/configuration.nix`
+- [X] T016 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-506/configuration.nix`
+- [X] T017 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-507/configuration.nix`
+- [X] T018 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-508/configuration.nix`
+- [X] T019 [US1] Run `make dry-run-all` after all T010–T018 complete — must exit 0
 - [ ] T020 [US1] Canary deploy Pi5 first: `make canary HOST=hlc-501 IP=10.23.50.51`; SSH in, verify `git --version`, `htop`, `jq`, `ripgrep`, `tmux` present; default bash prompt intact
 - [ ] T021 [US1] Canary deploy Pi4: `make canary HOST=hlc-401 IP=10.23.50.41`; same tool verification
 - [ ] T022 [US1] Roll to hlc-502: `make canary HOST=hlc-502 IP=10.23.50.52`; `make smoke-test` must pass
