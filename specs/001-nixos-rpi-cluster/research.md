@@ -273,36 +273,43 @@ when configuring NVMe/PCIe for Longhorn — by then the flake.lock pin should be
 
 ---
 
-## R-011: SSH-hang Root Cause (Phase A0 triage — TODO)
+## R-011: SSH Hang / PS1 Garble Root Cause
 
-**Status**: Open. To be filled in by the Phase A0 triage task.
+**Status**: Partially resolved (2026-04-26). SSH hang resolved; PS1 garble identified.
 
-**Symptom (observed 2026-04-26)**: hlc-501 boots, gets DHCP lease, accepts the
-TCP connection on :22, completes the SSH key-auth handshake, but the
-interactive shell never reaches a usable prompt — the operator's terminal
-hangs indefinitely. `ssh bob@host -- true` (non-PTY) was reported by the
-on-host `ForceCommand strace` debug to also exhibit the issue. hlc-508,
-running an even more minimal config, dropped off the network entirely after
-a config revert and is currently unreachable.
+**Original symptom (prior iteration)**: hlc-501 accepted TCP/22 and key auth but
+interactive shell never reached a usable prompt. hlc-508 went fully offline after a
+config revert.
 
-**Suspected layers** (to verify in A0 triage, in order of likelihood):
-1. `programs.bash.promptInit` / `PROMPT_COMMAND` chain in
-   `modules/shell/prompt.nix` — a shell-startup hang manifests exactly as
-   "auth succeeds, prompt never arrives." The PROMPT_COMMAND function calls
-   `__git_ps1`, sourced from git's contrib; if the source path is wrong at
-   eval time the shell may stall.
-2. `services.openssh.settings` block formerly in `modules/users/operator.nix`
-   (`ClientAliveInterval`, `MaxStartups`, `UseDns = false`, etc.). Already
-   removed on the working copy; confirm whether removal helped or whether
-   it's coincidental with hlc-508 going dark.
-3. `etc/motd` / dynamic MOTD — large static MOTD is benign; a script in a
-   PAM-driven dynamic-motd path that blocks would not be.
-4. `nixos-hardware.raspberry-pi-5` interaction with `raspberry-pi-nix` at the
-   pinned commits — unlikely to manifest as a shell-only hang, but in scope
-   because hlc-508 went fully offline.
+**Resolution (observed 2026-04-26)**: After reflashing with images built from commit
+`210af9b` (pre-imaging work), hlc-501 boots successfully and accepts interactive SSH.
+SSH hang is no longer reproducible. Suspected culprit was `services.openssh.settings`
+block (`ClientAliveInterval`, `MaxStartups`, `UseDns`) that has since been removed.
 
-**Action**: Reproduce in `nixos-rebuild build-vm --flake .#hlc-501` from the
-current branch HEAD. Bisect the diff `main..HEAD` per `hosts/hlc-501/` and
-the four `modules/{users,shell,motd,cluster}/` subtrees. Record the first
-commit/line that introduces the hang. Update this section with the finding
-before Phase C reintroduces the offending module.
+**Remaining issue — PS1 garble**: hlc-501's interactive prompt prints ANSI escape
+sequences as literal text, e.g. `[033[1m][[033[0m]bob@[033[36m]hlc-501...`.
+
+**Root cause identified**: `modules/shell/prompt.nix` has two interacting bugs:
+
+1. Color variables use `\033` in Nix multi-line strings (`''...''`):
+   ```nix
+   reset = ''"\[\033[0m\]"'';  # \033 is NOT interpreted as ESC by bash PS1
+   ```
+   Bash PS1 processes `\e` as ESC but NOT `\033` (C-style octal). The escape byte
+   is never emitted; terminal sees `033[0m` as literal ASCII.
+
+2. Color variable values include wrapping double-quotes (`".."`). When Nix interpolates
+   them into the bash `promptInit` string, the result is broken bash quoting:
+   `PS1=""\[\033[1m\]"[...]"` — adjacent quoted/unquoted segments technically
+   concatenate in bash but produce confusing output and prevent correct byte encoding.
+
+**Fix**: In `modules/shell/prompt.nix`:
+- Replace `\033[` with `\e[` in all color variable definitions.
+- Remove wrapping double-quotes from color variable values.
+- Example: `reset = ''\[\e[0m\]'';` (no outer quotes; `\e` renders as ESC in PS1).
+
+**Action**: Apply fix in Phase A0, step 1. Validate with `dry-run` + full build +
+interactive SSH before deploying to hlc-501 canary.
+
+**hlc-401**: Unreachable after reflash. Triage in Phase A0, step 3. Probable causes:
+DHCP MAC mismatch, wrong board image (Pi4 vs Pi5), or hardware/SD card issue.

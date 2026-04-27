@@ -174,6 +174,9 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
   to validate the extensible module structure without implementing ecto-1.
 - **FR-010**: The Makefile (or equivalent) MUST expose targets for: build-image,
   flash-image, provision, update-node, update-cluster, and encrypt-secret.
+  The `update-node` target MUST use `nixos-rebuild switch --flake .#<host> --target-host`
+  (workstation builds and pushes closure) as the primary path. SSH login is not a
+  Makefile target; operators connect directly via `ssh bob@<hostname>`.
 - **FR-011**: All nodes MUST be reachable via SSH as user `bob` using the operator's
   existing SSH key; password authentication MUST be disabled.
 - **FR-012**: Longhorn MUST use NixOS-compatible container images; upstream default
@@ -182,11 +185,13 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
   HLC cluster nodes, `eaglerock` for gaming/desktop systems, `slimer` for ecto-1
   cluster nodes. User config MUST be a shared module parameterized by username.
 - **FR-014**: All systems MUST share a standard shell environment module providing
-  a curated set of sysadmin CLI utilities (e.g. htop, ripgrep, jq, tmux, etc.)
+  a curated set of sysadmin CLI utilities (e.g. htop, ripgrep, jq, tmux, git, etc.)
   and consistent bash/zsh configuration. The module MUST include both: (a) a shell
   command (e.g. `syshelp`) that prints a categorized, colorized list of installed
   tools with one-line descriptions, and (b) a markdown reference doc in the repo
-  for onboarding context.
+  for onboarding context. The shell prompt (PS1) MUST match the `silicon` system's
+  styled prompt, adapted for the cluster username (`bob`) and node hostname. `git`
+  MUST be included in the standard tool set to support on-device config pulls.
 - **FR-015**: Each cluster MUST display a custom MOTD on SSH login, including
   cluster name and node hostname. HLC nodes MUST display an ASCII art splash
   screen replicating the existing Debian MOTD style (ASCII "HLC" banner, Bob Ross
@@ -230,6 +235,12 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
 
 ## Clarifications
 
+### Session 2026-04-26
+
+- Q: What is the primary update mechanism for cluster nodes, and is on-device rebuild supported? → A: Both — workstation push via `nixos-rebuild --target-host` is primary; on-device `git pull` + `nixos-rebuild switch` is a supported fallback for debugging/bootstrapping.
+- Q: What should the shell prompt (PS1) look like for cluster nodes? → A: Match `silicon`'s styled prompt, adapted for user `bob` and cluster hostnames.
+- Q: Should the Makefile include SSH login convenience targets? → A: No — Makefile covers build/provision/update only; SSH directly via `ssh bob@<hostname>`.
+
 ### Session 2026-04-25
 
 - Q: What is the migration strategy for the existing 12-node Debian cluster? → A: Parallel cluster — stand up NixOS nodes alongside existing Debian cluster, migrate workloads, then decommission old nodes. Must include a plan for DNS cutover and Unifi router/switch reconfiguration (DHCP reservations, VLANs, firewall rules) to avoid downtime during the transition.
@@ -255,6 +266,11 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
 - ecto-1 cluster implementation is out of scope; only stub modules are required.
 - ArgoCD bootstrap is a one-time manual `kubectl apply`; subsequent management is
   fully GitOps.
+- On-device `nixos-rebuild switch` is a supported fallback update path: the operator
+  can `git clone/pull` this repo directly onto a node and rebuild locally. This is
+  secondary to workstation-push (`update-node` Makefile target) and is intended for
+  debugging or bootstrapping scenarios; Pi hardware build times and RAM limits make
+  it impractical for routine cluster-wide updates.
 - Longhorn's NixOS compatibility issue (glibc path assumptions) is resolved by
   substituting `ghcr.io/duckfullstop/nixos-longhorn-manager` via Helm values.
 - The k3s token is chosen before provisioning node 1 and does not change during
