@@ -155,18 +155,26 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
 - **FR-001**: Repository MUST produce a bootable NixOS SD card image for each supported
   Pi model (RPi 4, RPi 5) using a single build command per model.
 - **FR-002**: Repository MUST support unattended provisioning of each node via
-  nixos-anywhere over SSH from the operator's workstation.
+  nixos-anywhere over SSH from the operator's workstation. Target Pi MUST have
+  a baseline OS running with SSH access; nixos-anywhere is invoked after the baseline
+  state is ready. Password prompts are acceptable if documented as workarounds.
 - **FR-003**: Each node's root filesystem MUST reside on a USB RAID1 mirror for
-  redundancy; the SD card MUST serve only as the boot layer.
+  redundancy; the SD card MUST serve only as the boot layer. RAID1 redundancy MUST be
+  verified functional before placing production workloads. Monitoring and alerting
+  for RAID degradation is deferred to polishing phase (planned alongside Prometheus/Grafana setup).
 - **FR-004**: Pi5 worker nodes MUST expose NVMe storage for Longhorn distributed
-  storage; NVMe MUST NOT be used as the root filesystem.
+  storage; NVMe MUST NOT be used as the root filesystem. At least one partition per
+  Pi5 MUST be dedicated to Longhorn; additional partitions may be reserved for other
+  uses. NVMe model: Corsair MP600 Micro 1TB per node (already purchased).
 - **FR-005**: All cluster secrets (k3s join token) MUST be encrypted at rest in the
   repository and decrypted at runtime using host SSH keys as age recipients.
 - **FR-006**: The k3s control plane MUST use 4-node embedded etcd (hlc-401–404,
   all Pi4 server nodes) for high availability; these nodes also run lightweight
-  workloads. No external etcd is required.
-- **FR-007**: k3s worker nodes (Pi5) MUST join the cluster via the control plane VIP
-  or primary server address; agent config MUST NOT hard-code individual server IPs.
+  workloads (CPU/memory constrained by Pi4 hardware; Pi4 is the limiting factor,
+  not Pi5). No external etcd is required.
+- **FR-007**: k3s worker nodes (Pi5) MUST join the cluster via control plane discovery;
+  agent config MUST NOT hard-code individual server IPs. Discovery mechanism (VIP, DNS
+  round-robin, or primary server IP) is deferred pending architectural deliberation.
 - **FR-008**: The module structure MUST separate cluster-agnostic k8s concerns
   (k3s role config, Longhorn prereqs) from cluster-specific concerns (HLC node config,
   Pi hardware config) so future clusters reuse the k8s layer without modification.
@@ -175,10 +183,14 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
 - **FR-010**: The Makefile (or equivalent) MUST expose targets for: build-image,
   flash-image, provision, update-node, update-cluster, and encrypt-secret.
   The `update-node` target MUST use `nixos-rebuild switch --flake .#<host> --target-host`
-  (workstation builds and pushes closure) as the primary path. SSH login is not a
-  Makefile target; operators connect directly via `ssh bob@<hostname>`.
+  (workstation builds and pushes closure) as the primary path. The `encrypt-secret`
+  target details (input/output format) are deferred; target existence and basic
+  functionality required for MVP. SSH login is not a Makefile target; operators
+  connect directly via `ssh bob@<hostname>`.
 - **FR-011**: All nodes MUST be reachable via SSH as user `bob` using the operator's
-  existing SSH key; password authentication MUST be disabled.
+  existing SSH key; password authentication MUST be disabled. For MVP, `bob`'s
+  authorized_keys is hardcoded in the NixOS module; migration to secrets management
+  (via sops-nix) is planned for later phases.
 - **FR-012**: Longhorn MUST use NixOS-compatible container images; upstream default
   images that assume glibc paths MUST be overridden via ArgoCD Helm values.
 - **FR-013**: Each system class MUST configure a distinct default user: `bob` for
@@ -235,7 +247,20 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
 
 ## Clarifications
 
-### Session 2026-04-26
+### Session 2026-04-26 (Round 2)
+
+- Q: What initial state must target Pi have before nixos-anywhere? → A: OS running with SSH access; baseline SD card as the starting point.
+- Q: Are password prompts acceptable in unattended provisioning? → A: Yes, if documented as workarounds; preferred path should be keyless.
+- Q: What sequence for bob user and SSH keys? → A: bob + SSH keys must be established by nixos-anywhere provisioning; this is the requirement, not prior setup.
+- Q: NVMe disk model and capacity requirement? → A: Corsair MP600 Micro 1TB (already purchased); hard requirement.
+- Q: NVMe partitioning — full device or partition allowed? → A: One partition minimum for Longhorn; other partitions may be reserved for future use.
+- Q: Definition of "lightweight workloads" on Pi4 control plane? → A: CPU/memory limited by Pi4 hardware; Pi4 is the constraint factor vs. Pi5.
+- Q: RAID1 redundancy — what does it entail? → A: RAID1 must be verified before production use; monitoring/alerting deferred to polishing phase.
+- Q: Agent discovery mechanism (VIP, DNS, hardcoded IP)? → A: Deferred; pending architectural deliberation.
+- Q: bob SSH key provisioning method? → A: Hardcoded in NixOS module for MVP; sops-nix migration planned later.
+- Q: encrypt-secret target input/output spec? → A: Deferred; target existence required for MVP, details can wait.
+
+### Session 2026-04-26 (Round 1)
 
 - Q: What is the primary update mechanism for cluster nodes, and is on-device rebuild supported? → A: Both — workstation push via `nixos-rebuild --target-host` is primary; on-device `git pull` + `nixos-rebuild switch` is a supported fallback for debugging/bootstrapping.
 - Q: What should the shell prompt (PS1) look like for cluster nodes? → A: Match `silicon`'s styled prompt, adapted for user `bob` and cluster hostnames.
@@ -275,5 +300,6 @@ sequentially across Pi4s then Pi5s, confirm cluster remains healthy throughout.
   substituting `ghcr.io/duckfullstop/nixos-longhorn-manager` via Helm values.
 - The k3s token is chosen before provisioning node 1 and does not change during
   the cluster lifetime without a full reset procedure.
-- All Pi5 NVMe drives (Corsair MP600 Micro 1TB) are formatted and managed entirely
-  by Longhorn; no manual partitioning is required before provisioning.
+- All Pi5 NVMe drives (Corsair MP600 Micro 1TB; already purchased) are unformatted
+  before provisioning and will be managed entirely by Longhorn; no pre-partitioning
+  required from the operator.

@@ -3,68 +3,48 @@
 **Branch**: `001-nixos-rpi-cluster` | **Date**: 2026-04-26 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/001-nixos-rpi-cluster/spec.md`
 
-> **Plan revised 2026-04-26 (post-first-flash).** hlc-501 is booted and SSH-accessible;
-> hlc-401 is unreachable. hlc-501's interactive shell shows garbled PS1 (ANSI escape
-> sequences printed as literal text, not rendered as colors). Root cause: `prompt.nix`
-> uses `\033` octal in Nix multi-line strings and wraps color variables in double-quotes;
-> bash PS1 interprets `\e` as ESC but NOT `\033`, so escape codes render literally.
->
-> Priorities per operator feedback (2026-04-26 clarification session):
-> 1. Usable PS1 matching `silicon`'s styled prompt, adapted for `bob@<hostname>`.
-> 2. Baseline POSIX shell environment (standard tools, clean interactive session).
-> 3. On-device git update workflow (git pull + `nixos-rebuild switch` as fallback
->    to workstation-push `update-node` target).
->
-> This revision promotes shell baseline to Phase A1 (was deferred to Phase C),
-> adds on-device update path documentation, and scopes Makefile to
-> build/provision/update only (no SSH login convenience targets).
+> **Spec clarification round 2 (2026-04-26)**: Updated spec.md with 10 clarifications
+> covering FR-002/003/004/006/007/010/011 provisioning sequence, storage partitioning,
+> NVMe model specification, lightweight workload definition, agent discovery deferral,
+> and SSH key provisioning method. Plan structure remains valid; no phase reordering required.
 
 ## Summary
 
-Get all 9 work-set HLC nodes (hlc-401, hlc-501–508) online, reliably SSH-accessible,
-with a correctly rendered shell prompt that matches the `silicon` operator experience
-adapted for `bob@<hostname>`. Validate both update paths — workstation push
-(`nixos-rebuild --target-host`) as primary, on-device `git pull` + rebuild as fallback.
-Defer disk layout (USB-RAID1), secrets (sops-nix), and cluster software (k3s, ArgoCD,
-Longhorn) to later phases.
+Provision and bring online 9 HLC work-set nodes (hlc-401 Pi4 + hlc-501–508 Pi5) with
+NixOS 25.11 using baseline OS boot from SD card, provisioning via nixos-anywhere with
+bob user + SSH keys configured by provisioning tool, RAID1 USB boot verified before
+workloads, and Pi5 NVMe (Corsair MP600 1TB) dedicated to Longhorn storage. Validate
+workstation-push and on-device-git update paths before proceeding to cluster software.
 
 ## Technical Context
 
 **Language/Version**: Nix (flakes), NixOS 25.11 stable, aarch64-linux for Pi nodes;
 build host gibson is x86_64-linux with `boot.binfmt.emulatedSystems = [ "aarch64-linux" ]`.
 
-**Primary Dependencies**: `nixpkgs/nixos-25.11`, `raspberry-pi-nix` (archived 2025-03;
-pinned), `nixos-hardware` (Pi4/Pi5 modules), `home-manager` (silicon only).
-`disko`, `sops-nix`, `nixos-anywhere` deferred to Phase D+.
+**Primary Dependencies**: `nixpkgs/nixos-25.11`, `raspberry-pi-nix`, `nixos-hardware`
+(Pi4/Pi5), `home-manager`. Phase D+: `disko`, `sops-nix`, `nixos-anywhere`.
 
-**Storage**: SD card boot only for Phases A–C. USB-RAID1 root and Pi5 NVMe deferred.
+**Storage**: Phase A–B: SD card boot only. Phase D: USB RAID1 root (mdadm) + verify
+before workload placement. Pi5 nodes: Corsair MP600 Micro 1TB NVMe per node, at least
+one partition reserved for Longhorn (OpenEBS/Longhorn choice deferred pending tech research).
 
-**Testing**: `nix build .#nixosConfigurations.<host>.config.system.build.toplevel`
-as pre-deploy gate. `make dry-run-all` for eval-only across all 12 (including
-decommissioned-set dry-run check). Post-deploy smoke: `scripts/smoke-test.sh` —
-ping, non-PTY ssh `true`, interactive PTY ssh reaching prompt within 10s.
-`nixos-rebuild build-vm` for any change touching shell/prompt (where feasible on
-aarch64 — verify VM boot works or use qemu-aarch64 wrapper).
+**Testing**: `nix build` on canary before roll. `make smoke-test` post-deploy. `nixos-rebuild
+build-vm` for shell/boot changes (aarch64 feasibility TBD).
 
-**Target Platform**: 9 work-set nodes: 1× Pi4/bcm2711 (hlc-401), 8× Pi5/bcm2712
-(hlc-501–508). Headless, rack-mounted, no console. Build host: gibson.
-3 decommissioned-set nodes (hlc-402–404): Nix configs evaluate only; no flash/switch.
+**Target Platform**: 1× Pi4/bcm2711 (hlc-401) + 8× Pi5/bcm2712 (hlc-501–508), headless.
+Build host: gibson. Decommissioned-set (hlc-402–404): configs evaluate only.
 
-**Project Type**: NixOS configuration repo (flake-based).
+**Project Type**: NixOS configuration repo (flake-based, multi-host).
 
 **Constraints**:
 - No console access. SSH must survive every change.
-- Pre-deploy full build gate on canary before rolling to remaining nodes.
-- Rollback via `nixos-rebuild switch --rollback --target-host` must work.
-- On-device builds on Pi hardware are slow and RAM-constrained (4-8GB); tolerated
-  as a fallback path only. Never required for routine cluster updates.
-- Makefile targets: build-image, flash-image, dry-run, dry-run-all, build, update-node,
-  update-cluster, smoke-test, canary-deploy, encrypt-secret. No SSH login targets.
-
-**Known bug**: `modules/shell/prompt.nix` v1 uses `\033` (not interpreted as ESC in
-bash PS1) and wraps color variables in double-quotes, producing garbled literal output.
-Fix: replace `\033` with `\e` throughout, remove wrapping double-quotes from Nix
-color variables (see Phase A1 step 1).
+- Pre-deploy full build gate on canary, smoke-test mandatory before roll.
+- Baseline OS with SSH open required on Pi before nixos-anywhere invocation.
+- Password prompts acceptable in provisioning flow if documented as workarounds.
+- RAID1 redundancy verified before production workloads placed.
+- Pi5 lightweight workload definition: CPU/memory bounded by Pi4 hardware limits.
+- Agent discovery mechanism (VIP vs DNS vs hardcoded IP) deferred; requires deliberation.
+- bob SSH authorized_keys hardcoded in NixOS module for MVP; sops migration planned.
 
 ## Constitution Check
 
@@ -366,5 +346,4 @@ No link change needed.
 
 ## Stop and report
 
-Plan complete. Run `/speckit-tasks` to regenerate `tasks.md` against this plan.
-The existing `tasks.md` describes a prior phase structure and should be replaced.
+Plan updated. Run `/speckit-tasks` to regenerate `tasks.md` against this plan.
