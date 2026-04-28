@@ -1,33 +1,31 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.1.0 → 1.2.0
-Bump rationale: MINOR — new principle added (VII. Standardized Build & Test Workflow);
-Safety & Change Management section updated with Makefile-first guidance and host
-capability table. No existing principles removed or redefined.
+Version change: 1.2.0 → 1.3.0
+Bump rationale: MINOR — new principle added (VIII. Human-AI Collaboration
+Protocol) codifying single-stakeholder model, debug-session conduct, and
+epistemic honesty after a debug session went off-rails on assumed-wrong
+operator data. No existing principles removed or redefined.
 
 Modified principles: none
 
 Added principles:
-  - VII. Standardized Build & Test Workflow (NEW) — Makefile as canonical test
-    interface; host capability awareness (gibson vs silicon vs cluster nodes);
-    gibson NixOS management deferred to future project.
+  - VIII. Human-AI Collaboration Protocol (NEW) — single technical stakeholder
+    (the SRE/operator); debug sessions MUST treat operator-supplied data as
+    authoritative until explicitly questioned and confirmed; AI MUST surface
+    uncertainty rather than mask it.
 
-Modified sections:
-  - Safety & Change Management — gate sequence updated to reference Makefile
-    targets; host capability table added.
+Modified sections: none
 
 Removed sections: none
 
 Templates checked:
-  - .specify/templates/plan-template.md ✅ aligned (Testing field is generic;
-    no principle numbering references)
+  - .specify/templates/plan-template.md ✅ aligned (generic; no principle refs)
   - .specify/templates/spec-template.md ✅ aligned (no principle refs)
   - .specify/templates/tasks-template.md ✅ aligned (no principle refs)
+  - .specify/templates/checklist-template.md ✅ aligned (no principle refs)
 
-Deferred TODOs:
-  - Principle VII will be revised when gibson receives NixOS system management
-    (tracked as a separate project, not in scope for feature 001).
+Deferred TODOs: none
 -->
 
 # nix-config Constitution
@@ -147,6 +145,45 @@ agent-driven invocation.
 
 This principle MUST be revisited when gibson receives NixOS system management
 (tracked as a separate project outside the current feature scope).
+
+### VIII. Human-AI Collaboration Protocol (NON-NEGOTIABLE)
+
+This repo has exactly one stakeholder: the operator/SRE who owns and uses
+the systems. There are no non-technical stakeholders, no product owners, and
+no compliance reviewers. Therefore:
+
+**Single-stakeholder model**: AI agents MUST NOT generate boilerplate framed
+for non-technical audiences (executive summaries, simplified-for-stakeholders
+explanations, "translation" docs). Output is for the operator. Use precise
+technical vocabulary; assume Linux/SRE fluency.
+
+**Debug-session conduct**: When the operator reports system state, command
+output, log lines, or observed behavior, that data is treated as authoritative
+input. Agents MUST NOT silently rewrite the working theory on the assumption
+the operator misread, mistyped, or misremembered. If the data does not match
+the agent's mental model, the correct response is one of:
+
+1. State the conflict explicitly ("your output shows X but I expected Y
+   because Z — can you confirm the command, host, or timing?");
+2. Ask for an additional concrete data point that would disambiguate;
+3. Re-examine the agent's own assumptions before challenging the operator's.
+
+Operators make mistakes — that is allowed as a hypothesis, but it MUST be
+raised as a question, never adopted as a silent premise. "Maybe you ran it
+on the wrong host?" is fine. Quietly assuming so and pivoting the
+investigation is a violation.
+
+**Epistemic honesty**: Agents are expected to be capable but not omniscient.
+When confidence is partial, that MUST be surfaced — "I'm fairly sure but not
+certain", "I haven't verified this on aarch64", "this matches the docs but
+I haven't tested the edge case" — rather than presented as fact. Hallucinated
+certainty is the failure mode this principle exists to prevent. When in
+doubt, prefer caution: ask, verify, or read the code before acting.
+
+**Why**: A debug session on 2026-04-27 went off-rails because the working
+theory drifted to "the operator's report is wrong" without that hypothesis
+being explicitly raised. Branch state was corrupted; rebase recovery is
+pending. This principle codifies the conduct that would have prevented it.
 
 ## Cluster Topology & Phasing
 
@@ -274,4 +311,4 @@ principles before declaring work complete. Pull requests that introduce
 new workarounds MUST include the corresponding ledger entry in the same
 commit (or earlier in the branch history).
 
-**Version**: 1.2.0 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-04-26
+**Version**: 1.3.0 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-04-28
