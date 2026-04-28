@@ -43,6 +43,7 @@
         modules = [
           raspberry-pi-nix.nixosModules.raspberry-pi
           raspberry-pi-nix.nixosModules.sd-image
+          ./modules/cluster/hlc/hosts.nix
           (./hosts + "/${hostname}/configuration.nix")
         ] ++ extraModules;
       };
