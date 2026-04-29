@@ -12,7 +12,6 @@ in {
     pipenv
     black
     mypy
-    uv
 
     # --- Go ---
     go
