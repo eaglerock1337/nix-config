@@ -1,6 +1,6 @@
 # Workarounds Ledger
 
-Per constitution v1.3.0 § Pragmatic Phasing (Principle V). Each entry is
+Per current constitution § Pragmatic Phasing (Principle V). Each entry is
 append-only; mark `Resolved` in-place when removed. Reviewed at every
 phase-exit gate and every `/speckit-plan` cycle.
 
