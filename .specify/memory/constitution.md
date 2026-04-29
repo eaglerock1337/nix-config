@@ -1,40 +1,40 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.3.0 → 1.3.1
-Bump rationale: PATCH — clarification of Principle IV's canary requirement
-to explicitly permit a manual operator-driven canary procedure
-(update-node → smoke-test → manual rollback on fail) as an equivalent path
-to automated single-command canary, alongside the existing automated path.
-Wording change only; intent unchanged (single-node canary + smoke-test
-gate before fleet roll remains mandatory). Safety & Change Management gate
-sequence updated to mirror the principle's two acceptable paths.
+Version change: 1.3.1 → 1.3.2
+Bump rationale: PATCH — clarify Principle IV's canary scope. Canary applies
+to the *change set* being deployed, which MAY be a single module OR a
+batched bundle (e.g. all module-creation work for a phase). When the change
+set bundles multiple modules, smoke-test failure triggers a bisect via the
+/speckit-debug skill (revert-and-incrementally-reintroduce on the canary
+node) to isolate the breaking module before fleet roll. The canary +
+smoke-test gate before any fleet roll still binds. No intent change to
+Principle IV's safety guarantee; this clarifies cadence flexibility.
 
 Modified principles:
-  - IV. Safety-First Changes — canary requirement reworded to admit two
-    explicit paths: (a) automated single-command canary with auto-rollback,
-    or (b) manual operator-driven sequence (update-node → smoke-test →
-    manual rollback on fail). Both satisfy the principle.
+  - IV. Safety-First Changes — added clarification that canary scope is the
+    change set (single module or bundle), and that bundles require bisect-
+    on-fail via /speckit-debug to preserve regression-isolation.
 
 Modified sections:
-  - Safety & Change Management — gate #4 rewritten to mirror the two
-    acceptable canary paths.
+  - Safety & Change Management — gate #4 references the bundle/bisect path.
 
 Added principles: none
 Removed sections: none
 
 Templates checked:
-  - .specify/templates/plan-template.md ✅ aligned (generic; no principle refs)
-  - .specify/templates/spec-template.md ✅ aligned (no principle refs)
-  - .specify/templates/tasks-template.md ✅ aligned (no principle refs)
-  - .specify/templates/checklist-template.md ✅ aligned (no principle refs)
+  - .specify/templates/plan-template.md ✅ aligned (generic)
+  - .specify/templates/spec-template.md ✅ aligned
+  - .specify/templates/tasks-template.md ✅ aligned
+  - .specify/templates/checklist-template.md ✅ aligned
 
 Deferred TODOs: none
 
-Prior version sync impact (retained for history):
-  Version change: 1.2.0 → 1.3.0
-  Bump rationale: MINOR — new principle added (VIII. Human-AI Collaboration
-  Protocol).
+Prior version sync impacts (retained for history):
+  1.3.0 → 1.3.1: PATCH — clarified Principle IV admits two canary paths
+                 (automated and manual operator-driven).
+  1.2.0 → 1.3.0: MINOR — added Principle VIII (Human-AI Collaboration
+                 Protocol).
 -->
 
 # nix-config Constitution
@@ -102,6 +102,19 @@ The manual path MUST NOT be used to bypass smoke-test failures: a red
 smoke-test always blocks the fleet roll until either the change is rolled
 back or the failure is diagnosed and the smoke-test passes on a follow-up
 deploy.
+
+**Canary scope (single module vs bundle)**: The canary applies to the
+*change set* being deployed. The change set MAY be a single module OR a
+batched bundle (e.g. all module-creation work for an entire user-story
+phase, deployed via `/speckit-implement` then a single `make update-node`).
+Bundling is permitted because the canary + smoke-test gate still gates the
+fleet roll. When the change set is a bundle, smoke-test failure on the
+canary node MUST trigger a regression-isolation pass via the `/speckit-debug`
+skill (rollback → comment-out / git-revert new modules incrementally → re-
+canary → smoke-test → bisect to the breaking module → fix → resume the
+bundle). This preserves the post-mortem lesson that motivated W-001 — the
+operator MUST end up knowing which module broke — while permitting the
+batched-implementation cadence the operator chose for speed.
 
 **Refinement-stage relaxation**: Once the cluster is fully automated and the
 prior-art bug surface is closed, the canary requirement MAY be replaced by
@@ -270,12 +283,15 @@ host-correct commands and are the documented interface (Principle VII):
    but-build-fails errors that dry-run misses
 3. `make build-vm HOST=<host>` — required for boot/kernel/hardware changes
    when feasible
-4. **Canary on a single node** — one of:
+4. **Canary on a single node** (scope = the change set, single module or
+   batched bundle) — one of:
    - **Automated**: `make canary HOST=<host> IP=<ip>` (switch + smoke-test
      + auto-rollback on smoke-test fail) — preferred when target exists.
    - **Manual**: `make update-node HOST=<host>` then `make smoke-test
      HOST=<host>`; on smoke-test fail run `make rollback HOST=<host>`
-     explicitly. Both paths satisfy Principle IV.
+     explicitly. On bundle smoke-test fail, follow `/speckit-debug` skill
+     to bisect the bundle on the canary node before resuming. Both paths
+     satisfy Principle IV.
 5. **`make smoke-test HOST=<host>`** — reachability + interactive-PTY ssh
    + sudo round-trip (already executed inside gate #4 in either path; listed
    separately because gates #6 below run it again per node)
@@ -341,4 +357,4 @@ principles before declaring work complete. Pull requests that introduce
 new workarounds MUST include the corresponding ledger entry in the same
 commit (or earlier in the branch history).
 
-**Version**: 1.3.1 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-04-29
+**Version**: 1.3.2 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-04-29
