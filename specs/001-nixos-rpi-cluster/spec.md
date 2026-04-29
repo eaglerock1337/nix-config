@@ -164,20 +164,20 @@ Every in-scope node has the packages and OS-level configuration required to part
 
 #### Operator workflow (Makefile / equivalent)
 
-- **FR-024**: The operator workflow MUST expose, at minimum, the following Makefile (or equivalent) targets — every constitution-mandated safety gate is a Makefile target:
-  - `dry-run HOST=<host>` — closure evaluation gate (Constitution §"Safety & Change Management" gate 1).
-  - `build HOST=<host>` — full toplevel build (gate 2).
-  - `build-image HOST=<host>` and `flash-image HOST=<host> DEV=<dev>` — SD image build + write.
-  - `smoke-test HOST=<host>` — reachability + interactive-PTY ssh + `sudo -n true` (gate 5).
-  - `canary HOST=<host>` — single-node switch with auto-rollback on smoke-test failure (gate 4).
-  - `rollback HOST=<host>` — manual rollback of a single node.
-  - `update-node HOST=<host>` — plain switch (post-canary rolling update path).
-  - `update-cluster` — serial roll across the work-set (canary first, then `update-node` on the rest).
-  - `provision HOST=<host>` — `nixos-anywhere` wrapper for the first install of a node onto USB-RAID + NVMe.
+- **FR-024**: The operator workflow MUST expose, at minimum, the following Makefile (or equivalent) targets by end of spec. Each target is added in the phase that first needs it (just-in-time, not pre-built); the set below is the end-of-spec total, not the Phase 0 starting state:
+  - `build-image HOST=<host>` (with `REBUILD=1` flag added Phase 3) — SD image build with explicit cache-bust.
+  - `flash-image HOST=<host> DEV=<dev>` — write SD image to physical device.
+  - `silicon-dry`, `silicon-switch` — silicon-specific dry-run / switch (workstation).
+  - `update` — `nix flake update`.
+  - `dry-run HOST=<host>` — single-host closure evaluation (gibson uses `nix build --dry-run`; silicon uses `nixos-rebuild dry-run`).
+  - `build HOST=<host>` — full single-host toplevel build.
+  - `smoke-test HOST=<host>` — single-node reachability check (ping + non-PTY ssh + PTY ssh + `sudo -n true`).
   - `ip HOST=<host>` — derive a node's IP from its hostname per the HLC IP convention.
-  - `encrypt-secret` — placeholder; full implementation deferred to the future secrets-mgmt feature spec (Constitution Principle V workaround).
+  - `provision HOST=<host>` — `nixos-anywhere` wrapper for the first install of a node onto USB-RAID + NVMe.
+  - `update-node HOST=<host>` — single-node `nixos-rebuild switch --target-host` for post-provisioning configuration updates.
+  - `rollback HOST=<host>` — single-node `nixos-rebuild --rollback --target-host`.
 
-  `IP=<ip>` parameters on host-targeting targets MUST be optional, derived from `HOST` per the HLC IP convention; an explicit override is accepted for non-standard situations. SSH-login convenience targets are out of scope; operators connect via `ssh bob@<hostname>`.
+  `IP=<ip>` parameters on host-targeting targets MUST be optional, derived from `HOST` per the HLC IP convention; an explicit override is accepted for non-standard situations. SSH-login convenience targets are out of scope; operators connect via `ssh bob@<hostname>`. Cluster-operations automation (automated single-command canary, cluster-wide rolling deploys, `encrypt-secret` integration) is **out of scope for this spec** — see Out of Scope below.
 
 #### Hardware and firmware
 
@@ -228,6 +228,7 @@ Every in-scope node has the packages and OS-level configuration required to part
 - Provisioning `hlc-402`, `hlc-403`, `hlc-404` onto NixOS (handled in the follow-on cutover spec).
 - ecto-1 cluster configuration (only structural readiness is required).
 - The `slimer` user (future ecto-1 server operator) is not configured in this spec. The `modules/users/operator.nix` and home-manager modules MUST be parameterizable so `slimer` can be added later without refactor; that is the only requirement on `slimer` here.
+- **Cluster-operations automation**: an automated single-command `canary` target (switch + smoke-test + auto-rollback in one invocation), `update-cluster` (rolling cluster-wide deploys), cluster-wide iteration helpers (`dry-run-all`, `smoke-test-all`), Pi-family build aliases (`build-image-rpi4`, `build-image-rpi5`), and `encrypt-secret` (sops-nix integration) are deferred to a future cluster-operations automation spec. Within this spec, the operator manually canaries by running `make update-node` on one host, verifying with `make smoke-test`, then proceeding (or `make rollback` if the smoke-test fails).
 - Network/VLAN reorganization (e.g., the planned move from VLAN 1 to VLAN 42 as the primary network).
 - Secrets management beyond hard-coded SSH keys in NixOS modules.
 - Monitoring/alerting (Prometheus/Grafana) for the cluster or for RAID health.

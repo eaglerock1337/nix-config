@@ -1,248 +1,291 @@
-# Tasks: NixOS RPi Cluster Foundation
+---
+description: "Task list for NixOS RPi Cluster Foundation (v2)"
+---
 
-**Feature**: `001-nixos-rpi-cluster` | **Regenerated**: 2026-04-26
-**Plan**: [plan.md](./plan.md) | **Spec**: [spec.md](./spec.md)
-**Scope**: Phases A0 → C (foundation through module reintroduction). Phases D/E deferred.
+# Tasks: NixOS RPi Cluster Foundation (v2)
 
-> **Plan reset 2026-04-26 (round 4)**: Shell modules stripped from host configs.
-> Phase A0 = verify minimal baseline + boot canaries.
-> Phase A1 = inline tool packages only, default bash prompt.
-> Phase C = module reintroduction one-at-a-time.
-> PS1 fix (prompt.nix \033→\e) deferred to Phase C step 4 (research.md R-011).
+**Input**: Design documents from `/specs/001-nixos-rpi-cluster/`
+**Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/), [quickstart.md](./quickstart.md)
+**Constitution**: v1.3.0
+**Generated**: 2026-04-29
+
+**Tests**: Test tasks are NOT included. This is a NixOS configuration repo; the verification model is `dry-run` → `build` → `update-node` (one host) → `smoke-test` (Constitution §"Safety & Change Management"), not unit/integration tests. Operator manually canaries by running `update-node` on one host, verifying with `smoke-test`, then proceeding to the next host (or `make rollback` if smoke-test fails). Automated single-command canary is out of scope for this spec.
+
+**Organization**: Tasks are grouped by user story (US1..US5 from spec.md). Each user story phase ends in a phase-exit `git tag` so any phase boundary can be `git bisect`-ed back to.
 
 ## Format: `[ID] [P?] [Story] Description`
 
-- **[P]**: Parallel-safe (different files, no deps on incomplete tasks)
-- **[Story]**: User story label — [US1]–[US5] match spec.md priorities
+- **[P]**: Can run in parallel — different files, no dependencies on incomplete tasks
+- **[Story]**: User story label (US1..US5) — only on story-phase tasks; setup/foundational/polish phases have no story label
+- File paths assume repo-root cwd: `/Users/petermarks/src/nix-config`
+
+## Pre-condition: Phase 0 — Baseline reset (operator-managed)
+
+Phase 0 is the operator's manual reset of the running code to `main`'s working state, executed via the `git checkout main -- … && git rm …` sequence in [plan.md](./plan.md#phase-0--baseline-reset). It MUST be complete (tagged `phase0-baseline-reset`) before T001 begins. The tasks below assume that reset has happened: `flake.nix` has only `silicon` + `hlc-501`, on `raspberry-pi-nix`, with no `sops-nix` / `disko` / `operatorPubkey` / `mkHlcNode`; the broken modules are deleted; `WORKAROUNDS.md`, the `Makefile` build-out, and this entire `specs/` directory are intact.
+
+If `git tag --list 'phase0-baseline-reset'` is empty, stop and run Phase 0 first per `quickstart.md`. Constitution VIII applies — do not start Phase 1 against an unverified substrate.
 
 ---
 
-## Phase 1: Setup (Baseline Verification)
+## Phase 1: Setup (post-Phase-0 verification)
 
-**Purpose**: Confirm repo state correct before hardware work.
+**Purpose**: Confirm Phase 0 landed cleanly and the working tree matches the assumptions of the rest of this list.
 
-> All 12 host configs already at minimal baseline (no shell/prompt/motd imports).
-> Verify before touch hardware.
+- [ ] T001 Verify `git tag --list 'phase0-baseline-reset'` returns the tag; if not, abort and run Phase 0 first
+- [ ] T002 [P] Run `make silicon-dry`; expect exit 0
+- [ ] T003 [P] Run `make build-image HOST=hlc-501`; expect exit 0 and an image artifact in `result/sd-image/`. (Main does not ship a `build-image-rpi5` alias; the parameterized form is canonical.)
+- [ ] T004 [P] Run `git diff main -- flake.nix hosts/hlc-501 hosts/silicon home/eaglerock.nix modules/home modules/hosts modules/hardware/x1-carbon.nix`; expect empty diff (running code matches `main`)
+- [ ] T005 Re-read [WORKAROUNDS.md](../../WORKAROUNDS.md) and confirm W-001/W-002/W-003 entries reference Phase 5 (not Phase 7) per the post-analyze update; if drift detected, fix before proceeding
+- [ ] T006 Re-read [.specify/memory/constitution.md](../../.specify/memory/constitution.md) §"Cluster Topology" — confirm hlc-402..404 are decom-set (untouchable beyond dry-run)
 
-- [X] T001 Verify all 12 `hosts/hlc-NNN/configuration.nix` have no shell/prompt/motd module imports; run `make dry-run-all` — must exit 0
-- [ ] T002 [P] Capture silicon's PS1 via `ssh silicon 'echo "$PS1"'`; add as `R-012` in `specs/001-nixos-rpi-cluster/research.md` (needed before Phase C prompt.nix fix)
-- [X] T003 [P] Verify `WORKAROUNDS.md` entries W-001 (Principle III deferral), W-002 (passwordless wheel), W-003 (PasswordAuthentication default) present with correct exit conditions
-
----
-
-## Phase 2: Foundational — Phase A0 (Canary boot verification)
-
-**Purpose**: Prove Pi4 + Pi5 minimal configs boot + accept SSH.
-
-**⚠️ CRITICAL**: Both canaries must pass smoke-test before Phase 3.
-
-- [ ] T004 Build Pi4 canary toplevel: `make build HOST=hlc-401` — must succeed
-- [ ] T005 [P] Build Pi5 canary toplevel: `make build HOST=hlc-501` — must succeed
-- [ ] T006 Flash hlc-401 SD: `make flash-image HOST=hlc-401 DEV=<dev>`; insert SD, power on, wait DHCP
-- [ ] T007 [P] Flash hlc-501 SD: `make flash-image HOST=hlc-501 DEV=<dev>`; insert SD, power on, wait DHCP
-- [ ] T008 Smoke-test Pi4 canary: `make smoke-test HOST=hlc-401 IP=10.23.50.41`; verify default bash prompt on interactive SSH (kitty: `TERM=xterm-256color ssh bob@10.23.50.41`)
-- [ ] T009 Smoke-test Pi5 canary: `make smoke-test HOST=hlc-501 IP=10.23.50.51`; verify default bash prompt
-
-**Checkpoint — A0 exit gate**: Both canaries green. If hlc-401 unreachable: check DHCP MAC reservation in Unifi, confirm bcm2711 board (not bcm2712), try different SD.
+**Checkpoint**: Branch state verified. Foundational work can begin.
 
 ---
 
-## Phase 3: US1 — Provision Cluster Nodes (P1) 🎯 MVP
+## Phase 2: Foundational — upstream swap + flake input restoration
 
-**Goal**: All 9 work-set nodes booted, SSH reachable, standard tools installed, both update paths validated.
+**Purpose**: Swap `raspberry-pi-nix` → `nvmd/nixos-raspberrypi`, re-introduce the flake-level helpers and inputs that all later phases consume. This phase blocks every user story; nothing else builds without it.
 
-**Independent Test**: `make smoke-test` passes for all 9 work-set nodes; `git --version`, `htop`, `jq`, `ripgrep`, `tmux` available on each.
+**⚠️ CRITICAL**: No user story work begins until T015 tag (`phase1-nvmd-swap`) lands.
 
-### A1 — Standard tool packages
+- [ ] T007 In `flake.nix`, remove `inputs.raspberry-pi-nix.url` and add `inputs.nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi"` (verify exact input name + branch against the nvmd repo's current README during this task)
+- [ ] T008 In `flake.nix`, re-add the `operatorPubkey` constant (single string literal, the operator's `eaglerock@gibson` SSH public key) — value preserved from the prior branch state's `flake.nix`
+- [ ] T009 In `flake.nix`, re-add the `mkHlcNode` helper that wraps `nixpkgs.lib.nixosSystem` with the nvmd modules + a per-host `configuration.nix`; for now its only caller is `hlc-501`
+- [ ] T010 [P] In `flake.nix`, add `inputs.disko.url = "github:nix-community/disko"` with `inputs.disko.inputs.nixpkgs.follows = "nixpkgs"` (used in Phase 5)
+- [ ] T011 [P] In `flake.nix`, add `inputs.nixos-anywhere.url = "github:nix-community/nixos-anywhere"` pinned to a specific revision per [research.md R-007](./research.md) (used in Phase 5)
+- [ ] T012 [P] In `flake.nix`, add `inputs.sops-nix.url = "github:Mic92/sops-nix"` with `inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs"` (deferred usage; W-002)
+- [ ] T013 In `hosts/hlc-501/configuration.nix`, replace any `raspberry-pi-nix` module references with the equivalent nvmd module names (verify against nvmd README — typical names like `raspberry-pi-nix.nixosModules.raspberry-pi` become the nvmd-named equivalent)
+- [ ] T014 Run `nix flake update` to re-lock the flake. Also add the four Phase 2 Foundational Makefile targets per [contracts/makefile-targets.md](./contracts/makefile-targets.md) §"Added Phase 2 Foundational": `dry-run HOST=<host>`, `build HOST=<host>`, `smoke-test HOST=<host>`, `ip HOST=<host>` (each with HOST→IP derivation per the HLC IP convention where applicable). Commit `flake.nix`, `flake.lock`, and `Makefile` together with a message describing the upstream swap and listing the locked nvmd revision and the new operator targets
+- [ ] T015 Validate: `make build HOST=hlc-501` succeeds; `make build-image HOST=hlc-501` succeeds; `make flash-image HOST=hlc-501 DEV=/dev/sdX`; insert SD into `hlc-501`, power on, run `make smoke-test HOST=hlc-501` — green
+- [ ] T016 On success, `git tag phase1-nvmd-swap`
 
-- [X] T010 [P] [US1] Add `environment.systemPackages = with pkgs; [ git htop jq ripgrep tmux ];` (alphabetic) inline to `hosts/hlc-401/configuration.nix`
-- [X] T011 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-501/configuration.nix`
-- [X] T012 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-502/configuration.nix`
-- [X] T013 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-503/configuration.nix`
-- [X] T014 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-504/configuration.nix`
-- [X] T015 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-505/configuration.nix`
-- [X] T016 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-506/configuration.nix`
-- [X] T017 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-507/configuration.nix`
-- [X] T018 [P] [US1] Add `environment.systemPackages` inline to `hosts/hlc-508/configuration.nix`
-- [X] T019 [US1] Run `make dry-run-all` after T010–T018 done — must exit 0
-- [ ] T020 [US1] Canary deploy Pi5 first: `make canary HOST=hlc-501 IP=10.23.50.51`; SSH in, verify `git --version`, `htop`, `jq`, `ripgrep`, `tmux` present; default bash prompt intact
-- [ ] T021 [US1] Canary deploy Pi4: `make canary HOST=hlc-401 IP=10.23.50.41`; same tool check
-- [ ] T022 [US1] Roll to hlc-502: `make canary HOST=hlc-502 IP=10.23.50.52`; `make smoke-test` must pass
-- [ ] T023 [US1] Roll to hlc-503: `make canary HOST=hlc-503 IP=10.23.50.53`; `make smoke-test` must pass
-- [ ] T024 [US1] Roll to hlc-504: `make canary HOST=hlc-504 IP=10.23.50.54`; `make smoke-test` must pass
-- [ ] T025 [US1] Roll to hlc-505: `make canary HOST=hlc-505 IP=10.23.50.55`; `make smoke-test` must pass
-- [ ] T026 [US1] Roll to hlc-506: `make canary HOST=hlc-506 IP=10.23.50.56`; `make smoke-test` must pass
-- [ ] T027 [US1] Roll to hlc-507: `make canary HOST=hlc-507 IP=10.23.50.57`; `make smoke-test` must pass
-- [ ] T028 [US1] Roll to hlc-508: `make canary HOST=hlc-508 IP=10.23.50.58`; `make smoke-test` must pass
-
-**Checkpoint — A1 exit gate**: All 9 work-set nodes pass smoke-test; tools available; default bash prompt on interactive SSH.
-
-### A2 — Update path validation
-
-- [ ] T029 [US1] Validate workstation-push forward+rollback on hlc-501: trivial change → `make canary HOST=hlc-501 IP=10.23.50.51` → `nixos-rebuild switch --rollback --target-host bob@10.23.50.51` → `make smoke-test HOST=hlc-501 IP=10.23.50.51` → re-deploy to restore
-- [ ] T030 [US1] Repeat forward+rollback on hlc-401 (Pi4)
-- [ ] T031 [US1] Test on-device git fallback on hlc-501: `ssh bob@10.23.50.51`, `git clone <repo-url> /tmp/nix-config`, `cd /tmp/nix-config && sudo nixos-rebuild switch --flake .#hlc-501`; document result (success / OOM / speed) as `R-013` in `specs/001-nixos-rpi-cluster/research.md`
-- [ ] T032 [US1] Rewrite `specs/001-nixos-rpi-cluster/quickstart.md`: SD flash → boot → smoke → canary → roll; workstation push primary; on-device fallback w/ caveats (Pi4 may OOM); kitty TERM workaround; direct SSH instructions
-
-**Checkpoint — A2 exit gate**: ≥1 Pi4 + 1 Pi5 complete forward+rollback cycle; on-device attempt documented.
-
-### B — Static IPs + SSH host key inventory
-
-- [ ] T033 [US1] Add static IP config inline to `hosts/hlc-501/configuration.nix` (`networking.interfaces.eth0.ipv4.addresses`, `networking.defaultGateway`, `networking.nameservers`); `make canary HOST=hlc-501 IP=10.23.50.51`; smoke-test
-- [ ] T034 [US1] Roll static IP to `hosts/hlc-401/configuration.nix`; `make canary HOST=hlc-401 IP=10.23.50.41`; smoke-test
-- [ ] T035 [US1] Roll static IP to `hosts/hlc-502` thru `hosts/hlc-508` one at time: `make canary HOST=hlc-50X IP=10.23.50.5X`; `make smoke-test` after each
-- [ ] T036 [US1] Collect `ssh_host_ed25519_key.pub` from all 9 nodes (`ssh bob@<ip> 'cat /etc/ssh/ssh_host_ed25519_key.pub'`); convert each to age pubkey via `ssh-to-age`; record all 9 age pubkeys in `specs/001-nixos-rpi-cluster/data-model.md`
-
-**Checkpoint — B exit gate**: All 9 nodes reachable on static IPs; `data-model.md` has age pubkeys for all 9.
+**Checkpoint**: Pi 5 boots on NixOS via the nvmd fork. All user-story phases can now begin (US2..US5 in priority order; story phases are mostly independent of each other once foundational is green).
 
 ---
 
-## Phase 4: US4 — Consistent Shell Environment (P3)
+## Phase 3: User Story 1 — Pi 5 boots from a barebones SD baseline (Priority: P1) 🎯 MVP
 
-**Goal**: All 9 work-set nodes have parameterized user module, syshelp, styled PS1, MOTD via shared modules. Principle III deferral (W-001) retired.
+**Goal**: A Raspberry Pi 5 boots NixOS from an SD image whose only contents are: `bob` user with operator's authorized key, network DHCP, recovery utilities, and the nvmd kernel/firmware. Per-host service modules are physically separated from the SD bootstrap configuration so they cannot accidentally bloat or break the recovery image (FR-002, FR-003).
 
-**Independent Test**: SSH any HLC node as `bob`; MOTD shows HLC ASCII art + hostname + Bob Ross quote; `syshelp` lists utilities; PS1 renders without escape artifacts.
+**Independent Test**: Build the new SD image for `hlc-501`, flash, boot, smoke-test. Then change a comment in the bootstrap source, rebuild without `REBUILD=1`, confirm the resulting image hash differs (FR-004 cache invariant — the post-mortem's stale-image vector is closed).
 
-**Prerequisites**: B exit gate passes.
+### Implementation for User Story 1
 
-> One canary cycle per module. hlc-501 always canary. Never bundle modules.
+- [ ] T017 [P] [US1] Create `modules/sd/recovery-utils.nix` with the alphabetical recovery package set per [research.md R-010](./research.md): `curl`, `dnsutils`, `dmidecode`, `e2fsprogs`, `git`, `gptfdisk`, `htop`, `iproute2`, `lsblk` (`util-linux`), `mdadm`, `parted`, `pciutils`, `tmux`, `usbutils`, `vim`, `xfsprogs`. Each package carries an inline comment describing its recovery purpose
+- [ ] T018 [US1] Create `modules/sd/bootstrap.nix`: `bob` user with `operatorPubkey` as authorized key, sshd key-only (`PasswordAuthentication = false` at this layer — W-003 deferral applies only to per-host steady-state, not bootstrap), DHCP via systemd-networkd on the cluster VLAN, hostname placeholder, imports `modules/sd/recovery-utils.nix`. Does NOT import `modules/cluster/*`
+- [ ] T019 [US1] Wire the SD image build path: in `flake.nix` (or wherever `sdImage` is declared), the SD image's module list must be `[ <nvmd sd-image module> modules/sd/bootstrap.nix ]` and MUST NOT include the per-host `configuration.nix`. After Phase 5 lands, ensure no `cluster/common.nix` import sneaks into the SD image set
+- [ ] T020 [US1] Add `REBUILD=1` support to `make build-image` in `Makefile`: when set, append `--rebuild` to the `nix build` invocation; default behavior unchanged
+- [ ] T021 [US1] Audit the `sdImage` derivation closure: change a comment in `modules/sd/bootstrap.nix`, run `make build-image HOST=hlc-501` without `REBUILD=1`, observe a new derivation hash. If unchanged, fix the closure dependency (this is the actual post-mortem stale-image fix; the `REBUILD=1` flag is the escape hatch, not the fix)
+- [ ] T022 [US1] Validate end-to-end: `make build-image HOST=hlc-501` → `make flash-image HOST=hlc-501 DEV=/dev/sdX` → power-cycle Pi → `make smoke-test HOST=hlc-501` green; SSH manually as `bob`, confirm recovery utilities (`mdadm`, `parted`, `lsblk`, `vim`, `git`) are on `$PATH`
+- [ ] T023 [US1] On success, `git tag phase2-sd-bootstrap`
 
-- [ ] T037 [US4] Verify/create `modules/users/operator.nix` parameterized user module (username option, wheel group, openssh.authorizedKeys from option); import in `hosts/hlc-501/configuration.nix`; `make build HOST=hlc-501` → `make canary HOST=hlc-501 IP=10.23.50.51` → SSH verify; roll to remaining 8 nodes
-- [ ] T038 [US4] Verify/create `modules/shell/utilities.nix` w/ alphabetic packages (git, htop, jq, ripgrep, tmux) + `pkgs.writeShellScriptBin "syshelp"` script; remove inline `environment.systemPackages` from each host config; canary hlc-501; roll to all 9
-- [ ] T039 [US4] Verify/create `modules/shell/common.nix` (bash history settings, aliases); canary hlc-501; roll to all 9
-- [ ] T040 [US4] Fix `modules/shell/prompt.nix`: replace all `\033[` with `\e[` in color var defs; remove wrapping double-quotes from color var values (see research.md R-011); attempt `nixos-rebuild build-vm` if aarch64 VM feasible; `make build HOST=hlc-501` → `make canary HOST=hlc-501 IP=10.23.50.51` → explicit interactive PTY SSH to verify no escape artifacts → roll to all 9
-- [ ] T041 [US4] Verify/create `modules/motd/default.nix` (parameterized w/ `environment.etc."motd".text`); verify/create `modules/cluster/hlc/motd.nix` (HLC ASCII art + hostname + Bob Ross quote replicating Debian MOTD); canary hlc-501; roll to all 9; verify MOTD on login
-- [ ] T042 [US4] SSH hardening canary: disable PasswordAuthentication in openssh settings (separate module or in operator.nix); canary hlc-501; verify SSH still works; roll to all 9; mark W-003 resolved in `WORKAROUNDS.md`
-- [ ] T043 [US4] Mark W-001 (Principle III deferral) resolved in `WORKAROUNDS.md`; run `make dry-run-all` to confirm all 12 hosts evaluate clean
-
-**Checkpoint — C exit gate per module**: all 9 work-set nodes pass smoke-test after each module rollout; interactive PTY SSH explicitly tested for T040 (prompt.nix).
-**Checkpoint — C exit gate**: All modules deployed; `nixos-rebuild dry-run` (via `make dry-run`) passes for hlc-402/403/404.
+**Checkpoint**: US1 deliverable in place — Pi 5 boots from a barebones SD on the new upstream, recovery utilities present, image build cache is honest. This is the MVP.
 
 ---
 
-## Phase 5: US3 — Add New Hosts Without Structural Rework (P3)
+## Phase 4: User Story 2 — Modular per-host configuration for all 9 (+3 deferred) nodes (Priority: P2)
 
-**Goal**: ecto-1 stub validates extensible module structure; no existing files modified.
+**Goal**: All 12 cluster hosts (`hlc-401..404`, `hlc-501..508`) succeed `nixos-rebuild dry-run --flake .#<host>` from a clean checkout. The three-scope module layering (cluster-common → cluster-hlc → device → per-host) is in place. Adding a new host requires no more than 2 file changes (new `hosts/<hostname>/` directory + `flake.nix` entry). The deferred Pi 4 set (`hlc-402..404`) is configured but not flashed (Constitution §"Cluster Topology").
 
-**Independent Test**: `make dry-run HOST=ecto1-001` succeeds without touching any existing host config or module file.
+**Independent Test**: From a clean repo checkout, run `make dry-run HOST=<host>` for each of the 12 host IDs (manual loop or shell `for h in hlc-401 hlc-402 hlc-403 hlc-404 hlc-501 hlc-502 hlc-503 hlc-504 hlc-505 hlc-506 hlc-507 hlc-508; do make dry-run HOST=$h; done`); each exits 0. Optionally, run `make build HOST=<one Pi 4 host>` and `make build HOST=<one Pi 5 host>` to confirm both Pi families realize. (No `dry-run-all` cluster-wide iteration target — that is out of scope per the contract.)
 
-**Prerequisites**: Phase C complete (modules exist to import).
+### Implementation for User Story 2
 
-- [ ] T044 [P] [US3] Create `modules/cluster/ecto1/` stub w/ `default.nix` placeholder; parameterize `slimer` user; generic hostname-only MOTD banner
-- [ ] T045 [US3] Create `hosts/ecto1-001/configuration.nix` importing shared modules (users/operator.nix w/ username=slimer, ecto1 MOTD stub); add to `flake.nix` nixosConfigurations; `make dry-run HOST=ecto1-001` must pass with no changes to existing files
+- [ ] T024 [P] [US2] Create `modules/cluster/common.nix` skeleton: imports for `modules/sd/recovery-utils.nix` package set as a baseline toolbox placeholder (replaced by the real toolbox in Phase 6 / US4), MOTD wiring (parameterized banner option, no banner content yet — `cluster/hlc/` overrides), base sshd posture, bash as canonical shell. NO custom PS1 (added in US4)
+- [ ] T025 [P] [US2] Create `modules/cluster/hlc/default.nix`: sets the MOTD banner option to the post-mortem-exact HLC ASCII banner + Bob Ross quote, sets FQDN domain to `marks.dev`, sets per-cluster DNS pointers (PiHole, Dream Machine fallback), declares the `bob` operator user identity (the actual operator user *module* lands in US4)
+- [ ] T026 [P] [US2] Create `modules/hardware/rpi4.nix`: Pi-4-specific NixOS hardware module imports (`nixos-hardware.nixosModules.raspberry-pi-4` + nvmd Pi-4 module if separate), force-disable `boot.loader.generic-extlinux-compatible.enable`
+- [ ] T027 [P] [US2] Create `modules/hardware/rpi5.nix`: Pi-5-specific module imports (`nixos-hardware.nixosModules.raspberry-pi-5` + nvmd Pi-5 module), NVMe overlay (`dtparam=nvme`)
+- [ ] T028 [P] [US2] Create `modules/cluster/config-txt.nix` (or extend `modules/cluster/common.nix`) with the headless-server `config.txt` profile per [research.md R-011](./research.md) and FR-025: `gpu_mem=16`, `dtparam=audio=off`, `dtoverlay=disable-bt`, `disable_splash=1`, `boot_delay=0`. Per-Pi-family thermal/overclock settings per FR-027 + R-012 split between `modules/hardware/rpi4.nix` (modest overclock) and `modules/hardware/rpi5.nix` (stock clocks)
+- [ ] T029 [US2] Refactor `hosts/hlc-501/configuration.nix` to import the new layering: `modules/cluster/common.nix`, `modules/cluster/hlc/default.nix`, `modules/hardware/rpi5.nix`. Move any per-host content (hostname, IP) into the host file; everything else moves up the layers
+- [ ] T030 [P] [US2] Create `hosts/hlc-401/configuration.nix` (Pi 4 control-plane class): hostname, MAC for DHCP reservation reference, imports `cluster/common`, `cluster/hlc`, `hardware/rpi4`
+- [ ] T031 [P] [US2] Create `hosts/hlc-502/configuration.nix` (Pi 5 worker class): hostname, hardware imports as hlc-501
+- [ ] T032 [P] [US2] Create `hosts/hlc-503/configuration.nix` (same pattern as hlc-502)
+- [ ] T033 [P] [US2] Create `hosts/hlc-504/configuration.nix` (same pattern as hlc-502)
+- [ ] T034 [P] [US2] Create `hosts/hlc-505/configuration.nix` (same pattern as hlc-502)
+- [ ] T035 [P] [US2] Create `hosts/hlc-506/configuration.nix` (same pattern as hlc-502)
+- [ ] T036 [P] [US2] Create `hosts/hlc-507/configuration.nix` (same pattern as hlc-502)
+- [ ] T037 [P] [US2] Create `hosts/hlc-508/configuration.nix` (same pattern as hlc-502)
+- [ ] T038 [P] [US2] Create `hosts/hlc-402/configuration.nix` (Pi 4, decom-set — config evaluable, NOT flashed)
+- [ ] T039 [P] [US2] Create `hosts/hlc-403/configuration.nix` (decom-set; same pattern as hlc-402)
+- [ ] T040 [P] [US2] Create `hosts/hlc-404/configuration.nix` (decom-set; same pattern as hlc-402)
+- [ ] T041 [US2] In `flake.nix`, add 11 new `nixosConfigurations` entries via `mkHlcNode`: `hlc-401..404` (with `nixos-hardware.nixosModules.raspberry-pi-4`) and `hlc-502..508` (with `nixos-hardware.nixosModules.raspberry-pi-5`)
+- [ ] T042 [US2] Validate: run `make dry-run HOST=<host>` for each of the 12 hosts (`for h in hlc-401 hlc-402 hlc-403 hlc-404 hlc-501 hlc-502 hlc-503 hlc-504 hlc-505 hlc-506 hlc-507 hlc-508; do make dry-run HOST=$h || break; done`) — every host evaluates from a clean checkout
+- [ ] T043 [US2] Validate: `make build HOST=hlc-401` succeeds (one Pi 4 toplevel realizes)
+- [ ] T044 [US2] Validate: `make build HOST=hlc-502` succeeds (one Pi 5 toplevel realizes)
+- [ ] T045 [US2] Validate SC-003 by hypothesis: pretend to add `hlc-509`; confirm only `hosts/hlc-509/configuration.nix` and one `flake.nix` entry would be needed (don't actually add it; this is a paper validation)
+- [ ] T046 [US2] On success, `git tag phase3-per-host-scaffolding`
 
-**Checkpoint**: Stub evaluates clean; SC-004 satisfied.
-
----
-
-## Phase 6: US5 — Maintain Cluster Configuration Over Time (P5)
-
-**Goal**: Rolling update procedure documented, `update-cluster` target verified.
-
-**Independent Test**: `nix flake update` → `make dry-run-all` passes → roll one Pi4 + one Pi5 via `make update-node`; cluster quorum maintained.
-
-**Prerequisites**: Phase C complete.
-
-- [ ] T046 [US5] Verify `update-cluster` Makefile target uses correct serial roll order (Pi4 servers: hlc-402 → hlc-403 → hlc-404 → hlc-401 last for quorum stability; Pi5 workers: any order); `make smoke-test` gate after each node; add target if missing
-- [ ] T047 [US5] Add rolling update runbook section to `specs/001-nixos-rpi-cluster/quickstart.md`: `nix flake update` → `make dry-run-all` → roll control nodes (quorum invariant: never fewer than 2 healthy server nodes during update) → roll workers → verify `kubectl get nodes` all Ready
-
----
-
-## Phase 7 (Deferred): Phases D/E — Storage + GitOps
-
-> Plan at next `/speckit-plan` invocation after Phase C exits green.
-> No task IDs assigned yet.
-
-**Phase D** (US1 storage layer — FR-003, FR-004, FR-005):
-- disko config: SD boot + 2× USB mdadm RAID1 root (`by-id` device paths); `boot.initrd.mdadmConf`
-- sops-nix: admin age key on gibson; `.sops.yaml` w/ all 12 recipients; `secrets/hlc.yaml` k3s token
-- nixos-anywhere: kexec aarch64 image; provision hlc-401 first (`clusterInit = true`)
-- Pi5 NVMe: one partition reserved for Longhorn; not used as root
-- RAID1 redundancy verification before production workloads
-
-**Phase E** (US2 GitOps — FR-006, FR-007, FR-012):
-- k3s: server config (hlc-401 clusterInit; hlc-402–404 join via serverAddr); agent config (hlc-501–508)
-- Cgroup kernel params in `modules/hardware/rpi4.nix` + `modules/hardware/rpi5.nix`
-- Firewall ports: TCP 6443/2379-2380/10250; UDP 8472/51820
-- ArgoCD bootstrap (`kubectl apply` — one-time manual)
-- Longhorn w/ NixOS-compatible images (research.md R-006)
-- cert-manager + ingress for marks.dev hostnames
-- DNS/DHCP/Unifi cutover runbook from Debian cluster
+**Checkpoint**: 12 host configurations evaluable. Module layering is real. No host has been flashed beyond `hlc-501` from US1.
 
 ---
 
-## Dependencies & Execution Order
+## Phase 5: User Story 3 — Full-disk provisioning via disko + nixos-anywhere (Priority: P3)
 
-```
-Phase 1 (Setup)
-  └── Phase 2 (A0: boot canaries)
-        └── Phase 3 (US1: A1 tool packages → A2 update validation → B static IPs)
-              └── Phase 4 (US4: module reintroduction, C exit gate)
-                    ├── Phase 5 (US3: ecto-1 stub)
-                    └── Phase 6 (US5: rolling update runbook)
-```
+**Goal**: Each work-set node ends with `/boot` on the SD card, `/` on a 2-disk USB-3 mdadm RAID1 mirror, `/srv/usb` on the same array, and (Pi 5 only) `/srv/ssd` on a 1 TB NVMe. Boot order prefers the USB array; SD recovery is the headless fallback (FR-010..FR-014, FR-026). EEPROM is brought to a known revision and configured declaratively (FR-026 + R-013).
 
-### Within Phase 3 (US1)
+**Independent Test**: Provision `hlc-501` (Pi 5) end-to-end — `nixos-anywhere` runs from gibson against the SD baseline, the Pi reboots into the new root, mounts are correct. Then physically detach the USB drives and power-cycle; the Pi boots into the SD recovery environment with `mdadm` available; smoke-test hits the recovery shell. Re-attach USB drives, normal boot resumes. Repeat the provision on `hlc-401` (Pi 4, no NVMe); `/srv/ssd` is absent without error (FR-010).
 
-- T010–T018: All parallel (separate files)
-- T019: Depends on T010–T018
-- T020: Depends on T019
-- T021: Depends on T020 (Pi5 canary must pass first)
-- T022–T028: Depend on T021
-- T029–T032 (A2): Depend on T022–T028
-- T033–T036 (B): Depend on T032
+### Implementation for User Story 3
 
-### Within Phase 4 (US4)
+- [ ] T047 [P] [US3] Create `disko/rpi4.nix` per [research.md R-004](./research.md): mdadm RAID1 across `usbDevice0` + `usbDevice1` for `/` and `/srv/usb`, both ext4. Device names parameterized via NixOS module arguments (`config.hlc.disko.usbDevice0`, etc.). No NVMe
+- [ ] T048 [P] [US3] Create `disko/rpi5.nix`: same USB RAID1 layout as `rpi4.nix`, plus xfs on the NVMe mounted at `/srv/ssd`. Device path parameterized as `config.hlc.disko.nvmeDevice` defaulting to `/dev/disk/by-id/...` (operator confirms exact id during canary)
+- [ ] T049 [US3] Wire `disko/rpi4.nix` import into `modules/hardware/rpi4.nix` (or per-host configs); same for `rpi5.nix` into `modules/hardware/rpi5.nix`. Per-host configs declare the actual `hlc.disko.usbDevice0/1` and `nvmeDevice` values
+- [ ] T050 [US3] Create `modules/hardware/rpi-eeprom.nix`: one-shot systemd service that runs on first boot of the SD baseline, applies `BOOT_ORDER = 0xf14` and the per-Pi-family EEPROM options from R-013 (BOOT_UART, WAKE_ON_GPIO, POWER_OFF_ON_HALT for Pi 5), idempotent via a marker file in `/boot`. Imported by `modules/sd/bootstrap.nix` so it runs on the bootstrap image, not on the post-provision system
+- [ ] T051 [US3] Add `make provision HOST=<host> [IP=<ip>]` target to the Makefile per [contracts/makefile-targets.md](./contracts/makefile-targets.md): wraps `nixos-anywhere --flake .#<host> --target-host root@<IP> --disko-mode disko`. IP derives from HOST per the convention. Refuses if HOST is in the decom-set (`hlc-40[234]`)
+- [ ] T052 [US3] Update `make help` text to list the new `provision` target
+- [ ] T053 [US3] First-node provision: power-cycle `hlc-501` from current SD-only state, attach the two USB drives + NVMe, boot into SD baseline; from gibson run `make provision HOST=hlc-501`; observe nixos-anywhere's logs; expect Pi reboot at end
+- [ ] T054 [US3] Validate provisioning result on `hlc-501`: SSH as `bob`, confirm `/` is on `/dev/md0` (or equivalent mdadm device), `mount | grep -E '(srv/usb|srv/ssd)'` shows both expected mounts, `mdadm --detail /dev/md0` shows clean RAID1 with both members
+- [ ] T055 [US3] **Recovery scenario test**: power off `hlc-501`, detach both USB drives, power on; expect SD recovery boot; `make smoke-test HOST=hlc-501` green; SSH manually, run `mdadm --examine` on the (still-attached) NVMe — confirm recovery utilities work
+- [ ] T056 [US3] Re-attach USB drives, power cycle; confirm normal post-provision boot resumes (USB array picks up cleanly)
+- [ ] T057 [US3] Provision `hlc-502`; smoke-test
+- [ ] T058 [US3] Provision `hlc-503`; smoke-test
+- [ ] T059 [US3] Provision `hlc-504`; smoke-test
+- [ ] T060 [US3] Provision `hlc-505`; smoke-test
+- [ ] T061 [US3] Provision `hlc-506`; smoke-test
+- [ ] T062 [US3] Provision `hlc-507`; smoke-test
+- [ ] T063 [US3] Provision `hlc-508`; smoke-test
+- [ ] T064 [US3] Provision `hlc-401` (Pi 4, no NVMe — confirm `/srv/ssd` is simply absent, no error); smoke-test
+- [ ] T065 [US3] Validate FR-013 idempotency: re-run `make provision HOST=hlc-501`; expect either no-op or a clear refusal message — NOT silent corruption of the existing array
+- [ ] T066 [US3] On success, `git tag phase4-disko-provisioning`
 
-T037 → T038 → T039 → T040 → T041 → T042 → T043 — strict sequential, one module per canary cycle.
-
-### Parallel Opportunities
-
-- T004/T005: Pi4 + Pi5 builds simultaneously
-- T006/T007: SD flashing on separate hardware
-- T010–T018: All 9 systemPackages edits simultaneously
-
----
-
-## Parallel Example: Phase A1 systemPackages
-
-```bash
-# All 9 host config edits simultaneously (T010–T018):
-Edit hosts/hlc-401/configuration.nix
-Edit hosts/hlc-501/configuration.nix
-...
-Edit hosts/hlc-508/configuration.nix
-
-# Then single gate (T019):
-make dry-run-all
-
-# Then sequential canary deploys (T020 → T021 → T022…):
-make canary HOST=hlc-501 IP=10.23.50.51   # Pi5 canary first
-make canary HOST=hlc-401 IP=10.23.50.41   # then Pi4
-# then hlc-502 through hlc-508 one at a time
-```
+**Checkpoint**: 9 work-set nodes are running NixOS with USB-RAID root + (Pi 5) NVMe `/srv/ssd`. `hlc-402..404` are still on Debian (decom-set, untouched). Recovery boot path verified. Ready for operator UX work.
 
 ---
 
-## Implementation Strategy
+## Phase 6: User Story 4 — Consistent operator shell environment (Priority: P4)
 
-### Immediate MVP (Phases 1–3, US1 only)
+**Goal**: Toolbox, bash baseline, two-form PS1 (local + remote), HLC MOTD, operator user, modular home-manager, and SSH hardening — each module reintroduced one at a time per W-001's exit plan. Per-module rollout: `make update-node HOST=hlc-501` → `make smoke-test HOST=hlc-501` → on green, serially repeat for `hlc-502..508` then `hlc-401`. On smoke-test failure: `make rollback HOST=<host>`, diagnose, fix, retry. Operator UX is consistent across silicon (workstation) and the cluster (server) per FR-015..FR-020 and SC-006.
 
-1. T001–T003: Verify baseline
-2. T004–T009: A0 — boot canaries (A0 exit gate)
-3. T010–T028: A1 — tool packages, canary, roll (A1 exit gate)
-4. T029–T032: A2 — update path validation
-5. T033–T036: B — static IPs + host keys (B exit gate)
-6. **Stop**: Cluster baseline established. Phases D/E begin after planning.
+This phase opens with adding the `make update-node` and `make rollback` targets — they don't exist yet; this is the first phase that does live-node rollouts post-provisioning. See [contracts/makefile-targets.md](./contracts/makefile-targets.md) §"Added Phase 6 US4".
 
-### Shell Environment (Phase 4, US4)
+**Independent Test**: SSH as `bob` into any cluster node — HLC MOTD shows, two-line box-drawing PS1 with `☁⛰☁` glyphs, all toolbox commands resolvable. SSH as `eaglerock` into `silicon` — same toolbox, no HLC MOTD, silicon's local PS1 with `☁⛰☁` substituting `////`. Workstation-only modules (i3, polybar, etc.) apply only to silicon.
 
-After B exit gate:
-7. T037–T043: Phase C — one module per canary cycle (C exit gate)
+### Implementation for User Story 4 — module-by-module per W-001
 
-### Notes
+- [ ] T067 [US4] Create `modules/shell/utilities.nix` with the alphabetical sysadmin toolbox per FR-015 (extends the recovery set): each package on its own line with an inline rationale comment. Imported by `modules/cluster/common.nix` (replacing the recovery-set placeholder from T024)
+- [ ] T068 [US4] Update `hosts/silicon/configuration.nix` to also import `modules/shell/utilities.nix` (toolbox is shared with workstation per FR-015)
+- [ ] T069 [US4] Add `make update-node HOST=<host>` and `make rollback HOST=<host>` Makefile targets per [contracts/makefile-targets.md](./contracts/makefile-targets.md) §"Added Phase 6 US4". They wrap `sudo nixos-rebuild switch --flake .#<host> --target-host bob@<ip> --use-remote-sudo` and `sudo nixos-rebuild --rollback --flake .#<host> --target-host bob@<ip> --use-remote-sudo` respectively, with HOST→IP derivation. Then apply the toolbox change to `hlc-501`: `make update-node HOST=hlc-501` → `make smoke-test HOST=hlc-501` (must be green); manually SSH and run `which htop && which jq && which mdadm` to confirm presence. On smoke-test failure: `make rollback HOST=hlc-501`, diagnose, fix, retry
+- [ ] T070 [US4] Roll toolbox to remaining Pi 5 work-set: for each of `hlc-502..508`, run `make update-node HOST=<host>` then `make smoke-test HOST=<host>`; on smoke-test failure, `make rollback`, diagnose, fix, retry before moving on
+- [ ] T071 [US4] Roll toolbox to `hlc-401`: `make update-node HOST=hlc-401` then `make smoke-test HOST=hlc-401`
+- [ ] T072 [US4] Apply toolbox to `silicon`: `make silicon-switch`; manually verify same commands resolvable
+- [ ] T073 [P] [US4] Create `modules/shell/common.nix`: bash baseline (canonical shell, baseline aliases, no PS1 setting). Imported by `modules/cluster/common.nix`
+- [ ] T074 [US4] Apply common.nix to `hlc-501`: `make update-node HOST=hlc-501` + `make smoke-test`. On green, roll serially to `hlc-502..508` then `hlc-401` (per-host `update-node` + `smoke-test`); also apply to silicon via `make silicon-switch`
+- [ ] T075 [US4] Create `modules/shell/prompt.nix` per FR-017 + R-002: local form (silicon-style structure with `☁⛰☁` substituting `////`, color preserved), remote form (two-line box per `remote-ps1.txt`, no color, FQDN). Add `hlc.prompt.mountainGlyph` NixOS option (default: `⛰` + variation selector U+FE0E; fallback: `▲`)
+- [ ] T076 [US4] Apply prompt.nix to `hlc-501`: `make update-node HOST=hlc-501` + `make smoke-test`. Then SSH from gibson (kitty terminal, expect remote two-line box), SSH with `TERM=xterm` from a fresh shell (expect remote form rendering correctly without color), and manually log in at the physical console (expect local form). Verify mountain glyph renders cleanly in all three; if not, flip `hlc.prompt.mountainGlyph` to ASCII fallback per-host
+- [ ] T077 [US4] Roll prompt to remaining work-set: serially run `make update-node HOST=<host>` + `make smoke-test HOST=<host>` for each of `hlc-502..508` and `hlc-401`
+- [ ] T078 [US4] Apply prompt to `silicon` (local form only — silicon never SSHes into itself)
+- [ ] T079 [P] [US4] Create `modules/motd/default.nix` per FR-018: parameterized banner module (option `hlc.motd.banner` for the multi-line ASCII string, option `hlc.motd.quote` for the quote, option `hlc.motd.hostnameLine` defaulting to `Cluster node: <fqdn>`). Pure Nix-rendered; hostname interpolated from `config.networking.fqdn`
+- [ ] T080 [P] [US4] Create `modules/cluster/hlc/motd-banner.nix` (or move into `modules/cluster/hlc/default.nix` — operator's call): sets `hlc.motd.banner` to the exact post-mortem ASCII art and `hlc.motd.quote` to "Let's build just a happy little cloud." — ~ Bob Ross
+- [ ] T081 [US4] Apply MOTD to `hlc-501`: `make update-node HOST=hlc-501` + `make smoke-test`. SSH as `bob`, observe MOTD matches the post-mortem reference exactly (banner + `Cluster node: hlc-501.marks.dev` + Bob Ross quote). On green, roll serially to `hlc-502..508` then `hlc-401`
+- [ ] T082 [US4] Roll MOTD to remaining work-set; smoke-test + spot-check MOTD on each
+- [ ] T083 [US4] Create `modules/users/operator.nix`: `bob` user with `operatorPubkey` as authorized key, member of `wheel` and `docker` groups, passwordless wheel (W-002 site annotated with link to `WORKAROUNDS.md`), bash as login shell. Parameterizable so a future `slimer` user can be added without refactor (per FR-013 / spec Out of Scope)
+- [ ] T084 [US4] Move `bob`'s definition out of inline host configs (W-001 site removal) into `modules/users/operator.nix`; imported via `modules/cluster/hlc/default.nix`
+- [ ] T085 [US4] Apply operator module to `hlc-501`: `make update-node HOST=hlc-501` + `make smoke-test`. On green, roll serially to `hlc-502..508` then `hlc-401`
+- [ ] T086 [P] [US4] Create `modules/home/base.nix` per [research.md R-009](./research.md): cross-cutting home-manager defaults (neovim baseline config, git config with operator's user/email, bash dotfiles, shared aliases)
+- [ ] T087 [P] [US4] Create `modules/home/server.nix`: server-only home-manager additions (tmux config tuned for headless work, kubectl/k9s aliases). Imports `modules/home/base.nix`
+- [ ] T088 [P] [US4] Create `modules/home/workstation.nix`: imports `modules/home/base.nix` plus existing workstation-only modules (`modules/home/i3.nix`, `polybar.nix`, `dunst.nix`, `ui.nix`, `vscode.nix`)
+- [ ] T089 [P] [US4] Create `home/bob.nix` composing `modules/home/base.nix` + `modules/home/server.nix`
+- [ ] T090 [US4] Refactor `home/eaglerock.nix` to compose `modules/home/base.nix` + `modules/home/workstation.nix` (remove direct imports of i3/polybar/etc. — those now live behind workstation.nix)
+- [ ] T091 [US4] Wire `home-manager.users.bob = import ./home/bob.nix` into the cluster scope (probably `modules/cluster/common.nix` or via the `mkHlcNode` helper)
+- [ ] T092 [US4] Apply home-manager refactor to `silicon`: `make silicon-switch`; verify i3/polybar still working (workstation profile)
+- [ ] T093 [US4] Apply home-manager refactor to `hlc-501` (server profile): `make update-node HOST=hlc-501` + `make smoke-test`. SSH as `bob`, verify neovim opens with baseline config, `git --version` works, tmux config loaded
+- [ ] T094 [US4] Roll home-manager to remaining work-set
+- [ ] T095 [US4] **SSH hardening** (closes W-003): in `modules/cluster/common.nix`, set `services.openssh.settings.PasswordAuthentication = false` and `services.openssh.settings.KbdInteractiveAuthentication = false`. Update FR-020 site annotation
+- [ ] T096 [US4] Apply SSH hardening to `hlc-501`: `make update-node HOST=hlc-501` + `make smoke-test` (key-only login still works); manually attempt password auth from gibson and confirm rejection
+- [ ] T097 [US4] Roll SSH hardening to remaining work-set; smoke-test after each
+- [ ] T098 [US4] Update `WORKAROUNDS.md`: mark W-001 Resolved (date YYYY-MM-DD) — all six modules reintroduced via canary; mark W-003 Resolved (date YYYY-MM-DD) — SSH hardening live on all 9 work-set nodes. W-002 stays open (deferred to future secrets-mgmt feature spec)
+- [ ] T099 [US4] On success, `git tag phase5-operator-ux`
 
-- T002 (silicon PS1 capture for R-012) must happen before T040 (prompt.nix fix)
-- `make canary` = build + `nixos-rebuild switch --target-host` + smoke-test + auto-rollback on failure
-- Decommissioned-set hlc-402/403/404: dry-run only; NEVER flash or `nixos-rebuild switch`
-- kitty users: `TERM=xterm-256color ssh bob@<host>` or use alacritty (known limitation — research.md R-011)
+**Checkpoint**: Operator UX consistent across all NixOS hosts. Inline-host workaround retired (W-001 closed). SSH hardened (W-003 closed). Only W-002 (passwordless wheel) remains open as expected.
+
+---
+
+## Phase 7: User Story 5 — k3s OS-level prerequisites (Priority: P5)
+
+**Goal**: Every in-scope node has k3s, k9s, container runtime dependencies, kernel modules, sysctls, and a `k` shell alias installed. The k3s service unit is enabled but stopped; no cluster state on disk. The follow-on cluster-bootstrap spec only needs to drop config and start the unit (FR-021..FR-023, R-003, SC-007).
+
+**Independent Test**: On any work-set node, `k3s --version`, `k9s --version`, and `k version --client` all succeed. `systemctl is-enabled k3s` reports enabled; `systemctl is-active k3s` reports inactive. No `/var/lib/rancher/k3s/` cluster state on disk.
+
+### Implementation for User Story 5
+
+- [ ] T100 [US5] Create `modules/k8s/prereqs.nix` per [research.md R-003](./research.md): `services.k3s.enable = true`, `systemd.services.k3s.wantedBy = lib.mkForce [ ]`, container runtime deps (`containerd`, `runc`), `pkgs.k9s`, shell alias `k = kubectl` in the bash baseline, kernel modules (`br_netfilter`, `overlay`), sysctls (`net.bridge.bridge-nf-call-iptables = 1`, `net.ipv4.ip_forward = 1`, etc.) per upstream k3s requirements
+- [ ] T101 [US5] Import `modules/k8s/prereqs.nix` from `modules/cluster/common.nix`
+- [ ] T102 [US5] Apply k3s prereqs to `hlc-501`: `make update-node HOST=hlc-501` + `make smoke-test`
+- [ ] T103 [US5] Verify on `hlc-501`: `ssh bob@hlc-501 'k3s --version && k9s --version && k version --client'` all exit 0
+- [ ] T104 [US5] Verify on `hlc-501`: `ssh bob@hlc-501 'systemctl is-enabled k3s'` returns `enabled`; `systemctl is-active k3s` returns `inactive`
+- [ ] T105 [US5] Verify on `hlc-501`: `ssh bob@hlc-501 'lsmod | grep -E "br_netfilter|overlay"'` shows modules loaded; `sysctl net.ipv4.ip_forward` returns 1
+- [ ] T106 [US5] Verify on `hlc-501`: no cluster state directory at `/var/lib/rancher/k3s/server/db/` (or equivalent)
+- [ ] T107 [US5] Roll k3s prereqs to remaining Pi 5 work-set: serially run `make update-node HOST=<host>` + `make smoke-test HOST=<host>` for each of `hlc-502..508`; per-host repeat the verifications from T103..T106
+- [ ] T108 [US5] Roll k3s prereqs to `hlc-401`: `make update-node HOST=hlc-401` + `make smoke-test HOST=hlc-401`; repeat the verifications
+- [ ] T109 [US5] On success, `git tag phase6-k3s-prereqs`
+
+**Checkpoint**: All 9 work-set nodes are at the spec's terminal state. The follow-on cluster-bootstrap spec begins from here — no more OS-level work needed.
+
+---
+
+## Phase 8: Polish & cross-cutting validation
+
+**Purpose**: Verify the spec's success criteria empirically; close out documentation; prepare for the follow-on spec.
+
+- [ ] T110 [P] Validate SC-001: time the workflow `make build-image HOST=<a fresh Pi 5> → flash → power-on → make smoke-test` for one cold node; expect ≤ 30 minutes operator wall-clock excluding raw `dd` time
+- [ ] T111 [P] Validate SC-002: on a clean checkout (`git clone` to /tmp), run `make dry-run HOST=<host>` for each of the 12 hosts via the shell loop above; expect exit 0 with no manual edits
+- [ ] T112 [P] Validate SC-005: pick any work-set node, detach USB drives, power-cycle, confirm SD recovery boot + `mdadm` available; document the recovery time and any surprises
+- [ ] T113 [P] Validate SC-006: SSH as `bob` to any cluster node — confirm MOTD per spec, toolbox on `$PATH`, two-line remote PS1; SSH as `eaglerock` to silicon — confirm same toolbox, no HLC MOTD, local PS1 with cluster-themed glyphs
+- [ ] T114 [P] Validate SC-007: across all 9 work-set nodes, `k3s --version`, `k9s --version`, `k version --client` succeed; no cluster state on disk anywhere
+- [ ] T115 [P] Validate SC-008: change a comment in `modules/sd/bootstrap.nix`, run `make build-image HOST=hlc-501` without `REBUILD=1`, observe new image hash. The post-mortem's stale-image vector stays closed
+- [ ] T116 Update `README.md` (top-level) if its quick-reference drifts from the new operator workflow (Makefile targets, IP convention, phase tags)
+- [ ] T117 Run `/speckit-analyze` post-implementation; expect coverage 100% (every FR mapped to a tagged commit), no CRITICAL or HIGH findings remaining
+- [ ] T118 Confirm `WORKAROUNDS.md` ledger state: W-001 Resolved, W-002 open (deferred to next feature), W-003 Resolved
+- [ ] T119 On full validation green, `git tag feature-001-complete` — this is the entry point for the follow-on cluster-bootstrap spec
+
+**Checkpoint**: Feature complete. Ready for `/speckit-specify` of the next feature (cluster bootstrap, joining nodes, k3s configuration).
+
+---
+
+## Dependencies
+
+- **Phase 0** (operator-managed) blocks all phases. Tag `phase0-baseline-reset` is the entry condition for T001.
+- **Phase 1** (Setup) blocks **Phase 2** (Foundational).
+- **Phase 2** (Foundational) blocks all user-story phases.
+- **US1** (Phase 3) is the MVP. Stops here for a minimum-viable delivery: one Pi 5 boots cleanly on the new upstream.
+- **US2** (Phase 4) depends on US1 (`mkHlcNode` and the upstream swap must be working before adding 11 hosts).
+- **US3** (Phase 5) depends on US2 (per-host configurations must exist before disko schemas attach to them).
+- **US4** (Phase 6) depends on US2 (module layering must be in place before reintroducing toolbox/PS1/MOTD/etc.). Largely independent of US3 — operator could parallelize if confident.
+- **US5** (Phase 7) depends on US2 (needs `modules/cluster/common.nix` to import from). Independent of US3 and US4 — can be done before, after, or in parallel with them once US2 is green.
+- **Phase 8** (Polish) depends on US1..US5 all being green.
+
+## Parallel execution opportunities
+
+- **Within US2** (T030..T040): the 11 new per-host configuration files can be created in parallel — they're separate files with no inter-dependencies. The `flake.nix` entries (T041) collapses to one task that gathers all of them.
+- **Within US4**: module *creation* tasks (T067, T073, T075, T079, T086..T089) are parallel-safe (different files). *Deployment* tasks (canary + roll) are serial by safety design (Constitution IV — one node at a time).
+- **Across US3/US4/US5**: once US2 is green, the three are mostly independent at the file level. Parallel across stories is operator's call; the safer default is serial because each Constitution IV gate is per-node, not per-story.
+- **Within Phase 8** (T110..T115): all validation tasks are read-only spot-checks; trivially parallel.
+
+## Implementation strategy
+
+**MVP scope**: User Story 1 (Phase 3, T017..T023). One Pi 5 boots a barebones SD on the new upstream, recovery utilities present, image build cache is honest. This alone delivers the post-mortem's "Phase 1" goal — restored, working baseline on the correct upstream.
+
+**Incremental delivery**: After MVP, each subsequent phase tags a recoverable state. Phase exits are bisect anchors. The operator can stop at any phase tag and still have a coherent, working system; the cluster simply has fewer features each time you stop earlier.
+
+- Stop at `phase2-sd-bootstrap` → Pi 5 boots cleanly on nvmd, barebones SD; recovery image works.
+- Stop at `phase3-per-host-scaffolding` → 12 host configs evaluable, but only `hlc-501` flashed.
+- Stop at `phase4-disko-provisioning` → 9 work-set nodes running NixOS with USB-RAID + NVMe, but operator UX is still bare.
+- Stop at `phase5-operator-ux` → polished operator experience, ready for k3s.
+- Stop at `phase6-k3s-prereqs` → spec complete; the follow-on cluster-bootstrap spec begins here.
+
+**Per-phase cadence** (Constitution IV):
+
+1. Read the phase's section in [quickstart.md](./quickstart.md).
+2. Run pre-conditions (`make dry-run` + `make build` for affected hosts).
+3. Implement the tasks in this list for that phase.
+4. **Canary on the designated node** (`hlc-501` for cluster work; silicon for workstation work).
+5. **Smoke-test green** (`make smoke-test HOST=<host>`).
+6. Roll to remaining work-set nodes serially.
+7. Tag the phase exit.
+8. Anything surprising → stop, raise the conflict (Constitution VIII), do not push past unexplained state.
+
+## Notes
+
+- Tests as separate test-files are NOT in scope. The verification model for this NixOS config repo is `dry-run` → `build` → `canary` → `smoke-test`; these are encoded as explicit tasks in each phase rather than as `tests/` directory artifacts.
+- `tasks.md` is a living document. If implementation surfaces a sub-step that wasn't anticipated, add it (and re-run `/speckit-analyze` if the addition is structurally significant).
+- Parallel `[P]` markers indicate file-level independence; they do NOT override Constitution IV's one-node-at-a-time canary discipline.

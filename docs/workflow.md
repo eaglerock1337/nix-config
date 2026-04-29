@@ -69,7 +69,7 @@ When in doubt, the constitution wins. Principle VIII (Human-AI Collaboration Pro
 - **PreToolUse hook — decommissioned-set guard**: block any `Bash` tool call matching `(nixos-rebuild|make (canary|update-node|provision|flash-image|smoke-test))` against `hlc-40[234]` or against `bob@10\.23\.50\.4[234]`. Constitution §"Cluster Topology" forbids touching the decom-set; this hook makes it enforced rather than aspirational.
 - **PreToolUse hook — `dd` safety**: block `dd .* of=/dev/(sda|nvme0n1)` and similar patterns that would clobber a system disk during SD flash.
 - **PreToolUse hook — destructive git**: require operator confirmation for `git push --force`, `git reset --hard`, `git clean -fd`. Lower priority since Claude Code already prompts for these by default in normal permission mode.
-- **SessionStart hook — status block**: echo `git describe --tags --match 'phase*'`, current branch, open WORKAROUNDS count + IDs, and last `make smoke-test-all` result if cached. Counters drift in long-running sessions.
+- **SessionStart hook — status block**: echo `git describe --tags --match 'phase*'`, current branch, and open WORKAROUNDS count + IDs. Counters drift in long-running sessions.
 
 ### Considered but not adopted
 

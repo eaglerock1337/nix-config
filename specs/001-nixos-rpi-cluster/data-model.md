@@ -27,7 +27,7 @@ A physical Raspberry Pi managed by this repo.
 
 **Lifecycle**:
 
-`unbuilt` → `flashed` (SD baseline written) → `reachable` (SSH from gibson, smoke-test green) → `provisioned` (nixos-anywhere installed, USB array online) → `live` (per-host config applied via `make canary`/`make update-node`).
+`unbuilt` → `flashed` (SD baseline written) → `reachable` (SSH from gibson, smoke-test green) → `provisioned` (nixos-anywhere installed, USB array online) → `live` (per-host config applied via `make update-node` + `make smoke-test`; on failure `make rollback`).
 
 For decommissioned-set hosts (`inScope = false`): lifecycle is bounded at `unbuilt → dry-run-only`. Any attempt to take them past `flashed` is a constitution violation (Cluster Topology section).
 
