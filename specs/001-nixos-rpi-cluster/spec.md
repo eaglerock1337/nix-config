@@ -1,301 +1,213 @@
-# Feature Specification: NixOS RPi Cluster Foundation
+# Feature Specification: NixOS RPi Cluster Foundation (v2)
 
 **Feature Branch**: `001-nixos-rpi-cluster`
-**Created**: 2026-04-25
-**Status**: Draft
-**Input**: User description: "NixOS configuration for Happy Little Cloud RPi k8s cluster (Pi4 control plane + Pi5 workers), with extensible structure for future desktop/laptop and additional cluster configurations."
+**Created**: 2026-04-29
+**Status**: Draft (rewritten post-mortem)
+**Input**: Restart from scratch per `post-mortem-26-04-29.md`. Goal: bring 9 Raspberry Pis (hlc-401 + hlc-501..508) onto NixOS using the actively maintained `nvmd` fork of `nixos-raspberrypi`, with a layered module structure, full-disk provisioning via `nixos-anywhere`/`disko`, operator UX (MOTD, PS1, sysadmin toolbox, home-manager), and k3s prerequisites installed. Cluster bootstrap, joining, and ArgoCD/workload management are out of scope.
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Provision Cluster Nodes from Source (Priority: P1)
+### User Story 1 — Boot a Raspberry Pi 5 on NixOS from a Barebones SD Card (Priority: P1)
 
-Operator start with bare RPi hardware. Use repo to make bootable SD card images, install NixOS to each node USB RAID, form 12-node k3s cluster — all from one `git clone` + few commands.
+The operator (running on `gibson`) builds a minimal SD-card image from this repo, flashes it onto a Raspberry Pi 5 (initial target: `hlc-501`), inserts the card, powers the Pi on, and confirms the node boots into NixOS, joins the network, and accepts SSH from operator's key as user `bob`. The image uses the `nvmd` fork of `nixos-raspberrypi` and contains only the minimum needed to reach this point: bob user with authorized SSH key, network configuration, and basic recovery utilities.
 
-**Why this priority**: No this story = no value. Whole point of Phase 1. Prereq for every other story.
+**Why this priority**: This is the foundation. Without a reproducible "Pi boots and is reachable" baseline on the supported upstream, every later phase is blocked. The post-mortem traced the prior incident to using an archived upstream and a broken `make` step that hid stale images; this story exists to lock in a verified baseline before doing anything else.
 
-**Independent Test**: Flash SD cards for all 12 nodes, provision via nixos-anywhere, verify k3s cluster show 4 server nodes (hlc-401–404) + 8 agent nodes (hlc-501–508) with `kubectl get nodes`.
+**Independent Test**: Operator runs `make flash-image` for `hlc-501`, inserts the SD card, powers on the Pi, and runs `make smoke-test` (or equivalent reachability check) from gibson. Test passes when SSH as `bob@hlc-501` succeeds with operator key and `uname -a` reports NixOS aarch64.
 
 **Acceptance Scenarios**:
 
-1. **Given** bare SD cards + USB drives, **When** operator run build-image
-   + flash-image targets, **Then** each Pi boot into working NixOS.
-2. **Given** booted Pi with DHCP IP, **When** operator run
-   provision target, **Then** nixos-anywhere install NixOS to USB RAID + reboot
-   node to persistent config.
-3. **Given** all 12 nodes provisioned, **When** operator bring online in cluster
-   bring-up order, **Then** `kubectl get nodes` show all 12 Ready.
-4. **Given** node failure, **When** operator re-provision from source, **Then**
-   node rejoin cluster, no manual state recovery.
+1. **Given** a clean repo checkout on gibson and a blank MicroSD card, **When** operator runs the SD image build + flash workflow for `hlc-501`, **Then** flashing produces a bootable SD without manual editing of build outputs.
+2. **Given** a flashed SD card, **When** operator inserts it into `hlc-501` and powers the Pi, **Then** the Pi boots, obtains an IP, and accepts SSH for `bob` using operator's key within 5 minutes of power-on.
+3. **Given** a configuration change to the SD image source, **When** operator rebuilds the image, **Then** the resulting image reflects the change (no stale-cache bug; documented rebuild flag is the supported path).
+4. **Given** the SD-only environment (no USB or NVMe attached), **When** operator boots the Pi, **Then** the Pi reaches a usable login state with recovery utilities (`mdadm`, `parted`, `lsblk`, basic editor) available.
 
 ---
 
-### User Story 2 - Deploy Workloads via GitOps (Priority: P2)
+### User Story 2 — Modular Per-Host Configuration for All 9 Nodes Across Both Pi Generations (Priority: P2)
 
-Operator bootstrap ArgoCD on cluster. After, manage all app deploys via Git — no manual `kubectl apply` after setup.
+The operator can build (`nixos-rebuild dry-run --flake .#<host>`) a NixOS configuration for any of the 9 in-scope nodes (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) from a single repo. Configuration is layered so that node files contain only what is genuinely node-specific; everything reusable lives in shared modules: cluster scope (HLC), device scope (rpi4 vs rpi5), and operator-environment scope (server-bash, server-tooling, home-manager). The SD bootstrap configuration is kept separate from the full per-host configuration.
 
-**Why this priority**: No GitOps = imperative + untrackable. Primary operational model.
+**Why this priority**: The previous attempt collapsed because a single host's configuration mixed concerns; debugging touched files that should not have been part of bootstrap. Splitting layers up front prevents recurrence and makes per-Pi-family hardware support tractable.
 
-**Independent Test**: Bootstrap ArgoCD, push app-of-apps manifest, verify Longhorn,
-cert-manager, ingress deploy auto via ArgoCD sync.
+**Independent Test**: From a clean checkout, `nixos-rebuild dry-run --flake .#<host>` succeeds for each of the 9 in-scope hosts. Adding a new host file under `hosts/<hostname>/` plus a flake entry is sufficient for it to evaluate; no edits to existing per-host configurations or shared modules are required.
 
 **Acceptance Scenarios**:
 
-1. **Given** running k3s cluster, **When** operator run ArgoCD bootstrap
-   command, **Then** ArgoCD running + watching repo.
-2. **Given** ArgoCD running, **When** Helm chart version updated in Git,
-   **Then** ArgoCD sync + upgrade app, no operator action.
-3. **Given** Longhorn deployed, **When** workload request PVC,
-   **Then** Longhorn provision storage from NVMe on Pi5 workers.
-4. **Given** cert-manager deployed, **When** Ingress made with
-   marks.dev hostname, **Then** TLS provisioned auto.
+1. **Given** the layered repo, **When** operator runs `nixos-rebuild dry-run --flake .#hlc-501`, **Then** evaluation succeeds.
+2. **Given** the same repo, **When** operator runs the equivalent dry-run for `hlc-401` (Pi 4), **Then** evaluation succeeds and pulls in Pi 4-specific hardware configuration distinct from Pi 5.
+3. **Given** a new node `hlc-502`, **When** operator adds a thin host config plus flake entry, **Then** dry-run for the new host succeeds with no edits to other hosts or to shared modules.
+4. **Given** the SD bootstrap config, **When** operator builds it, **Then** it does **not** pull in full per-host service configuration (such as k3s prerequisites or full operator toolbox).
 
 ---
 
-### User Story 3 - Add New Hosts Without Structural Rework (Priority: P3)
+### User Story 3 — Full-Disk Provisioning with USB RAID Root and NVMe Data Volume (Priority: P3)
 
-Operator add new host (cluster node, desktop, laptop) by writing thin host config that imports shared modules — no edit to existing host configs or modules.
+After a node is reachable on the SD baseline, the operator runs `nixos-anywhere` (from gibson or on the node itself) to install the full per-host NixOS configuration onto persistent storage. The result: `/boot` remains on the SD card; `/` lives on a 2-disk USB-3 mdadm RAID1 mirror; on Pi 5 nodes, `/srv/ssd` is mounted from a 1 TB NVMe drive; on all nodes, the USB RAID is also exposed at `/srv/usb` for storage workloads. The Pi prefers booting from the USB array when present and falls back to the SD-card live environment for recovery if the USB array is unavailable.
 
-**Why this priority**: Repo must grow gracefully. Current
-`hosts/silicon` config is prototype; 12 cluster nodes validate pattern at scale.
+**Why this priority**: This is the durable runtime configuration the cluster needs. The SD-only baseline (Story 1) is provisioning scaffolding; without USB-backed root and NVMe data volume, the nodes cannot host real workloads.
 
-**Independent Test**: Add `hosts/hlc-501` config importing shared modules, verify
-`nixos-rebuild dry-run --flake .#hlc-501` succeed, no other file touched.
+**Independent Test**: For a representative Pi 5 node and the Pi 4 node (`hlc-401`), the operator runs the documented `nixos-anywhere` workflow against the SD-baseline node and, after reboot, confirms: `/` is on the mdadm array, `/srv/ssd` is the NVMe (Pi 5 only), `/srv/usb` is mounted, and removing the USB drives + rebooting brings the Pi back into the SD-card recovery environment with `mdadm` available to inspect the array.
 
 **Acceptance Scenarios**:
 
-1. **Given** existing repo with cluster modules, **When** operator make
-   new host dir + thin config, **Then** flake evaluate for that
-   host, no errors.
-2. **Given** future desktop/laptop host, **When** config import desktop
-   modules, **Then** build, no touch cluster modules.
-3. **Given** future ecto-1 Ryzen cluster host, **When** config import shared
-   k8s modules, **Then** Pi-specific config not pulled in.
+1. **Given** a Pi 5 node booted on the SD baseline with two USB drives and an NVMe attached, **When** operator runs the provisioning workflow, **Then** the node reboots into NixOS with `/` on the mdadm RAID1 mirror and `/srv/ssd` mounted from the NVMe.
+2. **Given** a provisioned Pi 5 node, **When** the USB array is healthy, **Then** the system boots from the USB array and the SD card is used only for `/boot`.
+3. **Given** a provisioned node with the USB drives physically removed, **When** the operator powers the Pi on, **Then** the Pi falls back to the SD-card recovery environment and exposes `mdadm` and other utilities for repair.
+4. **Given** the Pi 4 node `hlc-401` (no NVMe), **When** the same workflow runs, **Then** the node provisions with `/` on USB RAID1 and `/srv/usb` available; `/srv/ssd` is absent without error.
+5. **Given** the operator runs the provisioning workflow against an already-provisioned node, **When** they re-run the same target, **Then** the operation is either idempotent or fails with a clear, documented message — never silently corrupts the array.
 
 ---
 
-### User Story 4 - Consistent Shell Environment Across Systems (Priority: P3)
+### User Story 4 — Consistent Operator Shell Environment Across All Managed Systems (Priority: P4)
 
-Operator SSH into any managed system, find familiar shell with right user, curated CLI tools, cluster-branded MOTD, quick reference for sysadmin utils.
+When the operator SSHes into any managed NixOS system (silicon today; the 9 cluster nodes after this spec), they land in a familiar bash environment: a styled PS1 that distinguishes local-vs-remote sessions, a curated sysadmin toolbox identical across systems, sensible home-manager defaults (e.g., neovim) shared with workstations where appropriate, and on cluster nodes a dynamic MOTD showing the HLC ASCII banner, the node hostname, and the Bob Ross quote. The toolbox lives in its own module included on every NixOS host (cluster nodes and silicon); each package carries a one-line comment describing its purpose.
 
-**Why this priority**: Consistent operator UX across nodes cut cognitive load + mistakes. MOTD + tool reference = living docs. Foundational — every other story benefit.
+**Why this priority**: Consistent operator UX across nodes reduces cognitive load and incident time. The previous attempt's PS1 fight contributed to debugging confusion; doing this once, in one shared module, with parameterization for "remote vs. local" and "server vs. workstation," prevents recurrence.
 
-**Independent Test**: SSH into HLC node as `bob`, verify MOTD show
-HLC ASCII banner + hostname + quote, confirm standard tools present,
-run sysadmin reference command to see utils.
+**Independent Test**: Operator SSHes as `bob@hlc-501` and observes: HLC MOTD with hostname `hlc-501.marks.dev`, styled PS1, all toolbox commands resolvable on `$PATH`. Operator SSHes as `eaglerock@silicon` and observes: same toolbox commands resolvable, no HLC MOTD, workstation-specific home-manager defaults preserved.
 
 **Acceptance Scenarios**:
 
-1. **Given** provisioned HLC node, **When** operator SSH as `bob`,
-   **Then** MOTD show HLC ASCII banner, hostname, Bob Ross quote.
-2. **Given** any managed system, **When** operator run sysadmin reference
-   command, **Then** categorized list of installed CLI tools w/ short
-   descriptions show.
-3. **Given** new cluster type (ecto-1), **When** config import shell
-   module with different user + MOTD theme, **Then** shell env
-   use `slimer` user + ecto-1 splash.
-4. **Given** desktop system, **When** config import shell module,
-   **Then** user `eaglerock` get same standard utils, no
-   cluster MOTD.
+1. **Given** an SSH session into any cluster node as `bob`, **When** the session opens, **Then** the MOTD shown matches the post-mortem reference (HLC ASCII banner, `Cluster node: <fqdn>`, Bob Ross quote) with hostname interpolated dynamically.
+2. **Given** an SSH session into any managed system, **When** the operator runs each tool in the documented toolbox, **Then** every tool resolves and runs.
+3. **Given** a local terminal on silicon and a remote SSH session, **When** the operator inspects the prompt, **Then** the PS1 visibly differs to indicate local vs. remote.
+4. **Given** server-side users (`bob`) and workstation users (`eaglerock`), **When** their home-manager configurations are evaluated, **Then** shared defaults (e.g., neovim baseline) apply to both, while workstation-only modules (i3, polybar, etc.) apply only to workstations.
 
 ---
 
-### User Story 5 - Maintain Cluster Configuration Over Time (Priority: P5)
+### User Story 5 — Kubernetes / k3s Prerequisites Installed on Every Node (Priority: P5)
 
-Operator update NixOS inputs, k3s version, or cluster secrets. Roll change across all 12 nodes, no downtime, no manual imperative steps.
+Every in-scope node has the packages and OS-level configuration required to participate in a k3s cluster: k3s itself, container runtime dependencies, `k9s`, a `k` shell alias for `kubectl`, and any kernel/module/sysctl settings k3s needs. **Joining the cluster, electing servers, distributing tokens, and managing workloads are out of scope for this spec** — those are handled in a follow-on spec. The point of this story is that, after this spec ships, no further OS-level work is needed before the next spec can wire k3s into a running cluster.
 
-**Why this priority**: Cluster that no update safely = liability.
-Day-2 ops must be declarative as Day-0 provisioning.
+**Why this priority**: Lower priority than Stories 1–4 because it depends on them, but in scope so that the next spec starts at "configure cluster" rather than "install k3s." Keeping it OS-level only also draws a sharp line: this spec does not need to deal with HA topology, embedded etcd, agent discovery, or Longhorn.
 
-**Independent Test**: Run `nix flake update`, verify dry-run pass, roll update
-sequential Pi4s then Pi5s, confirm cluster healthy throughout.
+**Independent Test**: On any provisioned node, `k3s --version`, `k9s --version`, and `k version --client` (alias resolving to `kubectl`) all succeed without an active cluster. No k3s service is running and no cluster state exists on the node.
 
 **Acceptance Scenarios**:
 
-1. **Given** new nixpkgs revision in flake.lock, **When** operator run
-   update-cluster target, **Then** all 12 nodes adopt new config
-   sequential, no quorum loss.
-2. **Given** rotated k3s token, **When** operator re-encrypt secret +
-   run update-cluster, **Then** all nodes pick up new token, no full reset.
-3. **Given** broken node config, **When** operator push fix,
-   **Then** only affected node rebuilt; others untouched.
+1. **Given** a fully provisioned node, **When** the operator queries the package set, **Then** k3s, container runtime dependencies, k9s, and `kubectl` are present.
+2. **Given** the same node, **When** the operator inspects systemd, **Then** the k3s service unit is **enabled but stopped** (it will start on next boot once cluster configuration is supplied), with no cluster configuration or token on disk yet, so the follow-on cluster-bootstrap spec only needs to drop config and trigger the start.
+3. **Given** the node's kernel/module/sysctl state, **When** the operator inspects k3s prerequisites (cgroups v2, br_netfilter, ip_forward, etc.), **Then** all are configured per upstream k3s requirements.
+4. **Given** an interactive shell as `bob`, **When** the operator types `k get nodes`, **Then** the alias resolves to `kubectl get nodes` (the command will return an error since no cluster is configured; that error is expected and correct for this spec).
 
 ---
 
 ### Edge Cases
 
-- USB drive in RAID1 pair fail mid-provision?
-- Pi5 NVMe not detected at boot?
-- nixos-anywhere lose SSH partway through install?
-- k3s token file absent on node at first boot?
-- hlc-401 (init server) unreachable during
-  rolling update of other server nodes?
-- DNS cut over to NixOS node before workload migration done on old Debian node? Drain traffic how?
+- A USB drive in the RAID1 pair fails mid-provision — the install should fail loudly and leave a recoverable state, not a half-written array.
+- A Pi 5 NVMe is missing or not detected — the system boots and `/srv/ssd` is simply absent (logged), rather than failing.
+- `nixos-anywhere` loses SSH partway through — the SD baseline must remain intact so the operator can retry.
+- The SD baseline image is rebuilt but the binary cache returns a stale artifact — the documented rebuild path must invalidate the cache (the post-mortem traced multi-day debugging to this exact failure mode).
+- Operator SSH key changes — recovery is by reflashing the SD baseline (the SD bootstrap config is the keying root), not by editing a deployed node.
+- Pi 4 node has no NVMe — provisioning must succeed with only USB RAID, no Pi 5-specific modules pulled in.
+- A node boots from SD recovery (USB drives missing) — operator can run `mdadm` and other recovery tools without re-provisioning.
+- Existing k3s cluster on Debian Pi 4s loses `hlc-401` when it is rebuilt as NixOS — acceptable per scope (cluster mgmt is out of scope; existing cluster will limp on `hlc-402..404` until the follow-on cutover spec).
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: Repo MUST produce bootable NixOS SD card image for each Pi
-  model (RPi 4, RPi 5), one build command per model.
-- **FR-002**: Repo MUST support unattended provisioning per node via
-  nixos-anywhere over SSH from operator workstation. Target Pi MUST have
-  baseline OS + SSH; nixos-anywhere invoked after baseline ready. Password prompts OK if documented as workarounds.
-- **FR-003**: Each node root fs MUST live on USB RAID1 mirror for
-  redundancy; SD card MUST be boot layer only. RAID1 MUST be
-  verified before production workloads. Monitoring + alerting
-  for RAID degradation deferred to polishing phase (planned alongside Prometheus/Grafana).
-- **FR-004**: Pi5 workers MUST expose NVMe for Longhorn distributed
-  storage; NVMe MUST NOT be root fs. At least one partition per
-  Pi5 MUST be Longhorn; other partitions may be reserved for other
-  uses. NVMe model: Corsair MP600 Micro 1TB per node (already bought).
-- **FR-005**: All cluster secrets (k3s join token) MUST be encrypted at rest in
-  repo, decrypted at runtime via host SSH keys as age recipients.
-- **FR-006**: k3s control plane MUST use 4-node embedded etcd (hlc-401–404,
-  all Pi4 servers) for HA; these nodes also run lightweight
-  workloads (CPU/memory bound by Pi4; Pi4 = limit factor,
-  not Pi5). No external etcd needed.
-- **FR-007**: k3s workers (Pi5) MUST join cluster via control plane discovery;
-  agent config MUST NOT hardcode server IPs. Discovery mechanism (VIP, DNS
-  round-robin, primary server IP) deferred pending arch deliberation.
-- **FR-008**: Module structure MUST split cluster-agnostic k8s concerns
-  (k3s role config, Longhorn prereqs) from cluster-specific (HLC node config,
-  Pi hw config) so future clusters reuse k8s layer unmodified.
-- **FR-009**: Repo MUST include stub modules for future ecto-1 cluster
-  to validate extensible module structure, no ecto-1 impl.
-- **FR-010**: Makefile (or equivalent) MUST expose targets: build-image,
-  flash-image, provision, update-node, update-cluster, encrypt-secret.
-  `update-node` target MUST use `nixos-rebuild switch --flake .#<host> --target-host`
-  (workstation builds + pushes closure) as primary path. `encrypt-secret`
-  target details (input/output format) deferred; existence + basic
-  func required for MVP. SSH login not Makefile target;
-  operators connect direct via `ssh bob@<hostname>`.
-- **FR-011**: All nodes MUST be reachable via SSH as `bob` using operator's
-  SSH key; password auth MUST be off. For MVP, `bob`'s
-  authorized_keys hardcoded in NixOS module; migration to secrets mgmt
-  (sops-nix) planned for later.
-- **FR-012**: Longhorn MUST use NixOS-compat container images; upstream defaults
-  that assume glibc paths MUST be overridden via ArgoCD Helm values.
-- **FR-013**: Each system class MUST configure distinct default user: `bob` for
-  HLC nodes, `eaglerock` for gaming/desktop, `slimer` for ecto-1
-  nodes. User config MUST be shared module parameterized by username.
-- **FR-014**: All systems MUST share standard shell env module providing
-  curated sysadmin CLI utils (e.g. htop, ripgrep, jq, tmux, git, etc.)
-  + bash as canonical shell (zsh out of scope). For MVP testing phase, module
-  use default bash prompt, no custom PS1, no syshelp, no
-  custom bashrc — pure NixOS defaults + tool packages. Styled PS1 (matching
-  `silicon`'s prompt, adapted for `bob` + cluster hostnames), `syshelp`
-  command, markdown reference doc deferred to stable testing phase after SSH
-  verified across all nodes. `git` MUST be included for on-device
-  config pulls.
-- **FR-015**: Each cluster MUST show custom MOTD on SSH login, including
-  cluster name + hostname. HLC nodes MUST show ASCII art splash
-  matching existing Debian MOTD style (ASCII "HLC" banner, Bob Ross
-  quote). ecto-1 stub MUST use generic hostname-only banner placeholder.
-  MOTD MUST be parameterized NixOS module, not static file.
-- **FR-016**: Standard shell utils module MUST be implemented first for HLC
-  nodes, then generalized for desktop + future cluster reuse.
+#### Upstream and image baseline
+
+- **FR-001**: All RPi NixOS configuration MUST use the `nvmd` fork of `nixos-raspberrypi` (`https://github.com/nvmd/nixos-raspberrypi`) as the upstream source of truth, replacing the archived `nix-community/raspberry-pi-nix` currently on `main`.
+- **FR-002**: The repo MUST produce a bootable SD image, built on `gibson`, that boots both Raspberry Pi 4 and Raspberry Pi 5 hardware. The image MUST contain only: `bob` user with operator-supplied authorized SSH key, network configuration sufficient to reach DHCP on the HLC VLAN, and a small set of recovery utilities (`mdadm`, `parted`, `lsblk`, a basic editor, `git`, `curl`).
+- **FR-003**: The SD bootstrap configuration MUST be physically separated in the repo from the per-host post-provisioning configuration, so that bootstrapping cannot accidentally pull in (or be broken by) per-host service modules.
+- **FR-004**: The image build workflow MUST surface a documented mechanism (e.g. `--rebuild`) for forcing a clean rebuild. Default behavior of `make flash-image` MUST never produce a stale image; if the build cache cannot be safely reused, the build MUST rebuild rather than silently flash an old artifact.
+
+#### Repository structure and per-host configuration
+
+- **FR-005**: The repository MUST be structured in three layered scopes plus per-node configuration:
+  - generic-server / generic-cluster scope (modules reusable by any future cluster, e.g. ecto-1);
+  - HLC-cluster scope (HLC-specific shared configuration);
+  - device scope (rpi4 vs. rpi5 hardware modules);
+  - per-host scope (`hosts/<hostname>/`) containing only what is genuinely node-specific.
+- **FR-006**: Top-level per-host `flake.nix` entries MUST include only minimal inclusions (per-host `configuration.nix`, cluster-specific configuration, device-specific configuration); deeper modules MUST be imported from within the appropriate scope-level module rather than enumerated at the host level.
+- **FR-007**: Per-host configuration MUST evaluate via `nixos-rebuild dry-run --flake .#<host>` from a clean checkout for all 9 in-scope hosts (`hlc-401`, `hlc-501..508`).
+- **FR-008**: Adding a new host to the repo MUST require at most two edits: a new `hosts/<hostname>/` directory and a corresponding `flake.nix` `nixosConfigurations` entry. No edits to existing per-host configurations or shared modules MUST be required.
+- **FR-009**: All 12 cluster nodes (`hlc-401..404` Pi 4 control-plane class, `hlc-501..508` Pi 5 worker class) MUST have evaluable per-host configuration in this repo and MUST succeed `nixos-rebuild dry-run --flake .#<host>` from a clean checkout. The 3 deferred Pi 4 nodes (`hlc-402..404`) MUST NOT be physically provisioned in this spec — they exist as configuration only, validating the layered structure at full target scale and leaving the follow-on cutover spec a pure provisioning task.
+
+#### Persistent storage and provisioning
+
+- **FR-010**: After provisioning via `nixos-anywhere`/`disko`, each in-scope node MUST have:
+  - `/boot` on the SD card;
+  - `/` on a 2-disk USB-3 mdadm RAID1 mirror;
+  - `/srv/usb` exposed for storage workloads (sourced from the same USB RAID);
+  - `/srv/ssd` on the 1 TB NVMe (Pi 5 nodes only; Pi 4 nodes do not mount this path and MUST NOT fail because of its absence).
+- **FR-011**: The boot order MUST prefer the USB array when healthy and fall back to the SD-card recovery environment when the USB array is absent or unbootable. Recovery from SD MUST be possible without operator intervention beyond removing/replacing USB drives.
+- **FR-012**: The provisioning workflow (`nixos-anywhere` invocation + `disko` schema) MUST be invokable from `gibson` against a SD-baseline node. Operator MAY also invoke it on the node itself; both paths MUST be documented.
+- **FR-013**: Provisioning MUST be re-runnable. Re-running on an already-provisioned node MUST either be idempotent or refuse with a documented message; it MUST NOT silently corrupt the existing array or filesystem.
+- **FR-014**: Filesystem choices for `/`, `/srv/usb`, and `/srv/ssd` MUST be selected for their use case (durability for `/`, throughput-friendly for `/srv/ssd`) and documented in the plan; this spec does not pin specific filesystems.
+
+#### Operator UX (shell, MOTD, toolbox, home-manager)
+
+- **FR-015**: All NixOS hosts (cluster nodes and `silicon`) MUST share a single sysadmin toolbox module. Each package in the module MUST carry an inline comment describing its purpose; the module MUST be the sole source of these tools across the fleet.
+- **FR-016**: Bash MUST be the canonical shell. The bash environment MUST be shared across all NixOS hosts; the styled PS1 MUST visibly differ when the session is local vs. remote (mirroring `silicon`'s existing behavior).
+- **FR-017**: A stylized HLC-themed PS1 MUST be defined for cluster nodes, distinct from silicon's `////` motif. The PS1 MUST incorporate a small "happy little cloud" glyph or motif (e.g. an ASCII cloud such as `(~)` or a Unicode cloud where terminal support permits) alongside the username and hostname, and MUST visibly differ between local and remote sessions in the same way silicon's PS1 does today. The exact glyph and color are finalized during planning, but the spec commits to "HLC-themed motif," not a silicon reuse.
+- **FR-018**: Each cluster node MUST display a dynamic MOTD on SSH login matching the exact text in `post-mortem-26-04-29.md` (HLC ASCII banner, `Cluster node: <fqdn>`, Bob Ross quote). The hostname MUST be interpolated from the system; the rest is static. The MOTD MUST be implemented as a parameterized NixOS module so future clusters can override the banner.
+- **FR-019**: Home-manager configuration MUST be modularized so that cross-cutting defaults (e.g., neovim, git, basic dotfiles) are shared between server users (`bob`) and workstation users (`eaglerock`), while workstation-only modules (i3, polybar, etc.) remain workstation-only.
+- **FR-020**: All cluster nodes MUST be reachable via SSH as `bob` using the operator's SSH key. Password authentication MUST be off post-provisioning. For this spec, `bob`'s authorized key MAY be hard-coded in a NixOS module; secrets management (e.g., `sops-nix`) is out of scope.
+
+#### Kubernetes prerequisites
+
+- **FR-021**: Each in-scope node MUST have k3s, container runtime dependencies, `k9s`, and a `k` alias for `kubectl` installed at the OS level.
+- **FR-022**: Kernel modules and sysctl settings required by k3s (per upstream documentation) MUST be enabled on every in-scope node.
+- **FR-023**: This spec MUST NOT join, configure, or run a k3s cluster. Cluster bootstrap, server election, agent discovery, token distribution, and workload management are explicitly the scope of a follow-on spec.
+
+#### Operator workflow (Makefile / equivalent)
+
+- **FR-024**: The operator workflow MUST expose, at minimum, the following targets (Makefile or equivalent): `flash-image` (build + write SD image), `smoke-test` (verify a freshly flashed node is reachable), and a provisioning target that wraps `nixos-anywhere` for a named host. SSH-login convenience targets are out of scope; operators connect via `ssh bob@<hostname>`.
 
 ### Key Entities
 
-- **Cluster Node**: Physical Pi w/ hostname, role (server/agent), IP, MAC,
-  age public key derived from SSH host key.
-- **NixOS Configuration**: Declarative host config = shared modules +
-  host-specific overrides; lives under `hosts/<hostname>/`.
-- **Cluster Secret**: Encrypted value (k3s token) in `secrets/hlc.yaml`;
-  decryptable by admin age key + all 12 node host keys.
-- **SD Image**: Bootable NixOS disk image flashed to MicroSD; provides firmware,
-  kernel, initramfs; not for persistent state.
-- **USB RAID Pair**: Two USB 3.2 drives per node = mdadm RAID1; holds
-  root fs for durability.
-- **NVMe Volume**: 1TB NVMe per Pi5; Longhorn PV storage only, not root.
+- **Cluster node**: A physical Pi with hostname (`hlc-401`, `hlc-501..508`), Pi family (rpi4 or rpi5), IP, MAC, role tag.
+- **SD bootstrap image**: A bootable SD-card image whose only purpose is to bring a Pi to a reachable state for `nixos-anywhere` and to serve as a recovery environment if the USB array fails.
+- **Per-host NixOS configuration**: The full configuration applied after provisioning; lives at `hosts/<hostname>/` and pulls from cluster, device, and operator-environment scopes.
+- **USB RAID pair**: Two USB-3 drives configured as mdadm RAID1; root filesystem and `/srv/usb` source.
+- **NVMe volume**: 1 TB NVMe per Pi 5; mounted at `/srv/ssd`.
+- **Toolbox module**: Single shared NixOS module installing the operator's CLI utility set across all NixOS hosts.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: All 12 nodes provisionable from clean git checkout in under 4
-  hours operator wall-clock (excluding SD flash time).
-- **SC-002**: `kubectl get nodes` show all 12 Ready within 15 min
-  of last node provisioned.
-- **SC-003**: Single node failure leave cluster fully operational; remaining
-  11 nodes serve workloads, no intervention.
-- **SC-004**: Adding new host need at most 2 new files (host config +
-  optional hw module), no edit to existing files.
-- **SC-005**: Full cluster rolling update done without dropping
-  below 2 healthy server nodes (etcd quorum preserved).
-- **SC-006**: All cluster secrets unreadable in plaintext in git;
-  decryption need admin private key or node SSH host key.
-- **SC-007**: `nixos-rebuild dry-run` for any host succeed from clean checkout
-  with no network beyond configured binary caches.
-
-## Clarifications
-
-### Session 2026-04-26 (Round 4)
-
-- Q: What baseline should shell module provide for MVP testing after PS1/kitty issues found? → A: Basic — default bash prompt, standard tool packages (htop, git, jq, tmux, ripgrep, etc.), no custom PS1 styling. PS1 styling, syshelp, custom bashrc deferred to stable testing phase after SSH verified.
-
-### Session 2026-04-26 (Round 3)
-
-- Q: Which shell canonical for cluster nodes? → A: Bash only; zsh out of scope.
-- Q: Does ecto-1 stub need dry-run validation for MVP? → A: No. Spec structure must support future ecto-1 inclusion; no stub files or dry-run required for MVP.
-- Q: Does SC-004 ("no changes to existing files") conflict with flake.nix wiring? → A: Accepted exception. Host config file + flake.nix entry is required pattern, satisfies SC-004 intent.
-
-### Session 2026-04-26 (Round 2)
-
-- Q: What initial state target Pi need before nixos-anywhere? → A: OS running w/ SSH; baseline SD card as start point.
-- Q: Password prompts acceptable in unattended provisioning? → A: Yes, if documented as workarounds; preferred path keyless.
-- Q: Sequence for bob user + SSH keys? → A: bob + SSH keys must be set up by nixos-anywhere provisioning; this is the requirement, not prior setup.
-- Q: NVMe disk model + capacity? → A: Corsair MP600 Micro 1TB (already bought); hard requirement.
-- Q: NVMe partitioning — full device or partition? → A: One partition min for Longhorn; others may be reserved for future use.
-- Q: Definition of "lightweight workloads" on Pi4 control plane? → A: CPU/memory limited by Pi4 hw; Pi4 is constraint vs Pi5.
-- Q: RAID1 redundancy — what entail? → A: RAID1 must be verified before prod use; monitoring/alerting deferred to polishing phase.
-- Q: Agent discovery mechanism (VIP, DNS, hardcoded IP)? → A: Deferred; pending arch deliberation.
-- Q: bob SSH key provisioning method? → A: Hardcoded in NixOS module for MVP; sops-nix migration later.
-- Q: encrypt-secret target input/output spec? → A: Deferred; existence required for MVP, details wait.
-
-### Session 2026-04-26 (Round 1)
-
-- Q: Primary update mechanism for cluster nodes, on-device rebuild supported? → A: Both — workstation push via `nixos-rebuild --target-host` primary; on-device `git pull` + `nixos-rebuild switch` supported fallback for debug/bootstrap.
-- Q: Shell prompt (PS1) for cluster nodes? → A: Match `silicon`'s styled prompt, adapted for `bob` + cluster hostnames.
-- Q: Makefile include SSH login convenience targets? → A: No — Makefile covers build/provision/update only; SSH direct via `ssh bob@<hostname>`.
-
-### Session 2026-04-25
-
-- Q: Migration strategy for existing 12-node Debian cluster? → A: Parallel cluster — stand up NixOS nodes alongside Debian, migrate workloads, decommission old. Must include plan for DNS cutover + Unifi router/switch reconfig (DHCP reservations, VLANs, firewall rules) to avoid downtime during transition.
-- Q: Standard shell env (users, MOTD, shell utils, sysadmin tooling) in this spec? → A: Yes, first-class requirements. HLC cluster first, then generalize for other systems (gaming/ecto-1).
-- Q: Pi4 workers replaced by Pi5s or kept alongside? → A: Replace — all 8 Pi4 workers (hlc-301–308) decommissioned. 8 new Pi5s (hlc-501–508) w/ NVMe replace them. Cluster stays 12: 4 Pi4 control plane (hlc-401–404, embedded etcd + light workloads) + 8 Pi5 workers (hlc-501–508, NVMe/Longhorn storage).
-- Q: Form for sysadmin tool reference? → A: Both — shell command (e.g. `syshelp`) printing categorized colorized list of installed utils w/ one-line descriptions, plus markdown doc in repo for onboarding.
-- Q: Theme/branding for ecto-1 stub MOTD? → A: Generic placeholder — simple hostname banner, no theme until ecto-1 implemented.
+- **SC-001**: Starting from a clean repo checkout on gibson, the operator can take a Pi 5 from "blank SD card" to "SSH-reachable on HLC VLAN" in under 30 minutes of operator wall-clock time (excluding raw flash time).
+- **SC-002**: All 12 cluster hosts (`hlc-401..404`, `hlc-501..508`) succeed `nixos-rebuild dry-run --flake .#<host>` from a clean checkout with no manual edits, even though only the 9 in-scope hosts (`hlc-401`, `hlc-501..508`) are physically provisioned by this spec.
+- **SC-003**: Adding a new in-scope host requires no more than 2 file changes (new `hosts/<hostname>/` directory plus a flake entry).
+- **SC-004**: Both Pi 4 (`hlc-401`) and Pi 5 (`hlc-501..508`) hardware boot and provision with the same operator workflow; the Pi family is selected by per-host configuration, not by switching tools.
+- **SC-005**: A provisioned node whose USB drives are removed boots from the SD recovery environment with `mdadm` and other recovery tools available, without operator intervention beyond a power cycle.
+- **SC-006**: An SSH login as `bob` to any cluster node lands in a styled bash session with the HLC MOTD and the full toolbox on `$PATH`. An SSH login as `eaglerock@silicon` lands in the same toolbox without the HLC MOTD.
+- **SC-007**: On every in-scope node, `k3s --version`, `k9s --version`, and `k version --client` succeed; the system has all kernel/sysctl prerequisites k3s requires; no cluster state exists.
+- **SC-008**: The image build workflow does not produce a stale image: a configuration change to the SD bootstrap source is reflected in the next flashed card without the operator needing to debug a caching layer.
 
 ## Assumptions
 
-- Operator workstation (gibson, Ryzen 9 5950X, NixOS) is build machine;
-  all cross-compile + image builds run there.
-- Network infra (Unifi, DHCP at 10.23.50.x subnet) already in
-  place, will get static DHCP reservations per PREP.md plan.
-- Existing Debian HLC cluster stays running during NixOS provisioning.
-  New NixOS nodes use separate IPs/hostnames initially; DNS + DHCP
-  cut over per-node once validated. Migration runbook covering DNS, DHCP, Unifi
-  switch port config in scope for planning.
-- `raspberry-pi-nix` flake input (or equivalent) provides working aarch64-linux
-  NixOS images for both RPi 4 + RPi 5; no custom kernel patches in scope.
-- Mobile/GUI desktop env config for `silicon` (operator laptop/desktop)
-  out of scope here; repo already manages silicon.
-- ecto-1 cluster impl out of scope; only stubs required.
-- ArgoCD bootstrap = one-time manual `kubectl apply`; subsequent mgmt
-  fully GitOps.
-- On-device `nixos-rebuild switch` supported fallback path: operator
-  can `git clone/pull` repo directly on node + rebuild local. Secondary
-  to workstation-push (`update-node` Makefile target); for
-  debug or bootstrap; Pi build times + RAM make
-  it impractical for routine cluster-wide updates.
-- Longhorn NixOS compat issue (glibc path assumptions) resolved by
-  substituting `ghcr.io/duckfullstop/nixos-longhorn-manager` via Helm values.
-- k3s token chosen before provisioning node 1; no change during
-  cluster lifetime without full reset.
-- Kitty terminal (TERM=xterm-kitty) not in default NixOS terminfo on
-  nodes; operators using kitty must install kitty terminfo on nodes or connect
-  with `TERM=xterm-256color`. Known limitation, not Phase 1 bug.
-- All Pi5 NVMe drives (Corsair MP600 Micro 1TB; already bought) unformatted
-  before provisioning, managed entirely by Longhorn; no pre-partitioning
-  needed from operator.
+- The operator workstation is `gibson` (Ryzen, NixOS); all cross-compile and image builds run there. `silicon` is the operator laptop and is not a build host.
+- The HLC VLAN (`10.23.50.0/24`) and Unifi infrastructure (Dream Machine SE, Switch Pro 48, PiHole DNS) are already in place per the network section of the post-mortem; static DHCP reservations and DNS entries for in-scope hosts will be added as needed.
+- Hardware is already on hand and physically installed: 1× Raspberry Pi 4 (`hlc-401`), 8× Raspberry Pi 5 (`hlc-501..508`), 2× 64 GB USB-3 drives per node, 1× 1 TB NVMe per Pi 5, official heatsink+fan on Pi 5s, heatsinks on Pi 4s.
+- The `nvmd/nixos-raspberrypi` `main` branch is the recommended consumption point per its README; the repo's `develop` branch is consulted for documentation but not pinned.
+- The existing Debian k3s cluster on `hlc-301..308` and `hlc-401..404` is allowed to degrade as `hlc-401` is rebuilt onto NixOS; full migration of workloads off the Debian cluster is the responsibility of a follow-on spec.
+- The existing `silicon` configuration will be refactored only as needed to share modules with cluster nodes (toolbox, home-manager defaults). Workstation-specific modules (i3, polybar, etc.) remain workstation-only.
+- Secrets management beyond hard-coding `bob`'s SSH key in a NixOS module is out of scope; `sops-nix` (or equivalent) is a follow-on concern.
+- ecto-1 cluster support is not required as concrete artifacts; the layered repo structure must simply be such that ecto-1 specific configuration could be added later by adding a new cluster scope module, without touching HLC-specific or generic-server-cluster modules.
+- Cluster bootstrap, k3s server election, agent discovery, token distribution, ArgoCD, Longhorn, and workload migration are all explicitly out of scope. This spec stops at "9 nodes are running NixOS with k3s prerequisites in place."
+- The Constitution's safety rules apply: changes are dry-run before apply; provisioning workflows are tested on a single node before being run against the rest; the operator is the source of truth on what the hardware is doing, and disagreements are investigated, not assumed away.
+
+## Out of Scope
+
+- Joining, configuring, or running a k3s cluster (servers, agents, tokens, embedded etcd, agent discovery).
+- ArgoCD, Helm chart deployment, Longhorn, cert-manager, ingress, or any application workload.
+- Migration of workloads off the existing Debian cluster, and decommissioning of `hlc-301..308`.
+- Provisioning `hlc-402`, `hlc-403`, `hlc-404` onto NixOS (handled in the follow-on cutover spec).
+- ecto-1 cluster configuration (only structural readiness is required).
+- Network/VLAN reorganization (e.g., the planned move from VLAN 1 to VLAN 42 as the primary network).
+- Secrets management beyond hard-coded SSH keys in NixOS modules.
+- Monitoring/alerting (Prometheus/Grafana) for the cluster or for RAID health.
+
+## Clarifications
+
+### Session 2026-04-29
+
+- Q1: k3s service state on provisioned nodes? → A: Enabled but stopped. Service unit installed and enabled; no cluster configuration or token on disk; follow-on spec drops config and triggers start. Resolved in User Story 5 acceptance scenario 2.
+- Q2: Do the deferred Pi 4 nodes (`hlc-402..404`) appear in the repo? → A: Yes, as fully evaluable per-host configurations. All 12 hosts must succeed `nixos-rebuild dry-run` from a clean checkout. Only the 9 in-scope hosts are physically provisioned; the cutover spec provisions the deferred 3. Resolved in FR-009 and SC-002.
+- Q3: HLC PS1 design — silicon reuse or HLC-themed? → A: HLC-themed, "happy little cloud" motif (small ASCII or Unicode cloud glyph) alongside username/hostname; visibly distinct local vs. remote, mirroring silicon's local/remote behavior. Exact glyph and color finalized during planning. Resolved in FR-017.
