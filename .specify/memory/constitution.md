@@ -1,22 +1,26 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.2.0 → 1.3.0
-Bump rationale: MINOR — new principle added (VIII. Human-AI Collaboration
-Protocol) codifying single-stakeholder model, debug-session conduct, and
-epistemic honesty after a debug session went off-rails on assumed-wrong
-operator data. No existing principles removed or redefined.
+Version change: 1.3.0 → 1.3.1
+Bump rationale: PATCH — clarification of Principle IV's canary requirement
+to explicitly permit a manual operator-driven canary procedure
+(update-node → smoke-test → manual rollback on fail) as an equivalent path
+to automated single-command canary, alongside the existing automated path.
+Wording change only; intent unchanged (single-node canary + smoke-test
+gate before fleet roll remains mandatory). Safety & Change Management gate
+sequence updated to mirror the principle's two acceptable paths.
 
-Modified principles: none
+Modified principles:
+  - IV. Safety-First Changes — canary requirement reworded to admit two
+    explicit paths: (a) automated single-command canary with auto-rollback,
+    or (b) manual operator-driven sequence (update-node → smoke-test →
+    manual rollback on fail). Both satisfy the principle.
 
-Added principles:
-  - VIII. Human-AI Collaboration Protocol (NEW) — single technical stakeholder
-    (the SRE/operator); debug sessions MUST treat operator-supplied data as
-    authoritative until explicitly questioned and confirmed; AI MUST surface
-    uncertainty rather than mask it.
+Modified sections:
+  - Safety & Change Management — gate #4 rewritten to mirror the two
+    acceptable canary paths.
 
-Modified sections: none
-
+Added principles: none
 Removed sections: none
 
 Templates checked:
@@ -26,6 +30,11 @@ Templates checked:
   - .specify/templates/checklist-template.md ✅ aligned (no principle refs)
 
 Deferred TODOs: none
+
+Prior version sync impact (retained for history):
+  Version change: 1.2.0 → 1.3.0
+  Bump rationale: MINOR — new principle added (VIII. Human-AI Collaboration
+  Protocol).
 -->
 
 # nix-config Constitution
@@ -72,17 +81,33 @@ tested with `nixos-rebuild build-vm` when feasible.
 
 **Canary requirement (cluster-transition phase, until prior art is fully
 reintegrated)**: Any change that touches a cluster host's runtime state MUST
-be deployed first to a single canary node, validated by an automated
-post-deploy smoke test (reachability + interactive-PTY ssh + sudo round-trip),
-and only then rolled to remaining nodes. The canary deploy MUST auto-rollback
-on smoke-test failure. SD-card reflash, local on-node `nixos-rebuild switch`,
-and remote `nixos-rebuild switch --target-host` are all valid update paths;
-the smoke-test gate applies to all three.
+be deployed first to a single canary node, validated by a post-deploy smoke
+test (reachability + interactive-PTY ssh + sudo round-trip), and only then
+rolled to remaining nodes. SD-card reflash, local on-node `nixos-rebuild
+switch`, and remote `nixos-rebuild switch --target-host` are all valid update
+paths; the smoke-test gate applies to all three.
+
+Two operator paths satisfy this requirement; either is acceptable so long as
+the canary + smoke-test gate is honored before any fleet roll:
+
+1. **Automated canary** — a single command performs switch + smoke-test +
+   auto-rollback on smoke-test failure (e.g. a `make canary` target). When
+   available, this is the preferred path.
+2. **Manual canary** — operator runs `make update-node HOST=<canary>`, then
+   `make smoke-test HOST=<canary>`, then on smoke-test failure runs `make
+   rollback HOST=<canary>` explicitly. Only after smoke-test green does the
+   operator proceed to remaining nodes.
+
+The manual path MUST NOT be used to bypass smoke-test failures: a red
+smoke-test always blocks the fleet roll until either the change is rolled
+back or the failure is diagnosed and the smoke-test passes on a follow-up
+deploy.
 
 **Refinement-stage relaxation**: Once the cluster is fully automated and the
 prior-art bug surface is closed, the canary requirement MAY be replaced by
 equivalent automation (CI gates, declarative rollout policy in ArgoCD or
-similar). Until that automation exists, canary is mandatory.
+similar). Until that automation exists, the canary + smoke-test gate is
+mandatory in one of the two forms above.
 
 No skipping dry-run "just this once."
 
@@ -245,10 +270,15 @@ host-correct commands and are the documented interface (Principle VII):
    but-build-fails errors that dry-run misses
 3. `make build-vm HOST=<host>` — required for boot/kernel/hardware changes
    when feasible
-4. **`make canary HOST=<host> IP=<ip>`** — switch on a single node;
-   auto-rollback on smoke-test failure (Principle IV)
+4. **Canary on a single node** — one of:
+   - **Automated**: `make canary HOST=<host> IP=<ip>` (switch + smoke-test
+     + auto-rollback on smoke-test fail) — preferred when target exists.
+   - **Manual**: `make update-node HOST=<host>` then `make smoke-test
+     HOST=<host>`; on smoke-test fail run `make rollback HOST=<host>`
+     explicitly. Both paths satisfy Principle IV.
 5. **`make smoke-test HOST=<host>`** — reachability + interactive-PTY ssh
-   + sudo round-trip
+   + sudo round-trip (already executed inside gate #4 in either path; listed
+   separately because gates #6 below run it again per node)
 6. Roll to remaining work-set nodes serially; smoke-test after each
 7. Tag commit at each phase exit gate for `git bisect` recovery
 
@@ -311,4 +341,4 @@ principles before declaring work complete. Pull requests that introduce
 new workarounds MUST include the corresponding ledger entry in the same
 commit (or earlier in the branch history).
 
-**Version**: 1.3.0 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-04-28
+**Version**: 1.3.1 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-04-29

@@ -48,14 +48,14 @@ Bring 9 Raspberry Pis (`hlc-401` Pi 4 + `hlc-501..508` Pi 5) onto NixOS 25.11 us
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.* Constitution v1.3.0.
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.* Constitution v1.3.1.
 
 | Principle | Status | Notes |
 |-----------|--------|-------|
 | I. Declarative Configuration | **Pass** | All host state expressed in NixOS modules; no imperative provisioning beyond the SD flash and the one-shot `nixos-anywhere` install (which itself runs declarative config). |
 | II. Reproducibility via Flakes | **Pass** | All inputs locked in `flake.lock`. Upstream swap to `nvmd/nixos-raspberrypi` will pin a specific revision (chosen in Phase 0). |
 | III. Modular Design | **Pass with active deferral** | Phase A inline-host workaround W-001 still open. New work done in this spec respects the W-001 exit plan: shared modules reintroduced one at a time via canary. No new monolithic module created. |
-| IV. Safety-First Changes | **Pass** | Every cluster-touching change runs through `make dry-run` → `make build` → `make update-node` (single host first) → `make smoke-test` → on failure `make rollback`. Automated single-command canary (switch + smoke-test + auto-rollback) is the subject of a follow-on spec; within this spec the operator manually canaries by running `make update-node` on one node, verifying with `make smoke-test`, and only then continuing to the next node. NixOS boot-generation rollback is always available. |
+| IV. Safety-First Changes | **Pass** | Every cluster-touching change runs through `make dry-run` → `make build` → `make update-node` (single host first) → `make smoke-test` → on failure `make rollback`. This is the **manual canary** path explicitly admitted by Constitution IV (v1.3.1) alongside the automated single-command canary form, which is deferred to a follow-on cluster-operations automation spec. Both paths honor the canary + smoke-test gate before any fleet roll; the manual path MUST NOT be used to bypass a red smoke-test. NixOS boot-generation rollback is always available. |
 | V. Pragmatic Phasing | **Pass** | W-002 (passwordless wheel) and W-003 (`PasswordAuthentication = true`) ledger entries cover the known deviations; both have target phases (W-002: future secrets-mgmt feature spec; W-003: Phase 5 SSH-hardening sub-step). No new workarounds introduced by this plan. |
 | VI. Minimal & Explicit Footprint | **Pass** | Toolbox module package list is alphabetical with inline rationale comments per package (FR-015). No speculative modules; ecto-1 is structural readiness only, not stub artifacts. Unfree allowlist unchanged. |
 | VII. Standardized Build & Test Workflow | **Pass** | Existing Makefile already exposes `dry-run`, `build`, `smoke-test`, `canary`, `rollback`, `build-image`, `flash-image`, `update-node`. Plan extends with the provisioning workflow target (`provision`) and updates `build-image` to honor the `--rebuild` story (FR-004). All scripted/agent invocations route through Makefile per Principle VII. |
@@ -137,14 +137,16 @@ modules/
 │   └── operator.nix            # Existing; bob (cluster) + eaglerock (workstation) factored
 │                               # so each is parameterizable; W-002/W-003 sites annotated.
 ├── home/
-│   ├── base.nix                # Cross-cutting home-manager defaults shared between
-│   │                           # bob and eaglerock (e.g. neovim baseline, git config).
+│   ├── base.nix                # Existing on main; refactored in Phase 5/US4 to be the
+│   │                           # cross-cutting home-manager defaults shared between bob
+│   │                           # and eaglerock (e.g. neovim baseline, git config).
 │   ├── server.nix              # NEW: server-only home-manager (no GUI assumptions).
-│   ├── workstation.nix         # NEW: workstation-only (i3/polybar/etc.) — silicon imports
-│   │                           # this; cluster nodes do not.
+│   ├── workstation.nix         # NEW: workstation-only (i3/polybar/dunst/dev/etc.) —
+│   │                           # silicon imports this; cluster nodes do not.
 │   ├── colors.nix              # Existing.
-│   ├── dev.nix                 # Existing.
-│   ├── i3.nix                  # Existing; pulled in by workstation.nix only.
+│   ├── dev.nix                 # Existing; pulled in by workstation.nix only.
+│   ├── dunst.nix               # Existing; pulled in by workstation.nix only.
+│   ├── i3.nix                  # Existing; same.
 │   ├── polybar.nix             # Existing; same.
 │   ├── ui.nix                  # Existing.
 │   └── vscode.nix              # Existing.
@@ -169,15 +171,15 @@ docs/
                                 # per the convention `hlc-VNN` → `10.23.50.<octet>`,
                                 # documented in contracts/makefile-targets.md.)
 ├── syshelp-reference.md        # Existing toolbox markdown reference.
-└── provisioning-runbook.md     # NEW: human-facing runbook mirroring quickstart.md.
-
-secrets/                        # NEW (placeholder dir, no live secrets in this spec):
-└── ssh-keys/                   # bob's authorized public keys, per-cluster (W-002 pre-sops).
+└── operator-runbook.md         # NEW (Phase 8): general post-001 operator runbook,
+                                # extracted from quickstart.md so quickstart can stay
+                                # spec-scoped while the runbook lives on past spec close.
 
 assets/                         # Existing wallpapers/images; unchanged.
 ```
 
 **Structure Decision**:
+
 - **Three-scope module layering** (`cluster/common.nix` → `cluster/hlc/` → `hosts/<host>/`) plus device hardware (`hardware/rpi{4,5}.nix`) realizes spec FR-005..FR-008.
 - **`modules/sd/` separated from `modules/cluster/`** so the bootstrap image cannot accidentally import per-host service config (FR-003).
 - **`disko/` at the repo root** (not under `modules/`) because its schemas are consumed by `nixos-anywhere` orchestration as well as by per-host configurations; keeping them adjacent to the per-host configs makes the relationship visible.
@@ -209,13 +211,13 @@ These survive Phase 0 unchanged:
 - `.specify/` — entire directory: constitution, templates, scripts, extensions, integrations, memory, workflows, `feature.json`, `init-options.json`, `integration.json`.
 - `.claude/` — entire directory: agents, agent-memory.
 - `CLAUDE.md`, `CLAUDE.original.md`.
-- `specs/001-nixos-rpi-cluster/` — entire spec directory: `spec.md`, this `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, `post-mortem-26-04-29.md`, `remote-ps1.txt`, `checklists/requirements.md`, `tasks.md` (the 119-task list, fresh from `/speckit-tasks` post-clarify).
+- `specs/001-nixos-rpi-cluster/` — entire spec directory: `spec.md`, this `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, `post-mortem-26-04-29.md`, `remote-ps1.txt`, `checklists/requirements.md`, `tasks.md` (the 122-task list, fresh from `/speckit-tasks` post-clarify).
 - `WORKAROUNDS.md` — entries W-001..W-003 stay (already updated to reference Phase 5).
 - `scripts/smoke-test.sh` — operator-authored helper; kept.
 - `.gitignore` — kept; if `hlc-output.txt` / `lshw-output.txt` are not already ignored, they get added.
 - `docs/syshelp-reference.md` — kept (documentation; revisited in Phase 5 when the toolbox module lands; retire then if no longer accurate).
 - `docs/workflow.md` — kept (created during plan/analyze cycle; captures spec-kit workflow, debug patterns, planned hooks).
-- `specs/001-nixos-rpi-cluster/tasks.md` — kept. Generated post-Phase-0 assumptions; the 119-task list is the source of truth from Phase 1 onward. Do **not** delete it during the reset.
+- `specs/001-nixos-rpi-cluster/tasks.md` — kept. Generated post-Phase-0 assumptions; the 122-task list is the source of truth from Phase 1 onward. Do **not** delete it during the reset.
 
 ### Revert to `main` (running code)
 

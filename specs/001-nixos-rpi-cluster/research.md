@@ -211,7 +211,7 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 **Decision**: The SD bootstrap (`modules/sd/bootstrap.nix` + `modules/sd/recovery-utils.nix`) installs:
 
-- **Recovery utilities** (`modules/sd/recovery-utils.nix`): `mdadm`, `parted`, `lsblk` (from `util-linux`), `e2fsprogs`, `xfsprogs`, `gptfdisk`, `pciutils`, `usbutils`, `dmidecode`, `vim` (basic editor), `git`, `curl`, `tmux`, `htop`, `iproute2`, `dnsutils`.
+- **Recovery utilities** (`modules/sd/recovery-utils.nix`), alphabetical order: `curl`, `dmidecode`, `dnsutils`, `e2fsprogs`, `git`, `gptfdisk`, `htop`, `iproute2`, `lsblk` (from `util-linux`), `mdadm`, `parted`, `pciutils`, `tmux`, `usbutils`, `vim` (basic editor), `xfsprogs`.
 - **Bootstrap config** (`modules/sd/bootstrap.nix`): `bob` user with operator's authorized SSH key, sshd with key-only (PasswordAuthentication false at this layer; the W-003 deferral applies to the per-host config, not the bootstrap), DHCP on the cluster VLAN, hostname placeholder (gets overwritten by per-host config after provisioning), no per-cluster service modules.
 
 **Rationale**:
