@@ -1,283 +1,321 @@
-# Research: NixOS RPi Cluster Foundation
+# Phase 0 Research: NixOS RPi Cluster Foundation (v2)
 
-**Feature**: 001-nixos-rpi-cluster | **Date**: 2026-04-25
+**Date**: 2026-04-29
+**Spec**: [spec.md](./spec.md)
+**Plan**: [plan.md](./plan.md)
 
-## R-001: raspberry-pi-nix
+This document resolves the technical unknowns surfaced by the spec and the plan's Technical Context, and records the rationale for each decision so it survives future revisitation.
 
-**Decision**: Use with caution — archived March 2025, may need fork for NixOS 25.11.
+---
 
-**Rationale**: Flake imports `raspberry-pi-nix`, existing `hlc-501` config works. Module supports `bcm2711` (Pi4) and `bcm2712` (Pi5), exports `nixosModules.raspberry-pi` and `nixosModules.sd-image`, handles firmware/kernel per board. Repo archived 2025-03-23, no named successor.
+## R-001 — Upstream Pi NixOS source: which fork, which branch, which revision
+
+**Decision**: Use `github:nvmd/nixos-raspberrypi`, branch `main`, pinned to a specific commit selected at flake-update time. The repo's `develop` branch is consulted for documentation only and not used as a flake input.
+
+**Rationale**:
+
+- The post-mortem identifies `nix-community/raspberry-pi-nix` (the current `flake.nix` input) as archived; ongoing Pi-5 work has moved to nvmd's fork. This is the proximate cause of the prior incident: the previous attempt fought stale upstream behavior because the upstream itself was unmaintained.
+- nvmd's `main` branch is the recommended consumption point per the project's README; `develop` is the active integration branch. Pinning `main` gives us latest-stable behavior without exposure to in-flight changes.
+- Pinning to a specific commit (rather than a moving branch ref) is required by Constitution Principle II (Reproducibility via Flakes). `nix flake update` is the supported path to advance the pin.
 
 **Alternatives considered**:
-- `nvmd/nixos-raspberrypi` — referenced in PREP.md for installer images, different project
-- `saronic-technologies/rpi-nix` — org fork, may be maintained
-- Manual kernel/firmware config — too much maintenance
 
-**Risks**:
-- No NixOS 25.11 compat testing by maintainers
-- Pi5 USB/NVMe u-boot boot non-functional (SD only)
-- 84 forks; evaluate `saronic-technologies/rpi-nix` or pin to last known-good commit
-- May need fork + maintain for cluster lifetime
+- Stay on `nix-community/raspberry-pi-nix`: rejected — archived, missing Pi 5 fixes that nvmd has merged.
+- Pin nvmd's `develop` branch: rejected — exposes us to in-flight upstream changes; conflicts with the safety-first posture of Constitution IV.
+- Use upstream NixOS `nixos-hardware` Pi 5 modules without the nvmd fork: rejected — `nixos-hardware`'s Pi 5 support is incomplete; nvmd specifically targets the gaps. We continue to use `nixos-hardware` for the generic Pi modules layered on top of nvmd.
 
-**Action items**:
-- Test current pin against NixOS 25.11 before building all 12 host configs
-- Evaluate active forks if pin breaks
-- Document chosen pin/fork in flake.nix comments
+**Open follow-ups**:
+
+- A flake-update task in `/speckit-tasks` will run `nix flake update raspberrypi-nvmd` (or whatever the input is named on swap) and record the resulting `flake.lock` revision in the commit message.
 
 ---
 
-## R-002: disko (disk layout)
+## R-002 — Mountain-glyph (`⛰`, U+26F0) presentation strategy
 
-**Decision**: Use disko — mature, mdadm RAID1 first-class.
+**Decision**: Append the Unicode variation selector `U+FE0E` (text presentation) immediately after `⛰` in the PS1 template, producing the byte sequence `⛰︎`. If a terminal still renders it as emoji (some kitty builds, some macOS Terminal versions), fall back at module-evaluation time to the ASCII triangle `▲` controlled by an `hlc.prompt.mountainGlyph` NixOS option.
 
-**Rationale**: disko has `example/mdadm.nix` and `example/boot-raid1.nix` matching our use case: separate FAT32 `/boot` + ext4 root on mdadm RAID1. Multi-device configs (SD + 2× USB) supported, no device coupling.
+**Rationale**:
+
+- `⛰` U+26F0 has a default emoji presentation in many fonts; `︎` (VARIATION SELECTOR-15) explicitly requests text presentation, which most modern terminals honor.
+- Rendering as an emoji has two side effects: variable cell width (some terminals render emoji as double-width) and color override (the terminal forces a color even when the surrounding string has none, breaking FR-017's "no color in remote form" rule).
+- A NixOS option (`hlc.prompt.mountainGlyph`) makes the fallback declarative: if a particular operator's terminal does not honor `︎`, they can flip the option for their own host without forking the module.
 
 **Alternatives considered**:
-- Manual partitioning scripts — imperative, violates Constitution Principle I
-- NixOS `fileSystems` only — no initial partitioning for nixos-anywhere
 
-**Risks**:
-- aarch64 test coverage thinner than x86_64 in examples
-- SD FAT32 + USB mdadm split unusual — test before scale provisioning
-- mdadm UUID stability across reboots needs `boot.initrd.mdadmConf` — verify disko generates
-- USB device paths (`/dev/sda`, `/dev/sdb`) may not be stable — consider `by-id` paths
+- Use only ASCII (`▲`) from the start: rejected — loses the Bob Ross-mountain feel the operator chose explicitly.
+- Wrap `⛰` in escape sequences (e.g. `\e[39m⛰\e[39m`) to suppress emoji color: rejected — does not work on terminals that auto-promote to emoji presentation; also violates FR-017 no-color rule for the remote form.
+- Use a different mountain glyph (e.g. `🗻` or `▲`): rejected — `🗻` is also default-emoji; `▲` is the documented fallback, not the primary.
 
-**Action items**:
-- Write disko configs using `by-id` paths where possible
-- Test disko config on single Pi4 + Pi5 before all-node rollout
-- Verify mdadm array reassembles after reboot
+**Open follow-ups**:
+
+- Phase 5 task to validate rendering on the operator's terminals (kitty on `gibson`, default `xterm-256color` over SSH from a fresh shell, plain `TERM=xterm`).
 
 ---
 
-## R-003: nixos-anywhere (remote provisioning)
+## R-003 — k3s service unit: enabled-but-stopped pattern in NixOS
 
-**Decision**: Use nixos-anywhere with custom aarch64 kexec image.
+**Decision**: Use `services.k3s.enable = true` to install the package and create the systemd unit, then add a NixOS module setting `systemd.services.k3s.wantedBy = lib.mkForce [ ];` so the unit exists but is not pulled in by `multi-user.target`. This matches User Story 5 acceptance scenario 2: the unit is enabled (by `services.k3s.enable`) but does not start at boot. The follow-on cluster-bootstrap spec will replace `wantedBy = [ ]` with the default `[ "multi-user.target" ]` and supply server/agent configuration.
 
-**Rationale**: nixos-anywhere integrates with disko for declarative remote provisioning. aarch64-linux supported via custom kexec image.
+**Rationale**:
 
-**Command for aarch64 targets**:
-```bash
-nix run github:nix-community/nixos-anywhere -- \
-  --kexec "$(nix build --print-out-paths \
-    github:nix-community/nixos-images#packages.aarch64-linux.kexec-installer-nixos-unstable-noninteractive \
-  )/nixos-kexec-installer-noninteractive-aarch64-linux.tar.gz" \
-  --flake '.#<hostname>' \
-  root@<ip>
-```
+- `services.k3s` from upstream NixOS provides the canonical k3s integration (binary, kernel module hints, sysctl recommendations). Using a custom unit would diverge from upstream and lose those defaults.
+- `wantedBy = [ ]` is the documented NixOS idiom for "package + unit installed, never auto-started." Combined with no `services.k3s.serverAddr` / `services.k3s.tokenFile` configuration, the service has nothing to start with even if invoked manually.
+- A separate sentinel file (`/var/lib/rancher/k3s/.disabled`) would also work but adds a non-declarative artifact, which violates Principle I.
 
 **Alternatives considered**:
-- Manual `nixos-install` via SSH — imperative, error-prone at scale
-- Custom install scripts — reinventing wheel
 
-**Risks**:
-- kexec image from nixos-unstable channel (installer env only — installed env uses 25.11 stable)
-- Target Pi must run Linux with kexec (SD card NixOS image satisfies)
-- Cross-compile from x86_64 needs QEMU emulation (`boot.binfmt.emulatedSystems`) or native aarch64 builder
-- QEMU slow; consider provisioned Pi as remote builder for later deploys
+- `services.k3s.enable = false` + manual package install: rejected — loses the upstream integration (kernel modules, sysctls, sd-card-friendly defaults).
+- Run k3s in single-node mode on each box and migrate later: rejected during clarification (Q1, Option C); the spec commits to "no cluster state on disk yet."
+- Use a custom systemd unit override file: rejected — duplicates upstream's work, harder to audit, no advantage over `mkForce`.
 
-**Action items**:
-- Enable `boot.binfmt.emulatedSystems = [ "aarch64-linux" ]` on gibson (build host)
-- Pre-build kexec image once, cache locally
-- Provision hlc-401 first, optionally register as remote builder for remaining nodes
+**Open follow-ups**:
+
+- Cross-check upstream `services.k3s` for any additional `wantedBy` or `requiredBy` sets that need overriding.
 
 ---
 
-## R-004: k3s on NixOS
+## R-004 — Disko schemas: Pi 4 vs Pi 5 (USB RAID1 root, NVMe data, SD recovery)
 
-**Decision**: Use upstream NixOS `services.k3s` module — all required options exist natively.
+**Decision**: Two disko schemas — `disko/rpi4.nix` and `disko/rpi5.nix`. Both define `/boot` on the SD-card device and `/` plus `/srv/usb` on a 2-disk mdadm RAID1 across the two USB drives. `disko/rpi5.nix` additionally defines `/srv/ssd` on the NVMe device. Filesystems: ext4 for `/` (durability, journaling, well-understood recovery); ext4 for `/srv/usb` (matches `/`); xfs for `/srv/ssd` (better for large-file Longhorn workloads, though Longhorn itself is out of scope for this spec — picking xfs now keeps the option open). Device names are passed in via NixOS module arguments (`config.hlc.disko.usbDevice0`, `usbDevice1`, `nvmeDevice`) so they can be overridden per host where physical layout differs.
 
-**Rationale**: Module exposes `role`, `tokenFile`, `clusterInit`, `serverAddr`, `extraFlags`. HA embedded etcd works with `clusterInit = true` on one bootstrap server.
+**Rationale**:
 
-**Key configuration details**:
-- Use `tokenFile` (not `token`) to avoid exposing secret in nix store
-- Cgroup kernel params required for RPi: `"cgroup_memory=1" "cgroup_enable=memory" "cgroup_enable=cpuset"`
-- Firewall ports: TCP 6443 (API), 2379-2380 (etcd), 10250 (kubelet); UDP 8472 (Flannel VXLAN), 51820 (WireGuard)
-- `clusterInit` migration from sqlite to etcd one-way — plan from start
-
-**Alternatives considered**: None — `services.k3s` canonical NixOS module.
-
-**Risks**:
-- k3s systemd unit depends on `firewall.service` — ensure firewall module loads first
-- `clusterInit = true` must be set on exactly one node; multiple causes split-brain
-- `extraFlags` needed for non-default options (e.g., `--flannel-backend=wireguard-native`)
-
-**Action items**:
-- Set cgroup params in both `rpi4.nix` and `rpi5.nix`
-- Add TCP 10250 (kubelet) to firewall ports (missing from informal plan)
-- Document cluster reset procedure for token rotation
-
----
-
-## R-005: sops-nix (secrets management)
-
-**Decision**: Use `sops.age.sshKeyPaths` with single `secrets/hlc.yaml` for all 12 nodes.
-
-**Rationale**: sops-nix derives age keys from SSH host ed25519 keys at activation — no separate age key per node. Single YAML with multi-recipient encryption works for shared k3s token.
-
-**`.sops.yaml` pattern**:
-```yaml
-keys:
-  - &admin age1<admin-pubkey>
-  - &hlc401 age1<hlc-401-host-pubkey>
-  # ... all 12 nodes
-creation_rules:
-  - path_regex: secrets/hlc\.yaml$
-    key_groups:
-    - age:
-      - *admin
-      - *hlc401
-      # ... all recipients in ONE key_groups entry
-```
-
-**Critical**: Do NOT put `-` before `age:` within `key_groups` entry — triggers Shamir secret sharing requiring multiple keys to decrypt.
+- USB RAID1 mirror for `/` matches FR-010 and the durability requirement: a single USB-drive failure must not take a node down.
+- mdadm (rather than ZFS or btrfs RAID): operator's existing toolchain expectation per post-mortem; mdadm's failure modes are well-understood; both ZFS and btrfs raise complexity (kernel module licensing for ZFS; btrfs RAID1 still has known caveats on small disks).
+- ext4 for `/`: smallest blast radius. xfs on `/srv/ssd` because the NVMe is intended for high-throughput workload data later (Longhorn, databases) and xfs scales better for large files.
+- Device-name parameterization is the same pattern silicon already uses for hardware-specific values; keeps the disko schemas reusable without per-host duplication.
 
 **Alternatives considered**:
-- agenix — similar approach, less ecosystem support
-- Vault — overkill for home lab cluster
 
-**Risks**:
-- SSH host key must exist before first deploy — SD boot generates, nixos-anywhere preserves
-- `sops updatekeys` needs decryption access — admin key must always be in recipients
-- Adding node requires re-encryption: update `.sops.yaml`, run `sops updatekeys`
+- Single shared disko schema with conditionals: rejected — Pi 4 / Pi 5 differ enough (NVMe presence) that two schemas are clearer than one branchy schema.
+- ZFS for `/`: rejected for complexity (CDDL/GPL friction in NixOS, kernel-module dependency on aarch64).
+- btrfs RAID1: rejected for not-yet-mature behavior on degraded mounts.
+- ext4 across all three filesystems: acceptable fallback if xfs surprises us; flagged as a trivial revert path.
 
-**Action items**:
-- Generate admin age key on gibson before first provision
-- Collect host ed25519 pubkeys during SD first-boot phase
-- Convert host SSH keys to age pubkeys: `ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub`
+**Open follow-ups**:
+
+- Confirm NVMe device path on Pi 5 with `nvmd` kernel: typically `/dev/nvme0n1`. To be verified on `hlc-501` during Phase 4 canary.
+- Confirm USB drive device names are stable across boots (the `/dev/disk/by-id/` paths will be used in the disko schemas, not `/dev/sd*`, to avoid renumbering issues).
 
 ---
 
-## R-006: Longhorn on NixOS
+## R-005 — Boot order: USB-first, SD recovery fallback (FR-011)
 
-**Decision**: HIGH RISK — Longhorn on NixOS actively broken upstream. Plan alternatives.
+**Decision**: Two-layer approach.
 
-**Rationale**: Longhorn containers use `nsenter` to resolve binaries (`mount`, `iscsiadm`) via FHS paths missing on NixOS. `ghcr.io/duckfullstop/nixos-longhorn-manager` image targets Longhorn v1.1.0 (2021), explicitly abandoned by author. Upstream issue #2166 in "Icebox" since 2021, no fix shipped.
+1. Pi firmware EEPROM `BOOT_ORDER` set to prefer USB (`0xf14` — try USB first, then SD, repeating). The SD card itself remains a fallback boot medium. EEPROM updates are performed once per Pi during the SD baseline boot via `rpi-eeprom-config`, captured in a NixOS module `modules/hardware/rpi-eeprom.nix`.
+2. The SD card carries the bootstrap NixOS image at all times. After provisioning, the SD card's `/boot` is updated to chain into the USB array's root. If the USB array is absent (drives removed or RAID degraded beyond mount), the firmware falls back to the SD card's standalone bootstrap configuration (which has its own root inside the SD's `/`), giving the operator a recovery shell with `mdadm` available.
 
-**Required host prerequisites** (regardless of Longhorn compat):
-- `services.openiscsi.enable = true`
-- Kernel modules: `iscsi_tcp`, `dm_crypt`, `nfs`
-- `environment.systemPackages`: `nfs-utils`, `cryptsetup`
+**Rationale**:
+
+- The EEPROM `BOOT_ORDER` is the only mechanism by which Pi firmware decides what to try first; a NixOS-side bootloader cannot override what the firmware does at power-on.
+- Keeping the SD card permanently in the slot (not just for first-boot) is the only way to get a headless recovery path. The post-mortem treats this as a hard requirement.
+- The SD's bootstrap root is small and self-contained; it does not need to mirror per-host service configuration. This is the same separation FR-003 mandates for the bootstrap image.
 
 **Alternatives considered**:
-- **OpenEBS (jiva/cStor)**: Working NixOS deployments documented in community configs
-- **democratic-csi with NAS backend**: Works on NixOS, needs external NAS
-- **Rook-Ceph**: Heavy for RPi hardware, NixOS-compatible
-- **Local-path provisioner**: Simplest, no replication, ships with k3s
-- **Custom Longhorn images**: Build NixOS-patched per release — ongoing maintenance
 
-**Risks**:
-- No maintained NixOS-compat Longhorn images for 1.5+
-- Custom images = ongoing maintenance per Longhorn release
-- `allowPrivileged = true` required in k3s config regardless of storage solution
+- USB-only boot, SD removed after provisioning: rejected — no headless recovery story; matches the failure mode the post-mortem warns about.
+- Network PXE boot for recovery: rejected for complexity and added dependency on the upstream network being healthy at recovery time.
 
-**Action items**:
-- Implement `modules/k8s/longhorn.nix` with host prerequisites (kernel modules, open-iscsi)
-- Start with k3s local-path provisioner for initial cluster validation
-- Evaluate OpenEBS or custom Longhorn images as follow-up
-- Keep Longhorn prerequisites in module even if deployment uses alternative
-- Document NixOS compat issue in spec for future reference
+**Open follow-ups**:
+
+- Verify `BOOT_ORDER = 0xf14` is the right value on both Pi 4 (bcm2711) and Pi 5 (bcm2712) bootloaders; the encoding is the same but the EEPROM ages differ.
+- Decide whether the SD bootstrap config gets `nixos-rebuild` updates over time, or is treated as a frozen recovery image (operator preference; default to "frozen, only updated on flash" for simplicity).
 
 ---
 
-## R-007: Parameterized MOTD Module
+## R-006 — `make build-image` rebuild story (FR-004)
 
-**Decision**: Use `environment.etc."motd".text` with NixOS module options.
+**Decision**: Add a `REBUILD=1` make variable to `build-image`. When set, the target invokes `nix build` with `--rebuild`, which forces all derivations to be re-realized rather than fetched from cache. Default behavior (no `REBUILD` flag) uses the cache as today — fast for unchanged inputs, but FR-004 also requires that "default behavior MUST never produce a stale image." We satisfy that by gating the SD image derivation on the SD-bootstrap module's source path: any change to the bootstrap source invalidates the derivation hash and forces a real rebuild even without `--rebuild`. Operators reach for `REBUILD=1` only when they suspect a binary-cache poisoning issue or want to verify a clean build.
 
-**Rationale**: `environment.etc."motd".text` writes `/etc/motd`, SSH and PAM display on login. Nix string interpolation with `config.networking.hostName` works at eval time. No systemd service needed.
+**Rationale**:
+
+- Nix's content-addressing already invalidates the SD image derivation when its inputs change. The post-mortem's "stale image" symptom was caused by something else: `make build-image` was wired to a target whose inputs did not actually include the per-host changes the operator was making. The fix is twofold: (a) ensure the SD image's derivation closure correctly depends on the SD bootstrap source, and (b) provide an explicit `REBUILD=1` escape hatch for paranoia.
+- A blanket `--rebuild` default would burn build minutes on every invocation; that is a footgun in its own right.
 
 **Alternatives considered**:
-- `programs.bash.loginShellInit` — fires on subshells, not just login
-- Systemd service writing `/etc/motd` at boot — unnecessary complexity
-- Static file — not parameterizable
 
-**Implementation pattern**:
-```nix
-options.cluster.motd = {
-  enable = mkEnableOption "cluster MOTD";
-  clusterName = mkOption { type = types.str; };
-  asciiArt = mkOption { type = types.lines; default = ""; };
-  tagline = mkOption { type = types.str; default = ""; };
-  attribution = mkOption { type = types.str; default = ""; };
-};
-config = mkIf cfg.enable {
-  environment.etc."motd".text = ''
-    ${cfg.asciiArt}
-    Cluster node: ${config.networking.hostName}
-    ${optionalString (cfg.tagline != "") cfg.tagline}
-    ${optionalString (cfg.attribution != "") cfg.attribution}
-  '';
-};
-```
+- `--rebuild` always: rejected for cost / build time on routine invocations.
+- Hash-stamp the build output and compare against the source tree on every flash: over-engineering; the Nix derivation system already does this.
+
+**Open follow-ups**:
+
+- During Phase 2 (SD bootstrap rebuild), audit the sdImage derivation's input closure to confirm bootstrap-module changes propagate correctly; this is the actual fix for the post-mortem's stale-image bug, not the `REBUILD=1` flag.
 
 ---
 
-## R-008: Shared Shell Utilities + syshelp
+## R-007 — `nixos-anywhere` invocation pattern from gibson
 
-**Decision**: Dedicated module with `pkgs.writeShellScriptBin` for `syshelp`.
+**Decision**: Add `make provision HOST=<host> IP=<ip>` which shells to `nixos-anywhere --flake .#<host> --target-host root@<ip> --disko-mode disko`. The target Pi is reached as `root` over SSH using the SD bootstrap image's root authorized key (which is the operator's gibson public key, baked into the bootstrap image). After install, nixos-anywhere reboots the Pi into the new root; the `bob` user's authorized keys are present from the per-host config; gibson's smoke-test confirms reachability.
 
-**Rationale**: `writeShellScriptBin` puts script in Nix store, symlinks into PATH — canonical NixOS approach. Avoid `shellAliases` (don't work in scripts/non-interactive shells).
+**Rationale**:
 
-**Action items**:
-- Create `modules/shell/utilities.nix` with curated package list + syshelp script
-- Keep lean — shared by all systems; desktop/k8s tools in separate modules
-- Generate markdown reference doc alongside module
+- nixos-anywhere's `--disko-mode disko` flag delegates partitioning to the per-host disko schema (`disko/rpi4.nix` or `disko/rpi5.nix`), which is exactly the FR-010..FR-014 contract.
+- Targeting `root@<ip>` rather than `bob@<ip>` keeps the install permission story simple: nixos-anywhere needs root to repartition, and the SD bootstrap image gives root only to the gibson key for the duration of the install. Once the install reboots, the new system's `services.openssh.settings.PermitRootLogin = "no"` kicks in and the install path closes.
+- Wrapping in a Makefile target (Principle VII) is required for any agent-driven invocation; ad-hoc CLI calls are permitted only during interactive triage.
 
----
+**Alternatives considered**:
 
-## R-009: Parameterized User Module
+- Run `nixos-anywhere` directly on the Pi via `git clone` + local invoke: rejected as primary path — Pi RAM and disk are tight, and the gibson-driven path is faster and more cache-friendly. Local invoke remains a documented fallback (Assumption: "On-device `nixos-rebuild switch` supported fallback path").
+- Use `nixos-rebuild --target-host` instead of `nixos-anywhere`: rejected for first install — `--target-host` requires NixOS already on the disk; the SD bootstrap image is too small to host the full per-host config. Once provisioned, `--target-host` is the canonical update path (existing `make update-node`).
 
-**Decision**: NixOS module with `lib.mkOption` for username, wiring home-manager dynamically.
+**Open follow-ups**:
 
-**Rationale**: `users.users.${cfg.username}` works because Nix evaluates option before building attrset. Same pattern for `home-manager.users.${cfg.username}`.
-
-**Gotchas**:
-- Avoid `mkMerge`/conditional logic on username — prevents infinite recursion
-- Keep option in `options`, consume only in `config`
-- Replace inline user defs in existing host configs (e.g., `hlc-501`)
+- Confirm nixos-anywhere can drive a disko schema that targets devices identified by `/dev/disk/by-id/...`. Recent versions support this; pin a known-good version.
 
 ---
 
-## R-010: raspberry-pi-nix + nixos-hardware NixOS 25.11 Compatibility
+## R-008 — Module layering: how `cluster/common.nix` differs from `cluster/hlc/`
 
-**Finding**: Two conflicts during Phase A dry-run validation (2026-04-25).
+**Decision**: `modules/cluster/common.nix` contains anything that is true for *any* k3s-aimed cluster of Pis: the toolbox import, k3s OS-level prereqs, base sshd posture (key-only after FR-020 lands), bash baseline, MOTD module wiring with a parameterized banner. `modules/cluster/hlc/` overrides the banner, supplies the HLC operator user (`bob`), HLC-specific network configuration (DNS pointers to PiHole, FQDN convention `*.marks.dev`), and any HLC-only package additions. A future `modules/cluster/ecto/` would override the same handful of options without having to touch `cluster/common.nix`.
 
-**Issue 1 — Pi4 bootloader conflict**:
-`nixos-hardware.nixosModules.raspberry-pi-4` sets `boot.loader.generic-extlinux-compatible.enable = true`, conflicts with `raspberry-pi-nix` u-boot bootloader which requires `false`.
-**Fix**: Added `boot.loader.generic-extlinux-compatible.enable = lib.mkForce false` in `modules/hardware/rpi4.nix`.
+**Rationale**:
 
-**Issue 2 — Pi5 dtmerge option missing**:
-`hardware.raspberry-pi."5".apply-overlays-dtmerge.enable` not present at pinned `nixos-hardware` commit (`2096f3f`). Option introduced later.
-**Fix**: Removed option from `modules/hardware/rpi5.nix` for Phase A. Re-enable in Phase B when configuring NVMe/PCIe for Longhorn — flake.lock pin should be updated by then.
+- This is the spec's three-scope layering (FR-005) made concrete. The split is by override surface: anything a future cluster *might* want to change goes into the HLC layer; anything that's "what k3s on a Pi needs" stays in common.
+- Keeping `common.nix` small and option-driven (rather than service-driven) means the HLC layer is mostly setting NixOS options, not redefining services.
+- The post-mortem's structural-readiness-only stance for ecto-1 (Out of Scope) is satisfied: `common.nix` is reusable today, and `cluster/ecto/` is not required to exist as a directory until ecto-1 is actually built.
 
-**Status**: All 12 hosts pass `nixos-rebuild dry-run` after both fixes.
+**Alternatives considered**:
+
+- Two layers (cluster + host): rejected — collapses HLC-specific and generic-cluster concerns, making future ecto-1 reuse impossible without refactor.
+- Four layers (common / k8s / hlc / host): rejected — over-engineering for a single cluster; deferred until a second cluster actually exists.
+
+**Open follow-ups**:
+
+- During Phase 3, confirm that `modules/cluster/hlc/hosts.nix` (already on disk) reduces to the hostname/FQDN map plus the operator user, with everything else moved into `common.nix`.
 
 ---
 
-## R-011: SSH Hang / PS1 Garble Root Cause
+## R-009 — Home-manager modular split (FR-019)
 
-**Status**: Partially resolved (2026-04-26). SSH hang resolved; PS1 fix deferred to Phase C.
+**Decision**: Three home-manager module files: `modules/home/base.nix` (cross-cutting defaults: neovim baseline, git, bash dotfiles, shared aliases), `modules/home/server.nix` (server-only additions: tmux config tuned for headless work, kubectl/k9s aliases), and `modules/home/workstation.nix` (workstation-only: i3, polybar, dunst, ui.nix, vscode.nix, browser config). Per-user entry points (`home/bob.nix`, `home/eaglerock.nix`) compose these: bob imports base + server; eaglerock imports base + workstation. The existing `modules/home/{i3,polybar,dunst,ui,vscode}.nix` files are pulled in by `workstation.nix` and not directly by user entry points.
 
-**Original symptom (prior iteration)**: hlc-501 accepted TCP/22 and key auth but interactive shell never reached usable prompt. hlc-508 went fully offline after config revert.
+**Rationale**:
 
-**Resolution (observed 2026-04-26)**: After reflashing with images built from commit `210af9b` (pre-imaging work), hlc-501 boots and accepts interactive SSH. Hang no longer reproducible. Suspected culprit: `services.openssh.settings` block (`ClientAliveInterval`, `MaxStartups`, `UseDns`) since removed.
+- This is the spec's "shared defaults between server users and workstation users, but workstation-only modules stay workstation-only" (FR-019) realized.
+- Composing at the user-entry-point level (rather than via host-level conditionals) keeps each user's configuration easy to read top-down.
+- Existing per-tool modules (i3, polybar, etc.) don't need to change; only their entry points do.
 
-**Additional finding (2026-04-26)**: hlc-504 passes smoke test. Reachable via alacritty on silicon (SSH'd through marks.dev VLAN). Not reachable from kitty on gibson — root cause: `TERM=xterm-kitty` not in NixOS default terminfo database. Workaround: use alacritty, or `TERM=xterm-256color ssh bob@<host>`. Known limitation (documented in spec Assumptions), not a Phase A bug.
+**Alternatives considered**:
 
-**Remaining issue — PS1 garble**: `modules/shell/prompt.nix` has two interacting bugs:
+- Conditional imports inside per-tool modules (e.g. `if isServer then ... else ...`): rejected — conditional logic in module files makes them hard to reason about; the entry-point composition is clearer.
+- Single `home/<user>.nix` file per user with no shared base: rejected — defeats the spec's shared-defaults intent.
 
-1. Color variables use `\033` in Nix multi-line strings (`''...''`):
-   ```nix
-   reset = ''"\[\033[0m\]"'';  # \033 is NOT interpreted as ESC by bash PS1
-   ```
-   Bash PS1 processes `\e` as ESC but NOT `\033` (C-style octal). Escape byte never emitted; terminal sees `033[0m` as literal ASCII.
+**Open follow-ups**:
 
-2. Color variable values include wrapping double-quotes (`".."`). When Nix interpolates into bash `promptInit` string, result is broken bash quoting.
+- Audit existing `home/eaglerock.nix` to make sure it doesn't accidentally pull workstation-only state into the wrong user; refactor when the split lands.
 
-**Fix (deferred to Phase C)**: In `modules/shell/prompt.nix`:
-- Replace `\033[` with `\e[` in all color variable definitions.
-- Remove wrapping double-quotes from color variable values.
-- Example: `reset = ''\[\e[0m\]'';` (no outer quotes; `\e` renders as ESC in PS1).
+---
 
-**Deferral rationale**: Phase A0 strategy strips prompt.nix from host configs entirely, uses default bash prompt. PS1 module reintroduced Phase C after SSH connectivity verified stable across all nodes. Eliminates risk of PS1 bug causing another unreachable-node incident during baseline.
+## R-010 — SD bootstrap minimal package set
 
-**hlc-401**: Unreachable during prior iteration. Triage in Phase A0, step 3. Probable causes: DHCP MAC mismatch, wrong board image (Pi4 vs Pi5), or hardware/SD issue.
+**Decision**: The SD bootstrap (`modules/sd/bootstrap.nix` + `modules/sd/recovery-utils.nix`) installs:
+
+- **Recovery utilities** (`modules/sd/recovery-utils.nix`): `mdadm`, `parted`, `lsblk` (from `util-linux`), `e2fsprogs`, `xfsprogs`, `gptfdisk`, `pciutils`, `usbutils`, `dmidecode`, `vim` (basic editor), `git`, `curl`, `tmux`, `htop`, `iproute2`, `dnsutils`.
+- **Bootstrap config** (`modules/sd/bootstrap.nix`): `bob` user with operator's authorized SSH key, sshd with key-only (PasswordAuthentication false at this layer; the W-003 deferral applies to the per-host config, not the bootstrap), DHCP on the cluster VLAN, hostname placeholder (gets overwritten by per-host config after provisioning), no per-cluster service modules.
+
+**Rationale**:
+
+- Recovery utilities are exactly the set the operator would reach for if a USB array degrades or a node fails to reboot: see what's plugged in, see what state filesystems are in, edit a config, push or pull from the repo if needed.
+- Strictly key-only on the bootstrap image is safe and reduces the attack surface during the brief SD-only window before provisioning (and during recovery boots later). W-003 applies only to the per-host steady-state, not to the bootstrap.
+- No per-cluster service modules in the bootstrap — this is what FR-003 mandates and what failed in the prior attempt.
+
+**Alternatives considered**:
+
+- Include the full toolbox in the bootstrap: rejected — drift from FR-003; bootstrap is not the operator's daily environment.
+- Include nothing beyond ssh + DHCP: rejected — operators recovering from a degraded array need real tools on hand, not "ssh in and `nix-env -iA`."
+- Different package set per Pi family: rejected — recovery doesn't depend on the Pi family.
+
+**Open follow-ups**:
+
+- During Phase 2 implementation, confirm the package set fits the SD card image size constraints (current sdImage builds well under 4 GB; the recovery set is small and shouldn't push past that).
+
+---
+
+## R-011 — `config.txt` for headless RPi servers
+
+**Decision**: Each cluster node sets a headless-server `config.txt` profile via the nvmd module's `raspberry-pi-nix.config-txt` (or equivalent — exact option name confirmed during Phase 1 against the nvmd README). The profile applies a curated, conservative set of settings appropriate for a headless server in a rack:
+
+- `gpu_mem=16` — minimum GPU memory split; we are not running a desktop, so any RAM given to the VideoCore is wasted.
+- `dtparam=audio=off` — disable on-board audio. No use case in the cluster; off saves a small amount of memory and removes an unused driver from the kernel surface.
+- `dtoverlay=disable-bt` — disable on-board Bluetooth. Not used in the cluster; freeing the UART makes the primary serial port available for headless console debug if ever needed (paired with `enable_uart=1` only when actively debugging).
+- `disable_splash=1` — skip the rainbow boot splash; meaningless on headless boxes.
+- `boot_delay=0` — don't sit at the firmware splash longer than necessary.
+- `dtparam=nvme` — Pi 5 only; ensures the M.2 HAT's PCIe lane is initialized in the firmware before the kernel takes over (required for `/srv/ssd`).
+- `enable_uart=1` — left disabled by default; flipped on per-host only when the operator is troubleshooting a non-booting node via the GPIO serial console.
+
+**Rationale**:
+
+- These are the settings every headless RPi server tutorial converges on, irrespective of distribution. They are conservative (no overclock, no risky tweaks), they reduce the running surface to what cluster workloads actually use, and they match the hardware reality (no display, no speaker, ethernet primary, NVMe on Pi 5).
+- Keeping `config.txt` declarative through the NixOS module surface means we don't hand-edit the FAT partition; per-host overrides are option settings, not file edits.
+- The Pi 5 NVMe overlay (`dtparam=nvme`) must be present at firmware time, not added at boot — easy to miss, important to record here.
+
+**Alternatives considered**:
+
+- Carry `main`'s implicit `config.txt` (whatever `nix-community/raspberry-pi-nix` ships): rejected — implicit defaults are exactly what failed in the prior incident; we want explicit config.
+- Enable `enable_uart=1` everywhere: rejected — uart-on without active monitoring just exposes a serial console; flip only when debugging.
+- Disable WiFi via `dtoverlay=disable-wifi`: deferred — not strictly necessary, and an emergency console-fallback path through WiFi is occasionally useful. Reconsider if any node shows surprising WiFi activity.
+
+**Open follow-ups**:
+
+- Confirm the exact NixOS option path in the nvmd fork. The previous upstream used `raspberry-pi-nix.config = { ... }`. nvmd's option name verified during Phase 1.
+- Confirm `dtparam=nvme` is not already implied by nvmd's RPi 5 module; if so, dropping the explicit setting is fine.
+
+---
+
+## R-012 — Thermal and overclock policy per Pi family
+
+**Decision**: Match the user's installed cooling.
+
+- **RPi 4 (`hlc-401..404`)**: passive heatsink only. Apply a modest overclock — `over_voltage=2`, `arm_freq=1750` — well below the 2.0 GHz stretch goals that need active cooling. Heatsink keeps thermals in check; passive cooling makes a fan-failure scenario impossible. Stock 1.5 GHz remains the fallback if a node shows thermal throttling.
+- **RPi 5 (`hlc-501..508`)**: official Active Cooler (heatsink + fan). Stock clocks (2.4 GHz) — no overclock applied. Pi 5 silicon is more sensitive to overvoltage, and the cluster is not CPU-bound enough for a small overclock to be worth instability risk. The fan is software-controlled by the kernel via the standard thermal trip points; no `config.txt` fan-curve override is added unless a node demonstrates inadequate cooling.
+
+**Rationale**:
+
+- The post-mortem records that heatsinks are installed on Pi 4s and the official heatsink+fan on Pi 5s and that the operator wants overclocking enabled. Matching the cooling is the safe path: the Pi 4 passive heatsink can support a modest overclock; the Pi 5's active cooler is *standard equipment* (Pi 5 silicon ships configured assuming active cooling) rather than headroom for further overclock.
+- "Modest overclock under passive cooling" beats "ambitious overclock under active cooling" for a 24/7 cluster: thermal margin remains, fan failure cannot brick the node, and the workload (k3s control-plane on Pi 4, Longhorn/storage on Pi 5) is not aggressively CPU-bound.
+
+**Alternatives considered**:
+
+- Pi 5 overclock to 2.6 GHz: documented as safe with the official cooler, but introduces a regression vector (operator must remember to revert if the fan ever fails). Rejected for now; revisit only if a workload demands it.
+- Per-host overclock tuning: rejected — same cooling, same silicon family, same workload class; no reason to differ across nodes within a family.
+
+**Open follow-ups**:
+
+- Phase 4 task to thermally validate `hlc-401` after sustained load; if 1750 MHz with passive heatsink shows throttling, drop to stock.
+- Phase 4 task to spot-check Pi 5 thermals under nvme + USB activity; only if surprised do we revisit fan-curve overrides.
+
+---
+
+## R-013 — Firmware EEPROM beyond `BOOT_ORDER`
+
+**Decision**: Update both the EEPROM firmware itself and its configuration during the SD baseline boot, idempotently, via a one-shot NixOS service:
+
+- Apply the latest stable EEPROM firmware shipped with the nvmd module (or pin a specific firmware revision per the fork's recommendation). EEPROM updates are infrequent but matter for stable USB and NVMe boot on Pi 5.
+- `BOOT_ORDER = 0xf14` — USB-first, SD-fallback (R-005).
+- `BOOT_UART = 1` — log firmware boot decisions over the GPIO UART (no ill effect when no console is attached; invaluable when one is).
+- `WAKE_ON_GPIO = 0` — Pi 5 only; the cluster has no use case for GPIO wake.
+- `POWER_OFF_ON_HALT = 1` — Pi 5 only; ensures `poweroff` actually drops power, useful in the rack.
+
+**Rationale**:
+
+- EEPROM revision is one of the few settings the OS cannot inspect-and-correct cleanly mid-run. Locking it during the SD baseline puts the right firmware in place before USB-RAID boot ever depends on it.
+- Logging boot decisions over UART is a cheap insurance policy — if a node mysteriously won't come up, the operator plugs in the GPIO UART cable and gets the firmware's own narrative for free.
+- `POWER_OFF_ON_HALT` and `WAKE_ON_GPIO` are Pi-5 conveniences that match how the rack is operated (centralized power switching, no GPIO wake source).
+
+**Alternatives considered**:
+
+- Leave EEPROM at whatever ships with each Pi: rejected — too much variance per box; debugging firmware-version drift is exactly the post-mortem failure pattern.
+- Apply EEPROM updates manually per node: rejected for fleet sanity; declarative + one-shot service is the only scalable path.
+
+**Open follow-ups**:
+
+- Confirm nvmd's mechanism for declaring EEPROM config (likely a `raspberry-pi-nix.eeprom-config = { ... }` option or similar). If not available, fall back to a NixOS `systemd.services.<name>` that runs `rpi-eeprom-config --apply` on first boot, gated by a marker file in `/boot`.
+
+---
+
+## Cross-cutting notes
+
+- **No NEEDS CLARIFICATION markers in the spec.** All clarification questions from `/speckit-clarify` (sessions 2026-04-29 — Q1..Q7) are resolved and reflected in FR-009, FR-017, SC-002, and User Story 5 acceptance scenario 2.
+- **WORKAROUNDS.md** contains W-001, W-002, W-003 — all open, all with documented exit conditions. This plan intentionally does not introduce new workarounds; if an unexpected one surfaces during `/speckit-tasks` or implementation, it gets a ledger entry and a target-phase tag, per Constitution Principle V.
+- **Constitution Principle VIII applies to operator interaction during the rollout**: any apparent disagreement between operator-reported state and the agent's model must be raised explicitly. The mountain-glyph terminal-rendering question (R-002) is a textbook example: the operator picked the glyph; the agent flagged the rendering risk; the agent now records a documented presentation strategy rather than silently swapping the glyph for a "safer" one.

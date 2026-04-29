@@ -117,7 +117,7 @@ Every in-scope node has the packages and OS-level configuration required to part
 
 #### Repository structure and per-host configuration
 
-- **FR-005**: The repository MUST be structured in three layered scopes plus per-node configuration:
+- **FR-005**: The repository MUST be structured in three layered scopes plus per-node configuration. Operator-environment modules (toolbox, PS1, MOTD, home-manager) are *cross-cutting* — they are imported by the cluster scope and apply to all hosts in scope; they are not a fourth layer. The three layers, in import order from generic to specific, are:
   - generic-server / generic-cluster scope (modules reusable by any future cluster, e.g. ecto-1);
   - HLC-cluster scope (HLC-specific shared configuration);
   - device scope (rpi4 vs. rpi5 hardware modules);
@@ -152,7 +152,7 @@ Every in-scope node has the packages and OS-level configuration required to part
       ```
       where `<fqdn>` is the fully qualified hostname (e.g. `bob@hlc-501.marks.dev`) and `<cwd>` appears in square brackets. The remote form MUST NOT rely on terminal color escapes (no `\033[...m` color codes); plain `TERM=xterm` SSH connections MUST render it correctly. Bold (`\e[1m`) MAY be used on glyphs; nothing else.
     - The mountain glyph (`⛰`, U+26F0) defaults to emoji presentation in some terminals; the implementation MUST select a presentation strategy (variation selector `U+FE0E` for text presentation, fallback ASCII, or accepted emoji rendering) and document the choice.
-- **FR-018**: Each cluster node MUST display a dynamic MOTD on SSH login matching the exact text in `post-mortem-26-04-29.md` (HLC ASCII banner, `Cluster node: <fqdn>`, Bob Ross quote). The hostname MUST be interpolated from the system; the rest is static. The MOTD MUST be implemented as a parameterized NixOS module so future clusters can override the banner.
+- **FR-018**: Each cluster node MUST display a per-host MOTD on SSH login matching the exact text in `post-mortem-26-04-29.md` (HLC ASCII banner, `Cluster node: <fqdn>`, Bob Ross quote). The hostname MUST be interpolated dynamically from `config.networking.fqdn`; the banner and quote are static. The MOTD MUST be implemented as a parameterized NixOS module so future clusters can override the banner.
 - **FR-019**: Home-manager configuration MUST be modularized so that cross-cutting defaults (e.g., neovim, git, basic dotfiles) are shared between server users (`bob`) and workstation users (`eaglerock`), while workstation-only modules (i3, polybar, etc.) remain workstation-only.
 - **FR-020**: All cluster nodes MUST be reachable via SSH as `bob` using the operator's SSH key. Password authentication MUST be off post-provisioning. For this spec, `bob`'s authorized key MAY be hard-coded in a NixOS module; secrets management (e.g., `sops-nix`) is out of scope.
 
@@ -164,7 +164,26 @@ Every in-scope node has the packages and OS-level configuration required to part
 
 #### Operator workflow (Makefile / equivalent)
 
-- **FR-024**: The operator workflow MUST expose, at minimum, the following targets (Makefile or equivalent): `flash-image` (build + write SD image), `smoke-test` (verify a freshly flashed node is reachable), and a provisioning target that wraps `nixos-anywhere` for a named host. SSH-login convenience targets are out of scope; operators connect via `ssh bob@<hostname>`.
+- **FR-024**: The operator workflow MUST expose, at minimum, the following Makefile (or equivalent) targets — every constitution-mandated safety gate is a Makefile target:
+  - `dry-run HOST=<host>` — closure evaluation gate (Constitution §"Safety & Change Management" gate 1).
+  - `build HOST=<host>` — full toplevel build (gate 2).
+  - `build-image HOST=<host>` and `flash-image HOST=<host> DEV=<dev>` — SD image build + write.
+  - `smoke-test HOST=<host>` — reachability + interactive-PTY ssh + `sudo -n true` (gate 5).
+  - `canary HOST=<host>` — single-node switch with auto-rollback on smoke-test failure (gate 4).
+  - `rollback HOST=<host>` — manual rollback of a single node.
+  - `update-node HOST=<host>` — plain switch (post-canary rolling update path).
+  - `update-cluster` — serial roll across the work-set (canary first, then `update-node` on the rest).
+  - `provision HOST=<host>` — `nixos-anywhere` wrapper for the first install of a node onto USB-RAID + NVMe.
+  - `ip HOST=<host>` — derive a node's IP from its hostname per the HLC IP convention.
+  - `encrypt-secret` — placeholder; full implementation deferred to the future secrets-mgmt feature spec (Constitution Principle V workaround).
+
+  `IP=<ip>` parameters on host-targeting targets MUST be optional, derived from `HOST` per the HLC IP convention; an explicit override is accepted for non-standard situations. SSH-login convenience targets are out of scope; operators connect via `ssh bob@<hostname>`.
+
+#### Hardware and firmware
+
+- **FR-025**: Each cluster node's `config.txt` MUST be set declaratively (via the upstream NixOS module surface, not by hand-editing the FAT partition) to a headless-server profile: `gpu_mem=16`, `dtparam=audio=off`, `dtoverlay=disable-bt`, `disable_splash=1`, `boot_delay=0`, plus Pi 5 NVMe enablement (`dtparam=nvme`) and any per-family thermal/overclock settings selected per [research.md R-011 / R-012](./research.md). Per-host `config.txt` overrides are permitted only for items genuinely host-specific.
+- **FR-026**: Each cluster node's EEPROM firmware MUST be brought to a known revision and configured declaratively during the SD baseline boot via a NixOS one-shot service. Configuration MUST include `BOOT_ORDER = 0xf14` (USB-first, SD-fallback per FR-011) and the Pi-family-specific options enumerated in [research.md R-013](./research.md). The service MUST be idempotent (subsequent boots no-op).
+- **FR-027**: Cooling configuration MUST match the installed hardware — passive heatsink on Pi 4 (modest overclock, conservative), official heatsink+fan on Pi 5 (stock clocks, kernel-controlled fan curve). Specific frequencies and overvoltage values per [research.md R-012](./research.md). No node MUST be overclocked beyond the validated profile for its installed cooler.
 
 ### Key Entities
 
@@ -208,6 +227,7 @@ Every in-scope node has the packages and OS-level configuration required to part
 - Migration of workloads off the existing Debian cluster, and decommissioning of `hlc-301..308`.
 - Provisioning `hlc-402`, `hlc-403`, `hlc-404` onto NixOS (handled in the follow-on cutover spec).
 - ecto-1 cluster configuration (only structural readiness is required).
+- The `slimer` user (future ecto-1 server operator) is not configured in this spec. The `modules/users/operator.nix` and home-manager modules MUST be parameterizable so `slimer` can be added later without refactor; that is the only requirement on `slimer` here.
 - Network/VLAN reorganization (e.g., the planned move from VLAN 1 to VLAN 42 as the primary network).
 - Secrets management beyond hard-coded SSH keys in NixOS modules.
 - Monitoring/alerting (Prometheus/Grafana) for the cluster or for RAID health.

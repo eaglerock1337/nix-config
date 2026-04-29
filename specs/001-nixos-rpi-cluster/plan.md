@@ -1,75 +1,65 @@
-# Implementation Plan: NixOS RPi Cluster Foundation
+# Implementation Plan: NixOS RPi Cluster Foundation (v2)
 
-**Branch**: `001-nixos-rpi-cluster` | **Date**: 2026-04-26 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature spec from `/specs/001-nixos-rpi-cluster/spec.md`
-
-> **Spec clarification round 4 (2026-04-26)**: Shell module baseline revised. MVP testing
-> phase use default bash prompt + standard tool packages only (no custom PS1, no syshelp,
-> no custom bashrc). Styled PS1, syshelp, bashrc customization deferred to Phase C
-> stable testing. kitty TERM=xterm-kitty incompatibility documented as known limitation.
->
-> **Spec clarification round 2 (2026-04-26)**: Updated spec.md with 10 clarifications
-> covering FR-002/003/004/006/007/010/011 provisioning sequence, storage partitioning,
-> NVMe model spec, lightweight workload definition, agent discovery deferral,
-> SSH key provisioning method. Plan structure still valid; no phase reorder needed.
+**Branch**: `001-nixos-rpi-cluster` | **Date**: 2026-04-29 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `specs/001-nixos-rpi-cluster/spec.md`
 
 ## Summary
 
-Provision + bring online 9 HLC work-set nodes (hlc-401 Pi4 + hlc-501–508 Pi5) with
-NixOS 25.11. Baseline OS boot from SD card, provision via nixos-anywhere with
-bob user + SSH keys configured by provisioning tool, RAID1 USB boot verified before
-workloads, Pi5 NVMe (Corsair MP600 1TB) dedicated to Longhorn storage. Validate
-workstation-push and on-device-git update paths before cluster software.
+Bring 9 Raspberry Pis (`hlc-401` Pi 4 + `hlc-501..508` Pi 5) onto NixOS 25.11 using the actively-maintained `nvmd/nixos-raspberrypi` fork in place of the archived `nix-community/raspberry-pi-nix` currently on `main`. Each provisioned node ends with `/boot` on SD, `/` on a 2-disk USB-3 mdadm RAID1 mirror, and (Pi 5 only) `/srv/ssd` on a 1 TB NVMe. The repo carries evaluable host configurations for all 12 cluster nodes — the deferred Pi 4 control-plane peers (`hlc-402..404`) dry-run only, with no SD flash or remote switch. Operator UX (HLC MOTD, Bob Ross-themed PS1 in two forms, sysadmin toolbox shared with `silicon`, modular home-manager) and k3s OS-level prerequisites (k3s, k9s, `k` alias, kernel/sysctl) are in scope; cluster bootstrap and workload deployment are not. The plan respects the existing W-001..W-003 ledger entries: shared modules are reintroduced per node via canary deploys, not big-bang.
 
 ## Technical Context
 
-**Language/Version**: Nix (flakes), NixOS 25.11 stable, aarch64-linux for Pi nodes;
-build host gibson is x86_64-linux with `boot.binfmt.emulatedSystems = [ "aarch64-linux" ]`.
+**Language/Version**: Nix (NixOS 25.11 stable, plus `nixos-unstable` for selected packages)
+**Primary Dependencies**:
+- `nixpkgs` 25.11 (stable channel)
+- `nixpkgs-unstable` (selected packages only, allowlist-controlled)
+- `home-manager` release-25.11
+- `nvmd/nixos-raspberrypi` (replaces `nix-community/raspberry-pi-nix`); branch and revision pinned by Phase 0 research
+- `nixos-hardware` (Pi 4 / Pi 5 hardware modules)
+- `nixos-anywhere` (one-shot remote install runner)
+- `disko` (declarative disk layout — already a flake input)
+- `sops-nix` (already a flake input; usage deferred per W-002)
 
-**Primary Dependencies**: `nixpkgs/nixos-25.11`, `raspberry-pi-nix`, `nixos-hardware`
-(Pi4/Pi5), `home-manager`. Phase D+: `disko`, `sops-nix`, `nixos-anywhere`.
+**Storage**:
+- SD card: `/boot` partition only after provisioning; full live recovery environment when USB array is absent (FR-011)
+- USB RAID1 (mdadm, 2× 64 GB USB-3): `/` and `/srv/usb`
+- NVMe (Corsair MP600 Micro 1 TB, Pi 5 only): `/srv/ssd`
 
-**Storage**: Phase A–B: SD card boot only. Phase D: USB RAID1 root (mdadm) + verify
-before workload placement. Pi5 nodes: Corsair MP600 Micro 1TB NVMe per node, ≥1
-partition reserved for Longhorn (OpenEBS/Longhorn choice deferred pending tech research).
+**Testing**:
+- `make dry-run HOST=<host>` (gibson: `nix build .#nixosConfigurations.<host>.config.system.build.toplevel`; silicon: `nixos-rebuild dry-run`)
+- `make build HOST=<host>` (full toplevel build)
+- `make build-vm HOST=<host>` (boot/kernel changes — Pi-targeted aarch64 builds may not VM-test; gate skipped for hardware modules with note)
+- `make canary HOST=<host> IP=<ip>` (single-node switch + smoke-test + auto-rollback on failure)
+- `make smoke-test HOST=<host> IP=<ip>` (ping + non-PTY ssh + PTY ssh + `sudo -n true`)
+- Acceptance via the operator runbook in `quickstart.md`
 
-**Testing**: `nix build` on canary before roll. `make smoke-test` post-deploy. `nixos-rebuild
-build-vm` for shell/boot changes (aarch64 feasibility TBD).
-
-**Target Platform**: 1× Pi4/bcm2711 (hlc-401) + 8× Pi5/bcm2712 (hlc-501–508), headless.
-Build host: gibson. Decommissioned-set (hlc-402–404): configs evaluate only.
-
-**Project Type**: NixOS config repo (flake-based, multi-host).
-
+**Target Platform**: aarch64-linux NixOS 25.11 on RPi 4 (bcm2711) and RPi 5 (bcm2712); cross-compiled / cross-built on `gibson` (x86_64).
+**Project Type**: NixOS flake-based system configuration repository.
+**Performance Goals**: SD baseline boot to SSH-reachable < 5 min from power-on (SC-001 sub-bound); `nixos-anywhere` provisioning of one node < 30 min wall-clock (SC-001); rolling re-provisions sequential, no quorum constraint (cluster bootstrap out of scope).
 **Constraints**:
-- No console access. SSH must survive every change.
-- Pre-deploy full build gate on canary, smoke-test mandatory before roll.
-- Baseline OS with SSH open required on Pi before nixos-anywhere invocation.
-- Password prompts OK in provisioning flow if documented as workarounds.
-- RAID1 redundancy verified before production workloads placed.
-- Pi5 lightweight workload definition: CPU/memory bounded by Pi4 hardware limits.
-- Agent discovery mechanism (VIP vs DNS vs hardcoded IP) deferred; needs deliberation.
-- bob SSH authorized_keys hardcoded in NixOS module for MVP; sops migration planned.
-- kitty terminal (TERM=xterm-kitty) not in default NixOS terminfo; use alacritty or
-  `TERM=xterm-256color ssh` when connecting from kitty session (known limitation).
+- Provisioning idempotency: re-running provision on an already-installed node must not corrupt the array (FR-013).
+- Boot recovery: removing both USB drives must drop the Pi into the SD live environment with `mdadm` available, no operator intervention beyond power cycle (FR-011, SC-005).
+- xterm-safety on remote PS1: no color escapes (FR-017 remote form).
+- Constitution Principle VIII: operator-supplied data is authoritative in debug sessions; no silent rewriting of working theory.
+
+**Scale/Scope**: 13 NixOS hosts (`silicon` + 12 cluster nodes); 9 physically provisioned in this spec; ~15 modules (cluster, hardware, hosts, motd, shell, users, home, sd, disko); single Makefile is the canonical build/test interface.
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0. Re-check after Phase 1.*
-*Aligned to constitution v1.2.0.*
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.* Constitution v1.3.0.
 
 | Principle | Status | Notes |
-|---|---|---|
-| I. Declarative Configuration | ✅ | All state in Nix. No imperative changes permitted. |
-| II. Reproducibility via Flakes | ✅ | `flake.lock` pins every input. |
-| III. Modular Design | ⚠️ deferred (legal under Principle V) | Host configs stay minimal (no shared modules) through Phase A. Shared modules reintroduced one at a time in Phase C, each with canary gate. Logged in WORKAROUNDS.md as W-001; exit condition = Phase C complete. |
-| IV. Safety-First Changes | ✅ | Canary deploy + smoke-test mandatory for every runtime change. Auto-rollback on smoke-test failure. |
-| V. Pragmatic Phasing | ✅ | Phase A workarounds (passwordless wheel W-002, PasswordAuthentication default W-003, inline host configs W-001) all logged with exit conditions. |
-| VI. Minimal & Explicit Footprint | ✅ | Phase A footprint minimal; packages alphabetically sorted when added. |
-| VII. Standardized Build & Test | ✅ | Makefile targets as canonical interface. |
-| Cluster Topology | ✅ | Work-set (9 nodes) vs decommissioned-set (3 nodes) correctly scoped throughout. |
+|-----------|--------|-------|
+| I. Declarative Configuration | **Pass** | All host state expressed in NixOS modules; no imperative provisioning beyond the SD flash and the one-shot `nixos-anywhere` install (which itself runs declarative config). |
+| II. Reproducibility via Flakes | **Pass** | All inputs locked in `flake.lock`. Upstream swap to `nvmd/nixos-raspberrypi` will pin a specific revision (chosen in Phase 0). |
+| III. Modular Design | **Pass with active deferral** | Phase A inline-host workaround W-001 still open. New work done in this spec respects the W-001 exit plan: shared modules reintroduced one at a time via canary. No new monolithic module created. |
+| IV. Safety-First Changes | **Pass** | Every cluster-touching change runs through `make dry-run` → `make build` → `make canary` → `make smoke-test`. `make build-vm` skipped for aarch64-only changes with a documented note. Rollback via NixOS boot generations always available. |
+| V. Pragmatic Phasing | **Pass** | W-002 (passwordless wheel) and W-003 (`PasswordAuthentication = true`) ledger entries cover the known deviations; both have target phases (W-002: future secrets-mgmt feature spec; W-003: Phase 5 SSH-hardening sub-step). No new workarounds introduced by this plan. |
+| VI. Minimal & Explicit Footprint | **Pass** | Toolbox module package list is alphabetical with inline rationale comments per package (FR-015). No speculative modules; ecto-1 is structural readiness only, not stub artifacts. Unfree allowlist unchanged. |
+| VII. Standardized Build & Test Workflow | **Pass** | Existing Makefile already exposes `dry-run`, `build`, `smoke-test`, `canary`, `rollback`, `build-image`, `flash-image`, `update-node`. Plan extends with the provisioning workflow target (`provision`) and updates `build-image` to honor the `--rebuild` story (FR-004). All scripted/agent invocations route through Makefile per Principle VII. |
+| VIII. Human-AI Collaboration Protocol | **Applies to working method** | Plan acknowledges: any apparent disagreement with operator-reported state is raised, not silently routed around. The PS1 mountain-glyph presentation question is one such case — an explicit emoji-presentation strategy is required (Phase 0 research) rather than assumed. |
 
-**Result: PASS with one justified deferral (Principle III via Principle V).**
+**Gate result**: Pass. No constitution violations require Complexity Tracking justification at this time.
 
 ## Project Structure
 
@@ -77,297 +67,232 @@ Build host: gibson. Decommissioned-set (hlc-402–404): configs evaluate only.
 
 ```text
 specs/001-nixos-rpi-cluster/
-├── plan.md              # This file
-├── research.md          # Phase 0 artifacts — still valid for Phase D+ tech
-├── data-model.md        # Node IPs/MACs/age keys reference
-├── quickstart.md        # Revised at Phase A2 step 3
-├── contracts/           # N/A — internal config repo
-├── checklists/
-│   └── requirements.md  # Existing
-└── tasks.md             # Regenerated by /speckit-tasks
+├── plan.md                  # This file (/speckit-plan command output)
+├── spec.md                  # /speckit-specify + /speckit-clarify output
+├── post-mortem-26-04-29.md  # Operator-authored context driving this rewrite
+├── remote-ps1.txt           # Operator-supplied remote PS1 sample
+├── research.md              # Phase 0 output (rewritten this cycle)
+├── data-model.md            # Phase 1 output (rewritten this cycle)
+├── quickstart.md            # Phase 1 output (rewritten this cycle)
+├── contracts/               # Phase 1 output (rewritten this cycle)
+└── tasks.md                 # Phase 2 output (/speckit-tasks; not produced here)
 ```
 
-### Source Code (repository root)
+### Source code (repository root)
+
+The target tree on completion of this spec. Existing paths are preserved where they already match; planned additions / refactors are noted inline.
 
 ```text
-flake.nix                       # nixosConfigurations for silicon + 12 HLC nodes
-Makefile                        # build-image, flash-image, dry-run[-all], build,
-                                #   update-node, update-cluster, smoke-test, canary-deploy
-                                #   (NO ssh login targets — connect via ssh bob@<host>)
+flake.nix                       # SWAP raspberry-pi-nix → nvmd/nixos-raspberrypi input;
+                                # update mkHlcNode to use the new module names.
+flake.lock                      # Re-locked after upstream swap.
+Makefile                        # Add `provision HOST=... IP=...` target wrapping nixos-anywhere.
+                                # Update `build-image` to honor a rebuild flag (FR-004).
+WORKAROUNDS.md                  # Append entries for any new deviations (none expected;
+                                # spec scope deliberately stays inside W-001..W-003).
+README.md                       # Updated quick-reference (kept in sync with quickstart.md).
 
 hosts/
-├── silicon/                    # Unchanged
-├── hlc-401/configuration.nix   # Pi4, minimal — gains tool packages in Phase A1
-├── hlc-402/configuration.nix   # Pi4, decommissioned-set — dry-run only
-├── hlc-403/configuration.nix   # Pi4, decommissioned-set — dry-run only
-├── hlc-404/configuration.nix   # Pi4, decommissioned-set — dry-run only
-└── hlc-50{1-8}/configuration.nix  # Pi5 workers, minimal → tool packages in Phase A1
+├── silicon/                    # Existing; refactored only to share toolbox + home-manager
+│   ├── configuration.nix       # base modules.
+│   └── hardware-configuration.nix
+├── hlc-401/                    # Pi 4 control-plane bootstrap (in scope).
+│   └── configuration.nix
+├── hlc-402..404/               # Pi 4 deferred set; configs evaluable, NEVER flashed.
+│   └── configuration.nix       # (3 directories — hlc-402, hlc-403, hlc-404.)
+└── hlc-501..508/               # Pi 5 worker class (8 directories; all in scope).
+    └── configuration.nix
 
 modules/
-├── home/                       # Unchanged silicon home-manager modules
+├── cluster/
+│   ├── common.nix              # NEW: generic-cluster module (shared by HLC and any
+│   │                           # future cluster like ecto-1). Includes the toolbox
+│   │                           # import, k3s OS-level prereqs, base sshd posture.
+│   └── hlc/                    # Existing dir; HLC-specific (operator user, MOTD,
+│       ├── hosts.nix           # network, hostname conventions, marks.dev FQDNs).
+│       └── ...                 # (existing modules adjusted to consume the new
+│                               # generic cluster/common.nix where they overlap.)
 ├── hardware/
-│   ├── rpi4.nix                # Pi4 board config (mkForce extlinux=false)
-│   └── rpi5.nix                # Pi5 board config
+│   ├── rpi4.nix                # Existing; aligned with nvmd module names.
+│   ├── rpi5.nix                # Existing; aligned with nvmd module names.
+│   └── x1-carbon.nix           # Existing; unchanged.
+├── hosts/                      # Existing; minor cleanup to remove silicon-only
+│   ├── common.nix              # imports from cluster/common.nix.
+│   ├── desktop-ui.nix
+│   ├── gaming.nix
+│   └── grub.nix
+├── motd/
+│   └── default.nix             # PARAMETERIZED: takes a banner module argument so future
+│                               # clusters can override; HLC banner matches the post-mortem
+│                               # exactly (FR-018).
 ├── shell/
-│   ├── common.nix              # Bash history, aliases — deferred to Phase C
-│   ├── prompt.nix              # Styled PS1 — deferred to Phase C (needs \e fix)
-│   └── utilities.nix           # sysadmin packages + syshelp — deferred to Phase C
-├── motd/default.nix            # Parameterized MOTD module — Phase C
-├── cluster/hlc/motd.nix        # HLC-specific MOTD content — Phase C
-└── users/operator.nix          # Parameterized user module — Phase C
+│   ├── common.nix              # bash baseline (no PS1 setting) shared with silicon.
+│   ├── prompt.nix              # REWRITE: implements local + remote PS1 forms per FR-017
+│   │                           # with mountain-glyph presentation strategy from research.md.
+│   └── utilities.nix           # toolbox; alphabetical packages with per-package comments
+│                               # (FR-015). Imported on every NixOS host.
+├── users/
+│   └── operator.nix            # Existing; bob (cluster) + eaglerock (workstation) factored
+│                               # so each is parameterizable; W-002/W-003 sites annotated.
+├── home/
+│   ├── base.nix                # Cross-cutting home-manager defaults shared between
+│   │                           # bob and eaglerock (e.g. neovim baseline, git config).
+│   ├── server.nix              # NEW: server-only home-manager (no GUI assumptions).
+│   ├── workstation.nix         # NEW: workstation-only (i3/polybar/etc.) — silicon imports
+│   │                           # this; cluster nodes do not.
+│   ├── colors.nix              # Existing.
+│   ├── dev.nix                 # Existing.
+│   ├── i3.nix                  # Existing; pulled in by workstation.nix only.
+│   ├── polybar.nix             # Existing; same.
+│   ├── ui.nix                  # Existing.
+│   └── vscode.nix              # Existing.
+├── sd/                         # NEW: SD bootstrap configuration (FR-002, FR-003, FR-004).
+│   ├── bootstrap.nix           # Barebones config: bob user + authorized key + network +
+│   │                           # recovery utilities. NO per-host service modules.
+│   └── recovery-utils.nix      # mdadm, parted, lsblk, basic editor, git, curl.
+└── k8s/                        # NEW: k3s OS-level prereqs (FR-021, FR-022).
+    └── prereqs.nix             # Packages, kernel modules, sysctls; service unit
+                                # enabled-but-stopped per User Story 5 AS#2.
 
-scripts/
-└── smoke-test.sh               # ping + non-PTY ssh + interactive PTY ssh check
+disko/                          # NEW: declarative disk layouts (FR-010..FR-014).
+├── rpi4.nix                    # USB RAID1 root + /srv/usb; no NVMe.
+└── rpi5.nix                    # USB RAID1 root + /srv/usb + NVMe at /srv/ssd.
+
+home/                           # Existing per-user home-manager entry points (kept).
+├── eaglerock.nix
+└── bob.nix                     # NEW: imports server.nix + base.nix.
+
+docs/
+                                # (No cluster-ips.txt — IPs are derived from hostnames
+                                # per the convention `hlc-VNN` → `10.23.50.<octet>`,
+                                # documented in contracts/makefile-targets.md.)
+├── syshelp-reference.md        # Existing toolbox markdown reference.
+└── provisioning-runbook.md     # NEW: human-facing runbook mirroring quickstart.md.
+
+secrets/                        # NEW (placeholder dir, no live secrets in this spec):
+└── ssh-keys/                   # bob's authorized public keys, per-cluster (W-002 pre-sops).
+
+assets/                         # Existing wallpapers/images; unchanged.
 ```
 
-**Structure Decision**: Phase A keep minimal inline host configs (no shared modules).
-Module reintroduction in Phase C follow strict one-module-at-a-time canary discipline.
-Shell module baseline for MVP = standard tool packages only, default bash prompt.
+**Structure Decision**:
+- **Three-scope module layering** (`cluster/common.nix` → `cluster/hlc/` → `hosts/<host>/`) plus device hardware (`hardware/rpi{4,5}.nix`) realizes spec FR-005..FR-008.
+- **`modules/sd/` separated from `modules/cluster/`** so the bootstrap image cannot accidentally import per-host service config (FR-003).
+- **`disko/` at the repo root** (not under `modules/`) because its schemas are consumed by `nixos-anywhere` orchestration as well as by per-host configurations; keeping them adjacent to the per-host configs makes the relationship visible.
+- **Existing `silicon` configuration** is refactored only insofar as it needs to share `modules/shell/utilities.nix` and `modules/home/base.nix` with cluster nodes; workstation-only modules (i3, polybar, etc.) move under `modules/home/workstation.nix` so the split is explicit.
+- **W-001 inline-host stance is preserved** for the duration of this spec's rollout. Shared modules are reintroduced one at a time, behind the canary gate, per the W-001 exit plan in `WORKAROUNDS.md`. This plan does not attempt the full module reintroduction in one go — that lesson is the entire reason for the post-mortem.
+
+## Phasing notes (W-001 alignment)
+
+The spec's user stories (P1..P5) align with these execution phases — written here so the plan reflects the W-001 reintroduction order. `/speckit-tasks` will expand each into discrete tasks.
+
+0. **Baseline reset (no spec FR; post-mortem §"Restarting → Phase 1" mandate)** — strip the failed-attempt content from this branch back to `main`'s working state, while preserving the directory structure designed by this plan, the operator's infrastructure additions, and this spec's documents. Single commit; no canary needed (silicon dry-run + `hlc-501` SD image build + flash + smoke-test is the gate). See "Phase 0 — Baseline reset" below for the keep/delete/revert lists. Tag commit `phase0-baseline-reset`.
+1. **Upstream swap (P1, FR-001)** — `raspberry-pi-nix` → `nvmd/nixos-raspberrypi`. Single PR; canary on `hlc-501`; smoke-test green before any other host changes.
+2. **SD bootstrap rebuild (P1, FR-002..FR-004)** — `modules/sd/bootstrap.nix`; replaces today's image build path; validated by reflashing `hlc-501` + smoke-test.
+3. **Per-host scaffolding (P2, FR-005..FR-009)** — verify all 12 hosts dry-run from a clean checkout; tighten `mkHlcNode`; introduce `modules/cluster/common.nix` skeleton.
+4. **Disko + nixos-anywhere (P3, FR-010..FR-014)** — `disko/rpi{4,5}.nix`, `make provision`; canary on `hlc-501` first, then sequential rollout to remaining work-set.
+5. **Operator UX (P4, FR-015..FR-020)** — toolbox, MOTD, PS1 (local + remote), home-manager modular split. Reintroduced module-by-module per W-001's exit plan; each module gated by canary + smoke-test.
+6. **k3s prereqs (P5, FR-021..FR-023)** — `modules/k8s/prereqs.nix`; service enabled but stopped; cluster bootstrap explicitly out of scope.
+
+## Phase 0 — Baseline reset
+
+**Goal**: Bring the running code (the Nix configurations that actually build silicon and `hlc-501`) back to `main`'s working state, while keeping the documentation, planning, and tooling work that has been done above `main` so we don't redo it. The post-mortem's restart directive — "Restoration of existing code to baseline `main` branch before working again" — is satisfied by this reset.
+
+**Principle**: Two buckets — "running code" (reverts to `main`) and "context" (kept). If a file gets compiled into a NixOS system or governs how Nix builds something, it is running code. If a file documents, plans, scaffolds spec-kit/Claude, or is operator-authored process work, it is context.
+
+### Keep (spec-kit, Claude context, process work, build tooling)
+
+These survive Phase 0 unchanged:
+
+- `.specify/` — entire directory: constitution, templates, scripts, extensions, integrations, memory, workflows, `feature.json`, `init-options.json`, `integration.json`.
+- `.claude/` — entire directory: agents, agent-memory.
+- `CLAUDE.md`, `CLAUDE.original.md`.
+- `specs/001-nixos-rpi-cluster/` — entire spec directory: `spec.md`, this `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, `post-mortem-26-04-29.md`, `remote-ps1.txt`, `checklists/requirements.md`. **Exception**: `tasks.md` is stale (dated 2026-04-26, references the prior plan) and is deleted; regenerated by `/speckit-tasks` after Phase 0 ships.
+- `WORKAROUNDS.md` — entries W-001..W-003 stay. Exit conditions referencing prior phase numbering get a small rewrite (analyze H2) but the entries themselves are still load-bearing.
+- `Makefile` — operator-authored target build-out (build/canary/smoke-test/etc.) is kept. Some targets (e.g. `dry-run-all`, `build-image-rpi4`) reference hosts that won't exist after the reset; those targets will simply fail until Phase 3 re-adds the host configs. That is acceptable.
+- `scripts/smoke-test.sh` — operator-authored helper; kept.
+- `.gitignore` — kept; if `hlc-output.txt` / `lshw-output.txt` are not already ignored, they get added.
+- `docs/syshelp-reference.md` — kept (documentation; will be revisited in Phase 5 when the toolbox module lands; if it no longer reflects reality at that point, retire it then).
+
+### Revert to `main` (running code)
+
+These are the files Nix actually evaluates to build silicon or `hlc-501`. Each is restored to `main`'s exact content:
+
+- `flake.nix` — `main`'s version: `silicon` and `hlc-501` only as `nixosConfigurations`, `raspberry-pi-nix` as the upstream input, no `sops-nix` / `disko` / `operatorPubkey` / `mkHlcNode`. (The flake input additions are valuable but reach back into the failed attempt's wiring; they get re-introduced cleanly in Phase 1+ as needed.)
+- `flake.lock` — re-locked after `flake.nix` revert.
+- `hosts/silicon/configuration.nix`, `hosts/silicon/hardware-configuration.nix` — `main`'s content.
+- `hosts/hlc-501/configuration.nix` — `main`'s content (the canonical Pi 5 baseline that boots).
+- `home/eaglerock.nix` — `main`'s content.
+- `modules/home/` — entire directory's content reverted to `main` (the home-manager modular split into base/server/workstation lands in Phase 5; not now).
+- `modules/hosts/` — entire directory's content reverted to `main` (silicon system modules: `common.nix`, `desktop-ui.nix`, `gaming.nix`, `grub.nix`, `grub/` assets).
+- `modules/hardware/x1-carbon.nix` — `main`'s content.
+
+### Delete (failed-attempt-only files)
+
+Files created during the prior incident with no counterpart on `main`:
+
+- All Pi 4 host directories: `hosts/hlc-401/`, `hosts/hlc-402/`, `hosts/hlc-403/`, `hosts/hlc-404/`.
+- All Pi 5 host directories except `hlc-501`: `hosts/hlc-502/`, `hlc-503/`, `hlc-504/`, `hlc-505/`, `hlc-506/`, `hlc-507/`, `hlc-508/`.
+- `modules/cluster/` — entire directory.
+- `modules/motd/` — entire directory.
+- `modules/shell/` — entire directory.
+- `modules/users/` — entire directory.
+- `modules/hardware/rpi4.nix`, `modules/hardware/rpi5.nix`.
+- Any branch-only file under `modules/home/` or `modules/hosts/` not present on `main` (e.g. if `modules/home/dev.nix` is branch-only).
+- `hlc-output.txt`, `lshw-output.txt` — debug artifacts from the prior incident.
+
+After deletion, no empty placeholder directories are left behind. Phase 1+ creates new directories as files land in them.
+
+### Reset procedure
+
+The reset is a single commit. Operator runs (or a `make reset-to-baseline CONFIRM=yes` target wraps):
+
+```bash
+# 1. Snapshot the pre-reset state for recovery.
+git tag pre-reset-2026-04-29
+
+# 2. Restore main's running code.
+git checkout main -- \
+    flake.nix flake.lock \
+    hosts/silicon hosts/hlc-501 \
+    home/eaglerock.nix \
+    modules/home modules/hosts modules/hardware/x1-carbon.nix
+
+# 3. Delete failed-attempt-only files.
+git rm -r \
+    hosts/hlc-401 hosts/hlc-402 hosts/hlc-403 hosts/hlc-404 \
+    hosts/hlc-502 hosts/hlc-503 hosts/hlc-504 hosts/hlc-505 \
+    hosts/hlc-506 hosts/hlc-507 hosts/hlc-508 \
+    modules/cluster modules/motd modules/shell modules/users \
+    modules/hardware/rpi4.nix modules/hardware/rpi5.nix
+git rm -f hlc-output.txt lshw-output.txt
+git rm specs/001-nixos-rpi-cluster/tasks.md
+
+# 4. Add debug artifacts to .gitignore if not already.
+#    (Manual edit; verify with: grep -E '(hlc|lshw)-output' .gitignore)
+
+# 5. Commit.
+git commit -m "Phase 0: baseline reset — running code to main, context kept"
+
+# 6. Validate (see gate below). On green:
+git tag phase0-baseline-reset
+```
+
+If a `make reset-to-baseline CONFIRM=yes` target is preferred, it MUST refuse without `CONFIRM=yes`, MUST `git tag pre-reset-<timestamp>` before any destructive op, and MUST run the validation gate before tagging `phase0-baseline-reset`. Operator decides whether to add the target now or do it by hand once.
+
+### Validation gate (Phase 0 exit)
+
+All four MUST pass before tagging `phase0-baseline-reset`:
+
+1. `make silicon-dry` — silicon's NixOS config evaluates clean.
+2. `make build-image-rpi5` (or equivalent: `make build-image HOST=hlc-501`) — Pi 5 SD image builds. Still on `raspberry-pi-nix` here; nvmd swap is Phase 1.
+3. `make flash-image HOST=hlc-501 DEV=/dev/sdX` — image flashes.
+4. Insert SD into `hlc-501`, power on, run `make smoke-test HOST=hlc-501` — green (IP derived as `10.23.50.51`).
+
+If any step fails, the reset is incomplete. Diagnose and re-run until green. Do **not** proceed to Phase 1 with a yellow gate — Constitution VIII applies (operator-observed state is authoritative, do not silently assume around it).
 
 ## Complexity Tracking
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|---|---|---|
-| Principle III deferred for Phase A: work-set host configs inline minimal config instead of shared module | Prior attempt (Phase 0) bundled shared modules + 12 hosts; result garbled PS1 + unreachable nodes. Minimal inline configs give zero inter-host blast radius and make regressions attributable to individual changes. Principle V explicitly authorizes this with WORKAROUNDS.md tracking. | "Correct" shared-module pattern is what we iterate toward in Phase C; restoring before baseline stable repeats mistake. |
-| `make canary` wraps `nixos-rebuild switch --target-host` with pre-build + smoke-test + auto-rollback | Headless Pi nodes cannot recover without physical access when SSH broken. Canary wrapper auto-rollbacks failed switch. | Plain `nixos-rebuild switch` is what was used when node dropped off network in prior iteration. |
+> **Fill ONLY if Constitution Check has violations that must be justified.**
 
----
-
-## Phases
-
-### Phase A0 — Triage & strip to baseline
-
-**Goal**: Resolve immediate blockers + ensure all host configs stripped to
-pure NixOS defaults — no custom shell modules, no prompt customization.
-
-**A0.1 — Strip shell modules from host configs (workstation only)**
-
-Any `hosts/hlc-NNN/configuration.nix` currently importing `modules/shell/prompt.nix`,
-`modules/shell/common.nix`, or any custom shell module must have those imports removed.
-
-Target baseline for every work-set host config (~12 lines):
-
-```nix
-{ ... }: {
-  raspberry-pi-nix.board = "bcm2711";   # bcm2712 for Pi5 (hlc-501–508)
-  networking.hostName = "hlc-NNN";
-  networking.useDHCP = true;
-  services.openssh.enable = true;
-  users.users.bob = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = [ "<gibson pubkey>" ];
-  };
-  security.sudo.wheelNeedsPassword = false;
-  system.stateVersion = "25.11";
-}
-```
-
-No imports beyond what `raspberry-pi-nix` provides. No SSH hardening. No prompt. No MOTD.
-
-After edit: `make dry-run-all` must pass.
-
-**A0.2 — Build canaries**
-
-```bash
-make build HOST=hlc-401     # full Pi4 toplevel
-make build HOST=hlc-501     # full Pi5 toplevel
-```
-
-Both must succeed before any hardware deploy.
-
-**A0.3 — Flash & smoke-test the canaries**
-
-```bash
-make flash-image HOST=hlc-401 DEV=/dev/sdX
-make flash-image HOST=hlc-501 DEV=/dev/sdY
-# Insert SDs, power on, wait for DHCP lease.
-make smoke-test HOST=hlc-401 IP=10.23.50.41
-make smoke-test HOST=hlc-501 IP=10.23.50.51
-```
-
-If hlc-401 still unreachable: check DHCP MAC, confirm Pi4 image (bcm2711 board),
-verify Unifi switch port, try different SD card. Smoke-test must pass for BOTH before
-proceeding.
-
-**A0 exit gate**: `make smoke-test` passes for hlc-401 + hlc-501; both nodes show
-default bash prompt on interactive SSH.
-
----
-
-### Phase A1 — Standard tool packages across work-set
-
-**Prerequisites**: A0 exit gate passes.
-
-**Goal**: All 9 work-set nodes have curated set of sysadmin tool packages.
-Default bash prompt — no PS1 customization. No syshelp. No custom bashrc.
-
-Add `environment.systemPackages` directly inline in each host configuration.nix:
-
-```nix
-environment.systemPackages = with pkgs; [
-  git
-  htop
-  jq
-  ripgrep
-  tmux
-];
-```
-
-Packages alphabetically sorted per Principle VI. Add/remove from list based on
-what actually needed for triage work (YAGNI — keep lean).
-
-Deployment sequence (canary-first):
-1. hlc-501 — canary deploy, smoke-test, interactive SSH check.
-2. hlc-401 — canary deploy, smoke-test, interactive SSH check.
-3. hlc-502 through hlc-508 + hlc-402/403/404 — roll out; smoke-test after each work-set node.
-
-**Note**: `git` most important package — enables on-device config pulls
-(Phase A2 fallback path test).
-
-**A1 exit gate**: All 9 work-set nodes pass `make smoke-test`; interactive SSH shows
-default bash prompt; `htop`, `git`, `jq`, `ripgrep`, `tmux` available.
-
----
-
-### Phase A2 — Update path validation
-
-**Prerequisites**: A1 exit gate passes.
-
-**Goal**: Prove both update paths work for every node before layering more features.
-
-**A2.1 — Workstation push path (primary)**
-
-For one Pi4 (hlc-401) + one Pi5 (hlc-501):
-1. Make trivial config change (add comment or bump package).
-2. `make canary HOST=<host> IP=<ip>` — forward deploy + smoke-test.
-3. `nixos-rebuild switch --rollback --target-host bob@<host>` — rollback + smoke-test.
-4. Forward deploy again to restore current config.
-
-Confirms `update-node` + `--rollback` both work reliably.
-
-**A2.2 — On-device git fallback path (secondary)**
-
-On hlc-501 (has git from Phase A1):
-```bash
-ssh bob@hlc-501.marks.dev
-git clone <repo-url> /tmp/nix-config   # HTTPS or SSH depending on network access
-cd /tmp/nix-config
-sudo nixos-rebuild switch --flake .#hlc-501
-```
-
-Expected behavior:
-- Nix evaluation runs locally on Pi (slow but tolerable for occasional use).
-- Full build may OOM on Pi4 (4GB RAM) for large closures — if OOM, document
-  in `research.md` as `R-013: On-device rebuild RAM limits`; Pi5 (8GB) should handle.
-  Pi4 on-device for eval/dry-run only.
-- Path NOT used for routine updates.
-
-**A2.3 — Quickstart revision**
-
-Rewrite `specs/001-nixos-rpi-cluster/quickstart.md` to reflect:
-- Current (Phase A) reality: SD card flash → boot → smoke-test → canary → roll out.
-- Workstation push as primary update path (`make update-node HOST=...`).
-- On-device git fallback procedure with caveats (slow, Pi4 may OOM).
-- Direct SSH: `ssh bob@<hostname>.marks.dev` (no Makefile target).
-- kitty users: `TERM=xterm-256color ssh bob@<hostname>` or use alacritty.
-
-**A2 exit gate**: At least one Pi4 + one Pi5 complete forward + rollback canary
-cycle; on-device rebuild attempted + result documented in `research.md`.
-
----
-
-### Phase B — Static IPs + SSH host key inventory (no new modules)
-
-**Prerequisites**: A2 exit gate passes.
-
-**Goal**: Move from DHCP reservation to declared static IPs in Nix; inventory SSH
-host pubkeys for future sops-nix age-recipient use.
-
-Still inline (no shared module). Add `networking.interfaces.eth0.ipv4.addresses`,
-`networking.defaultGateway`, `networking.nameservers` directly in each host config.
-Canary on hlc-501 first, smoke-test, roll to remaining 8.
-
-Collect `ssh_host_ed25519_key.pub` from each node during this phase + record in
-`data-model.md` (SSH host key column, conversion to age pubkey via `ssh-to-age`).
-
-**B exit gate**: All 9 nodes reachable on static IPs; host pubkeys in `data-model.md`.
-
----
-
-### Phase C — Layered module reintroduction (one module at a time)
-
-**Prerequisites**: B exit gate passes.
-
-**Goal**: Reintroduce shell customization + remaining modules one at a time using
-proven canary-gate process. Retire Principle III deferral (W-001).
-
-Module order (one canary cycle per module, hlc-501 as canary):
-1. `modules/users/operator.nix` — parameterized `bob` user (without SSH hardening).
-2. `modules/shell/utilities.nix` — sysadmin packages + `syshelp` command (replaces
-   inline `environment.systemPackages` from Phase A1).
-3. `modules/shell/common.nix` — bash history settings, aliases.
-4. `modules/shell/prompt.nix` — styled PS1 matching silicon's prompt, adapted for
-   `bob`@`<hostname>`. **Requires bug fix first** (replace `\033[` with `\e[` in
-   color variables; remove wrapping double-quotes). Test with `nixos-rebuild build-vm`
-   if feasible before canary deploy. Validate interactive PTY ssh explicitly.
-5. `modules/motd/default.nix` + `modules/cluster/hlc/motd.nix` — HLC MOTD banner.
-6. SSH hardening — separate canary cycle.
-7. ecto-1 stub modules — minimal placeholder (validates extensible structure).
-
-After all modules: remove Principle III deferral WORKAROUNDS entry W-001 (exit condition met).
-
-**C exit gate per module**: all 9 work-set nodes pass smoke-test after rollout; interactive
-PTY SSH tested explicitly for prompt.nix.
-**C exit gate**: all modules deployed; `nixos-rebuild dry-run` succeeds for hlc-402/403/404.
-
----
-
-### Phase D — Disko / USB-RAID1 root, sops-nix secrets
-
-Deferred. Plan in detail at `/speckit-plan` time after C exits green.
-
-### Phase E — k3s, ArgoCD, Longhorn
-
-Deferred. Plan after Phase D. ArgoCD bootstrap is one-time manual `kubectl apply`;
-Longhorn NixOS compatibility documented in `research.md` R-006.
-
----
-
-## Phase 0: Outline & Research
-
-**Existing `research.md` is current** for Phase D+ (raspberry-pi-nix, disko,
-nixos-anywhere, k3s, sops-nix, Longhorn). No new tech in Phases A–C.
-
-**New research items to add**:
-- **R-011**: SSH-hang root cause — update to reflect current status: nodes reachable;
-  PS1 bug root-caused to `prompt.nix` `\033` vs `\e`; deferred to Phase C. Mark status
-  "deferred" not "resolved."
-- **R-012**: Silicon PS1 style — capture exact PS1 format/visual structure from silicon
-  before implementing Phase C prompt.nix.
-- **R-013**: On-device rebuild RAM limits — document Pi4 vs Pi5 behavior during Phase A2.
-
-**Output**: updated `research.md` entries.
-
----
-
-## Phase 1: Design & Contracts
-
-**Data model**: `data-model.md` accurately reflects node topology, IPs, storage.
-No structural changes needed. SSH host key column populated in Phase B.
-
-**Contracts**: N/A — internal config repo.
-
-**Quickstart**: Rewrite in Phase A2 step 3.
-
-**Agent context**: CLAUDE.md already points to `specs/001-nixos-rpi-cluster/plan.md`.
-No link change needed.
-
-**Output**: `data-model.md` (SSH key column updated in Phase B), revised `quickstart.md`
-(Phase A2), augmented `research.md` (Phases A0–A2).
-
----
-
-## Stop and report
-
-Plan updated. Run `/speckit-tasks` to regenerate `tasks.md` against this plan.
+No new violations. The three open ledger entries (W-001 inline hosts; W-002 passwordless wheel; W-003 password auth) are pre-existing and have documented exit conditions. The Phase 0 reset *removes* state rather than adding deviations; the existing ledger entries become more accurate post-reset (the inline hosts they describe will not yet exist, and W-001's exit phase reference will be updated to match this plan's Phase 5).
