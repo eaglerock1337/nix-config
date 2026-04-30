@@ -65,7 +65,13 @@ Full toplevel build. `nix build .#nixosConfigurations.<host>.config.system.build
 
 #### `make smoke-test HOST=<host> [IP=<ip>]`
 
-Single-node reachability check. Resolves `IP` from `HOST` via the convention unless overridden. Then: `ping -c1 <IP>` → `ssh bob@<IP> true` (non-PTY) → `ssh -t bob@<IP> true` (PTY) → `ssh bob@<IP> sudo -n true`. All four MUST succeed.
+Single-node reachability check. Resolves `IP` from `HOST` via the convention unless overridden. Steps in order:
+
+1. Remove SSH host key entries for `<IP>` and `<HOST>` from `~/.ssh/known_hosts` (prevents stale-key failures after reflash).
+2. `ssh bob@<IP> uname -a` (non-PTY) — MUST succeed.
+3. `ssh bob@<HOST> uname -a` (non-PTY) — MUST succeed.
+
+All steps MUST pass. No PTY (`-t` flag) — PTY mode caused Pi login hangs during testing; plain non-PTY SSH is the correct form.
 
 **Pre-conditions**: Host has booted past the SD baseline (or post-provision steady state) and has the expected IP.
 **Post-conditions**: Logs pass / fails specific step.

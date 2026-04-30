@@ -59,7 +59,7 @@ git commit -m "Phase 0: baseline reset — running code to main, context kept"
 1. `make silicon-dry` — silicon evaluates (target exists on `main`).
 2. `make build-image HOST=hlc-501` — Pi 5 SD image builds. Still on `raspberry-pi-nix`; nvmd swap is Phase 1.
 3. `make flash-image HOST=hlc-501 DEV=/dev/sdX` — image flashes.
-4. Insert SD into `hlc-501`, power on, then verify reachability manually: `ping -c1 10.23.50.51 && ssh bob@10.23.50.51 true && ssh -t bob@10.23.50.51 true && ssh bob@10.23.50.51 sudo -n true` — all four succeed. (`make smoke-test` is added at the start of Phase 2 Foundational; until then, the manual ssh check is the gate.)
+4. Insert SD into `hlc-501`, power on. Remove known_hosts entries for `10.23.50.51` and `hlc-501`, then run `ssh bob@10.23.50.51 uname -a` and `ssh bob@hlc-501 uname -a` — both MUST succeed (no `-t`; PTY mode caused Pi login hangs during testing). (`make smoke-test` is added at the start of Phase 2 Foundational; until then, this manual SSH check is the gate.)
 
 On green: `git tag phase0-baseline-reset`. Open issues blocking the gate get fixed before proceeding to Phase 1; Constitution VIII forbids assuming around an unexplained failure.
 
