@@ -1,14 +1,40 @@
 NIX_FLAGS := --extra-experimental-features 'nix-command flakes'
 
-.PHONY: build-image flash-image silicon-dry silicon-switch update help
+.PHONY: build-image flash-image silicon-dry silicon-switch update \
+        dry-run build smoke-test ip help
+
+# Derive IP from HOST via hlc-VNN → 10.23.50.(V*10+N) convention.
+# count ≤ 9:  octet = V*10+N  (e.g. hlc-501 → 51)
+# count 10-19: octet = 100+V*10+(N mod 10)
+# Override for non-standard situations: IP=<addr> make target HOST=<host>
+_DERIVED_IP = $(shell echo '$(HOST)' | awk -F- 'NF==2 {v=substr($$2,1,1)+0; n=substr($$2,2)+0; if(n<=9) print "10.23.50."v*10+n; else print "10.23.50."100+v*10+n%10}')
+IP ?= $(_DERIVED_IP)
+
+# Decommissioned set — these hosts dry-run and build only; no live-node ops
+DECOM_HOSTS := hlc-402 hlc-403 hlc-404
+
+define check_decom
+	@if echo '$(DECOM_HOSTS)' | tr ' ' '\n' | grep -qx '$(HOST)'; then \
+		echo "ERROR: $(HOST) is in the decommissioned set — live-node targets are not permitted."; \
+		exit 1; \
+	fi
+endef
 
 help:
 	@echo "Targets:"
-	@echo "  build-image HOST=hlc-501          Build SD card image for a pi node"
-	@echo "  flash-image HOST=hlc-501 DEV=...  Flash built image to SD card device"
-	@echo "  silicon-dry                        Dry-run NixOS config for silicon"
-	@echo "  silicon-switch                     Apply NixOS config for silicon"
-	@echo "  update                             Update all flake inputs"
+	@echo "  build-image HOST=<host> [REBUILD=1]      Build SD card image for a pi node"
+	@echo "  flash-image HOST=<host> DEV=<dev>         Flash built image to SD card device"
+	@echo "  silicon-dry                               Dry-run NixOS config for silicon"
+	@echo "  silicon-switch                            Apply NixOS config for silicon"
+	@echo "  update                                    Update all flake inputs"
+	@echo "  dry-run HOST=<host>                       Dry-run toplevel for a cluster host"
+	@echo "  build HOST=<host>                         Build toplevel for a cluster host"
+	@echo "  smoke-test HOST=<host> [IP=<ip>]          Reachability check (ping+ssh+sudo)"
+	@echo "  ip HOST=<host>                            Print derived IP for a host"
+
+ifdef REBUILD
+_REBUILD_FLAG := --rebuild
+endif
 
 build-image:
 ifndef HOST
@@ -16,6 +42,7 @@ ifndef HOST
 endif
 	time nix build $(NIX_FLAGS) \
 		.#nixosConfigurations.$(HOST).config.system.build.sdImage \
+		$(_REBUILD_FLAG) \
 		-L
 
 flash-image: build-image
@@ -37,3 +64,44 @@ silicon-switch:
 
 update:
 	nix flake update $(NIX_FLAGS)
+
+# Phase 2 Foundational targets —————————————————————————————————————————————
+
+dry-run:
+ifndef HOST
+	$(error HOST is not set. Usage: make dry-run HOST=hlc-501)
+endif
+	nix build $(NIX_FLAGS) \
+		.#nixosConfigurations.$(HOST).config.system.build.toplevel \
+		--dry-run -L
+
+build:
+ifndef HOST
+	$(error HOST is not set. Usage: make build HOST=hlc-501)
+endif
+	nix build $(NIX_FLAGS) \
+		.#nixosConfigurations.$(HOST).config.system.build.toplevel \
+		-L
+
+smoke-test:
+ifndef HOST
+	$(error HOST is not set. Usage: make smoke-test HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> smoke-test $(HOST) at $(IP)"
+	@echo "--- ping"
+	ping -c1 $(IP)
+	@echo "--- ssh non-PTY"
+	ssh bob@$(IP) true
+	@echo "--- ssh PTY"
+	ssh -t bob@$(IP) true
+	@echo "--- sudo"
+	ssh bob@$(IP) sudo -n true
+	@echo "==> smoke-test PASS: $(HOST)"
+
+ip:
+ifndef HOST
+	$(error HOST is not set. Usage: make ip HOST=hlc-501)
+endif
+	@if [ -z '$(IP)' ]; then echo "ERROR: cannot derive IP for HOST=$(HOST)" >&2; exit 1; fi
+	@echo $(IP)
