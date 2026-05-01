@@ -1,7 +1,14 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.3.1 → 1.3.2
+Version change: 1.3.2 → 1.3.3
+Bump rationale: PATCH — correct smoke-test definition in Principle IV. The
+prior text said "interactive-PTY ssh + sudo round-trip"; post-implementation
+testing confirmed PTY mode causes Pi login hangs. Smoke-test is now defined
+as non-PTY SSH with `uname -a` (no `-t` flag), matching Q9 clarification
+in spec.md and the tasks.md smoke-test definition. Safety intent unchanged.
+
+Prior version (1.3.2):
 Bump rationale: PATCH — clarify Principle IV's canary scope. Canary applies
 to the *change set* being deployed, which MAY be a single module OR a
 batched bundle (e.g. all module-creation work for a phase). When the change
@@ -12,12 +19,12 @@ smoke-test gate before any fleet roll still binds. No intent change to
 Principle IV's safety guarantee; this clarifies cadence flexibility.
 
 Modified principles:
-  - IV. Safety-First Changes — added clarification that canary scope is the
-    change set (single module or bundle), and that bundles require bisect-
-    on-fail via /speckit-debug to preserve regression-isolation.
+  - IV. Safety-First Changes — corrected smoke-test language from
+    "interactive-PTY ssh + sudo round-trip" to non-PTY SSH reachability
+    check per post-implementation Q9 finding.
 
 Modified sections:
-  - Safety & Change Management — gate #4 references the bundle/bisect path.
+  - Safety & Change Management — smoke-test definition updated.
 
 Added principles: none
 Removed sections: none
@@ -82,7 +89,7 @@ tested with `nixos-rebuild build-vm` when feasible.
 **Canary requirement (cluster-transition phase, until prior art is fully
 reintegrated)**: Any change that touches a cluster host's runtime state MUST
 be deployed first to a single canary node, validated by a post-deploy smoke
-test (reachability + interactive-PTY ssh + sudo round-trip), and only then
+test (reachability; non-PTY SSH with `uname -a`; no `-t` flag — PTY mode caused Pi login hangs in post-implementation testing), and only then
 rolled to remaining nodes. SD-card reflash, local on-node `nixos-rebuild
 switch`, and remote `nixos-rebuild switch --target-host` are all valid update
 paths; the smoke-test gate applies to all three.
@@ -292,9 +299,7 @@ host-correct commands and are the documented interface (Principle VII):
      explicitly. On bundle smoke-test fail, follow `/speckit-debug` skill
      to bisect the bundle on the canary node before resuming. Both paths
      satisfy Principle IV.
-5. **`make smoke-test HOST=<host>`** — reachability + interactive-PTY ssh
-   + sudo round-trip (already executed inside gate #4 in either path; listed
-   separately because gates #6 below run it again per node)
+5. **`make smoke-test HOST=<host>`** — reachability; non-PTY SSH with `uname -a` (no `-t` flag — PTY mode caused Pi login hangs in post-implementation testing); already executed inside gate #4 in either path; listed separately because gate #6 below runs it again per node
 6. Roll to remaining work-set nodes serially; smoke-test after each
 7. Tag commit at each phase exit gate for `git bisect` recovery
 
@@ -357,4 +362,4 @@ principles before declaring work complete. Pull requests that introduce
 new workarounds MUST include the corresponding ledger entry in the same
 commit (or earlier in the branch history).
 
-**Version**: 1.3.2 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-04-29
+**Version**: 1.3.3 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-05-01
