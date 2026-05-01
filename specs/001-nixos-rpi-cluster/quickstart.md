@@ -12,18 +12,18 @@ The runbook is sequenced by the implementation phases listed in [plan.md](./plan
 ## Prerequisites
 
 - Working directory: `/Users/petermarks/src/nix-config` on `gibson` (or equivalent path on whichever build host is in use).
-- Branch: `001-nixos-rpi-cluster`. Phase 0 below is the mandatory first step — the running code is reset to `main` while spec-kit / Claude / process context is preserved.
+- Branch: `001-nixos-rpi-cluster`. Phase 1 below is the mandatory first step — the running code is reset to `main` while spec-kit / Claude / process context is preserved.
 - Hardware on hand: 9 in-scope Pis powered, racked, ethernet-connected; 2 USB-3 drives per node; 1 NVMe per Pi 5; 9 SD cards (16 GB or larger).
 - Operator key: `eaglerock@gibson` SSH public key (re-introduced into `flake.nix` as `operatorPubkey` during Phase 1).
 - IP convention: `hlc-VNN` → `10.23.50.<octet>` per [contracts/makefile-targets.md](./contracts/makefile-targets.md). No lookup file required.
 
 ---
 
-## Phase 0 — Baseline reset
+## Phase 1 — Setup: Baseline reset
 
 **Goal**: Bring the running code (`flake.*`, `hosts/silicon`, `hosts/hlc-501`, `home/eaglerock.nix`, `modules/home`, `modules/hosts`, `modules/hardware/x1-carbon.nix`) back to `main`'s working state. Keep spec-kit, Claude context, `WORKAROUNDS.md`, the Makefile build-out, and `scripts/smoke-test.sh`. Delete the failed-attempt-only files (Pi 4 host configs, hlc-502..508 host configs, `modules/{cluster,motd,shell,users}`, `modules/hardware/rpi{4,5}.nix`, debug artifacts, stale `tasks.md`).
 
-The full keep / revert / delete lists and the rationale are in [plan.md → Phase 0 — Baseline reset](./plan.md#phase-0--baseline-reset). The operator commands:
+The full keep / revert / delete lists and the rationale are in [plan.md → Phase 1 — Setup](./plan.md#phase-1--setup-confirmed-complete). The operator commands:
 
 ```bash
 # Recovery snapshot.
@@ -54,20 +54,20 @@ git rm -f hlc-output.txt lshw-output.txt
 git commit -m "Phase 0: baseline reset — running code to main, context kept"
 ```
 
-**Validation gate** — all four MUST pass before tagging `phase0-baseline-reset`:
+**Validation gate** — all four MUST pass before proceeding to the upstream swap:
 
 1. `make silicon-dry` — silicon evaluates (target exists on `main`).
 2. `make build-image HOST=hlc-501` — Pi 5 SD image builds. Still on `raspberry-pi-nix`; nvmd swap is Phase 1.
 3. `make flash-image HOST=hlc-501 DEV=/dev/sdX` — image flashes.
-4. Insert SD into `hlc-501`, power on. Remove known_hosts entries for `10.23.50.51` and `hlc-501`, then run `ssh bob@10.23.50.51 uname -a` and `ssh bob@hlc-501 uname -a` — both MUST succeed (no `-t`; PTY mode caused Pi login hangs during testing). (`make smoke-test` is added at the start of Phase 2 Foundational; until then, this manual SSH check is the gate.)
+4. Insert SD into `hlc-501`, power on. Remove known_hosts entries for `10.23.50.51` and `hlc-501`, then run `ssh bob@10.23.50.51 uname -a` and `ssh bob@hlc-501 uname -a` — both MUST succeed (no `-t`; PTY mode caused Pi login hangs during testing). (`make smoke-test` is added in Phase 1; this manual SSH check is the gate before it exists.)
 
-On green: `git tag phase0-baseline-reset`. Open issues blocking the gate get fixed before proceeding to Phase 1; Constitution VIII forbids assuming around an unexplained failure.
+On green: proceed to the upstream swap. Open issues blocking the gate get fixed first; Constitution VIII forbids assuming around an unexplained failure.
 
-After Phase 0, the branch's running code is identical to `main`, the spec/plan/research/etc. are intact, and the next commit starts fresh on the nvmd swap.
+After the baseline reset, the branch's running code is identical to `main`, the spec/plan/research/etc. are intact, and the next commit starts fresh on the nvmd swap.
 
 ---
 
-## Phase 1 — Foundational: upstream swap + Phase 2 single-host Makefile targets
+## Phase 1 (cont.) — Upstream swap + single-host Makefile targets
 
 **Goal**: Replace `nix-community/raspberry-pi-nix` with `nvmd/nixos-raspberrypi` as the upstream Pi NixOS source. Re-introduce `flake.nix` helpers (`mkHlcNode`, `operatorPubkey`, `disko` / `nixos-anywhere` / `sops-nix` inputs). Add the four single-host Makefile targets (`dry-run`, `build`, `smoke-test`, `ip`) that every later phase's safety gate uses. Validate `hlc-501` boots from the new SD image. (Research: R-001.)
 
@@ -77,7 +77,7 @@ After Phase 0, the branch's running code is identical to `main`, the spec/plan/r
    - Re-add the `operatorPubkey` constant and the `mkHlcNode` helper.
    - Add `disko`, `nixos-anywhere`, `sops-nix` flake inputs (used in later phases; sops-nix usage deferred per W-002).
 2. `nix flake update` — re-lock; commit `flake.nix` + `flake.lock` together.
-3. Add the Phase 2 Foundational Makefile targets: `make dry-run HOST=<host>`, `make build HOST=<host>`, `make smoke-test HOST=<host>`, `make ip HOST=<host>` (HOST→IP derivation per the convention).
+3. Add Phase 1 Makefile targets: `make dry-run HOST=<host>`, `make build HOST=<host>`, `make smoke-test HOST=<host>`, `make ip HOST=<host>` (HOST→IP derivation per the convention).
 4. Validation: `make build HOST=hlc-501` succeeds; `make build-image HOST=hlc-501` succeeds.
 5. Flash: `make flash-image HOST=hlc-501 DEV=/dev/sdX`.
 6. Insert SD into `hlc-501`, power on. After ~5 minutes:
@@ -87,7 +87,7 @@ After Phase 0, the branch's running code is identical to `main`, the spec/plan/r
 
 ---
 
-## Phase 2 — SD bootstrap rebuild (P1, FR-002..FR-004)
+## Phase 3 — SD Bootstrap Rebuild (US1, FR-002..FR-004)
 
 **Goal**: SD bootstrap configuration is barebones (bob + key + recovery utils + DHCP) and physically separated from per-host service modules. Stale-image bug (post-mortem root cause) is closed by the derivation closure correctly depending on the bootstrap source. (Research: R-006, R-010.)
 
@@ -100,7 +100,7 @@ After Phase 0, the branch's running code is identical to `main`, the spec/plan/r
 
 ---
 
-## Phase 3 — Per-host scaffolding (P2, FR-005..FR-009)
+## Phase 4 — Per-Host Scaffolding (US2, FR-005..FR-009)
 
 **Goal**: All 12 host configurations dry-run from a clean checkout. Module layering (`cluster/common.nix` → `cluster/hlc/*` → `hardware/rpi{4,5}.nix` → `hosts/<host>/`) is in place. (Research: R-008.)
 
@@ -111,7 +111,7 @@ After Phase 0, the branch's running code is identical to `main`, the spec/plan/r
 
 ---
 
-## Phase 4 — Disko + nixos-anywhere (P3, FR-010..FR-014)
+## Phase 5 — Disko + nixos-anywhere (US3, FR-010..FR-014)
 
 **Goal**: Provisioning workflow installs the full per-host configuration onto USB-RAID + NVMe. (Research: R-004, R-005, R-007.)
 
@@ -126,7 +126,7 @@ After Phase 0, the branch's running code is identical to `main`, the spec/plan/r
 
 ---
 
-## Phase 5 — Operator UX (P4, FR-015..FR-020)
+## Phase 6 — Operator UX (US4, FR-015..FR-020)
 
 **Goal**: HLC MOTD, two-form PS1 (local + remote), sysadmin toolbox, modular home-manager all in place. Reintroduced one module at a time per W-001's exit plan. (Research: R-002, R-009.)
 
@@ -151,7 +151,7 @@ Module reintroduction order (W-001 exit plan):
 
 ---
 
-## Phase 6 — k3s prerequisites (P5, FR-021..FR-023)
+## Phase 7 — k3s Prerequisites (US5, FR-021..FR-023)
 
 **Goal**: Every in-scope node has k3s, k9s, container runtime, kernel/sysctl prereqs installed. The k3s service unit is enabled but stopped, with no cluster state on disk. (Research: R-003.)
 
@@ -166,6 +166,6 @@ Module reintroduction order (W-001 exit plan):
 ## Closing
 
 - All 9 work-set nodes are now in the target state. The 3 deferred Pi 4s (`hlc-402..404`) remain on the old Debian cluster, untouched, with evaluable but unflashed NixOS configs in this repo.
-- Open ledger entries: W-001 (closes when all six modules reintroduce per Phase 5), W-002 (closes with the future secrets-mgmt feature spec), W-003 (closes with `services.openssh.settings.PasswordAuthentication = false` in a future hardening pass).
+- Open ledger entries: W-001 (closes when all six modules reintroduce per Phase 6), W-002 (closes with the future secrets-mgmt feature spec), W-003 (closes with `services.openssh.settings.PasswordAuthentication = false` in a future hardening pass).
 - The follow-on cluster-bootstrap spec begins from this state: it flips `wantedBy` back to `[ "multi-user.target" ]`, drops k3s configuration onto each node, and brings the cluster up. No reflashing required.
-- If anything during Phases 1–6 surprises you (a node misbehaves, an upstream module name changed, a glyph renders wrong), apply Constitution Principle VIII: state the conflict explicitly, ask for the data point that would disambiguate, do not silently rewrite the working theory.
+- If anything during Phases 3–7 surprises you (a node misbehaves, an upstream module name changed, a glyph renders wrong), apply Constitution Principle VIII: state the conflict explicitly, ask for the data point that would disambiguate, do not silently rewrite the working theory.

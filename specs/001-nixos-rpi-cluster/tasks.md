@@ -7,19 +7,6 @@
 
 **Smoke-test definition** (updated 2026-04-30): `make smoke-test HOST=<host>` removes SSH host key entries from `~/.ssh/known_hosts` for both the node IP and hostname, then verifies non-PTY SSH login succeeds on both IP and hostname (no `-t` flag; PTY mode caused Pi login hangs during testing; command: `uname -a`).
 
-**Phase mapping** (tasks.md vs plan.md phase numbers differ):
-
-| tasks.md Phase | plan.md Phase | Content |
-|----------------|---------------|---------|
-| Phase 1 Setup | Phases 0+1 | Baseline reset + nvmd upstream swap |
-| Phase 2 Foundational | (empty) | Subsumed by Phase 1 |
-| Phase 3 US1 | Phase 2 | SD bootstrap rebuild |
-| Phase 4 US2 | Phase 3 | Per-host scaffolding |
-| Phase 5 US3 | Phase 4 | Disko + provisioning |
-| Phase 6 US4 | Phase 5 | Operator UX |
-| Phase 7 US5 | Phase 6 | k3s prerequisites |
-| Phase 8 Polish | (post-spec) | Final validation + close-out |
-
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
@@ -28,7 +15,7 @@
 
 ---
 
-## Phase 1: Setup (Plan Phases 0+1 — COMPLETE)
+## Phase 1: Setup
 
 **Purpose**: Baseline reset to `main` running-code state + nvmd upstream swap + foundational Makefile targets.
 
@@ -38,7 +25,7 @@
 - [X] T004 Commit baseline reset: `git commit -m "Phase 0: baseline reset — running code to main, context kept"` then `git tag phase0-baseline-reset`
 - [X] T005 Update `flake.nix`: remove `raspberry-pi-nix.url = "github:nix-community/raspberry-pi-nix"`, add `nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi"`, re-add `operatorPubkey` constant and `mkHlcNode` helper, add `disko`/`nixos-anywhere`/`sops-nix` inputs
 - [X] T006 Run `nix flake update nixos-raspberrypi disko nixos-anywhere sops-nix` (input-scoped; do NOT run bare `nix flake update` to avoid bumping nixpkgs/home-manager on the same commit). Commit `flake.nix` and `flake.lock` together.
-- [X] T007 Add Phase 2 Foundational Makefile targets to `Makefile`: `dry-run HOST=<host>` (gibson: `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run`; silicon: `sudo nixos-rebuild dry-run --flake .#<host>`), `build HOST=<host>` (`nix build .#nixosConfigurations.<host>.config.system.build.toplevel -L`), `smoke-test HOST=<host>` (remove known_hosts for IP + hostname, then `ssh bob@<IP> uname -a` and `ssh bob@<HOST> uname -a`, no `-t`), `ip HOST=<host>` (pure shell HOST→IP derivation per HLC convention: `hlc-VNN` → `10.23.50.<V*10+NN>`)
+- [X] T007 Add Phase 1 Makefile targets to `Makefile`: `dry-run HOST=<host>` (gibson: `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run`; silicon: `sudo nixos-rebuild dry-run --flake .#<host>`), `build HOST=<host>` (`nix build .#nixosConfigurations.<host>.config.system.build.toplevel -L`), `smoke-test HOST=<host>` (remove known_hosts for IP + hostname, then `ssh bob@<IP> uname -a` and `ssh bob@<HOST> uname -a`, no `-t`), `ip HOST=<host>` (pure shell HOST→IP derivation per HLC convention: `hlc-VNN` → `10.23.50.<V*10+NN>`)
 - [X] T008 Validate: `make build HOST=hlc-501` succeeds; `make build-image HOST=hlc-501` succeeds; `make flash-image HOST=hlc-501 DEV=/dev/sdX`; insert SD into `hlc-501`, power on, run `make smoke-test HOST=hlc-501` — green. Tag `phase1-nvmd-swap`.
 
 **Checkpoint**: ✅ Phase 1 complete. `hlc-501` boots on nvmd fork; smoke-test green.
@@ -66,7 +53,7 @@
 - [ ] T013 [US1] Validate cache invariant: (a) run `make build-image HOST=hlc-501` and record the output store path; (b) change a comment in `modules/sd/bootstrap.nix`; (c) run `make build-image HOST=hlc-501` again without `REBUILD=1`; (d) confirm the output store path changed. This validates FR-004 — the derivation closure correctly depends on `modules/sd/bootstrap.nix`.
 - [ ] T014 [US1] Flash rebuilt SD: `make flash-image HOST=hlc-501 DEV=/dev/sdX`. Insert into `hlc-501`, power on, wait ~5 minutes, run `make smoke-test HOST=hlc-501` — must be green.
 - [ ] T015 [US1] Validate recovery utils on `hlc-501`: `ssh bob@hlc-501 "which mdadm parted vim git curl"` — all MUST resolve. Confirm `uname -a` reports `NixOS aarch64`.
-- [ ] T016 [US1] Commit with message describing SD bootstrap separation and cache-invariant fix. Tag `phase2-sd-bootstrap`.
+- [ ] T016 [US1] Commit with message describing SD bootstrap separation and cache-invariant fix. Tag `phase3-sd-bootstrap`.
 
 **Checkpoint**: US1 complete. SD bootstrap boots, cache invariant verified, smoke-test green.
 
@@ -88,7 +75,7 @@
 - [ ] T024 Update `flake.nix` `nixosConfigurations` to include all 12 hosts (`hlc-401..404`, `hlc-501..508`). Each entry: `lib.nixosSystem { system = "aarch64-linux"; modules = [ hosts/<hostname>/configuration.nix ]; }` (plus home-manager if already wired at the flake level).
 - [ ] T025 Run `make dry-run` for all 12 hosts and confirm each succeeds: `make dry-run HOST=hlc-401`, `make dry-run HOST=hlc-402`, `make dry-run HOST=hlc-403`, `make dry-run HOST=hlc-404`, `make dry-run HOST=hlc-501` through `make dry-run HOST=hlc-508`. Fix any evaluation errors before proceeding.
 - [ ] T026 SC-003 testability: create `hosts/hlc-509/configuration.nix` (copy of hlc-501 with `networking.hostName = "hlc-509"`) and add `hlc-509` entry to `flake.nix`. Run `make dry-run HOST=hlc-509` — must succeed. Confirm only 2 file changes were required. Remove `hosts/hlc-509/` and revert the flake entry after verification.
-- [ ] T027 Commit with message describing layered scaffolding and all-12 dry-run validation. Tag `phase3-scaffolding`.
+- [ ] T027 Commit with message describing layered scaffolding and all-12 dry-run validation. Tag `phase4-scaffolding`.
 
 **Checkpoint**: US2 complete. All 12 hosts evaluate from clean checkout. SC-002 and SC-003 verified.
 
@@ -122,7 +109,7 @@
 - [ ] T047 Provision `hlc-508`: `make provision HOST=hlc-508`. Run `make smoke-test HOST=hlc-508`.
 - [ ] T048 Fill real device IDs for `hlc-401` in `hosts/hlc-401/configuration.nix`. Pi 4: USB drives only; `hlc.disko.nvmeDevice = null`.
 - [ ] T049 Provision `hlc-401` (Pi 4): `make provision HOST=hlc-401`. After reboot, verify `/srv/ssd` does NOT exist (absent without error, FR-010). Verify `/` on mdadm array, `/srv/usb` mounted. Run `make smoke-test HOST=hlc-401` — green.
-- [ ] T050 Commit all device-ID updates and provisioning-validated configs. Tag `phase4-provisioned`.
+- [ ] T050 Commit all device-ID updates and provisioning-validated configs. Tag `phase5-provisioned`.
 
 **Checkpoint**: US3 complete. All 9 work-set nodes provisioned. SC-005 verified.
 
@@ -186,7 +173,7 @@
 - [ ] T079 [US4] Apply home-manager changes to `silicon`: `make silicon-switch`. Verify: toolbox commands available as `eaglerock@silicon`, no HLC MOTD in local terminal, workstation modules (i3, polybar) still functional.
 - [ ] T080 [US4] Close W-001 in `WORKAROUNDS.md`: fill `Resolved: 2026-<date>`. All six US4 modules reintroduced with canary + smoke-test gates per exit condition.
 - [ ] T081 [US4] Close W-003 in `WORKAROUNDS.md`: fill `Resolved: 2026-<date>`. `PasswordAuthentication = false` applied in T057, validated in T070.
-- [ ] T082 [US4] Commit. Tag `phase5-operator-ux`.
+- [ ] T082 [US4] Commit. Tag `phase6-operator-ux`.
 
 **Checkpoint**: US4 complete. SC-006 verified. W-001 and W-003 closed.
 
@@ -222,7 +209,7 @@
   - `ssh bob@hlc-501 "cat /sys/fs/cgroup/cgroup.controllers"` — contains `memory cpu io` (cgroups v2 active)
 - [ ] T089 [US5] Roll k3s prereqs to `hlc-502..508` serially: for each, `make update-node HOST=<host>` + `make smoke-test HOST=<host>`. Spot-check T087/T088 verifications on `hlc-504` (midpoint).
 - [ ] T090 [US5] Roll k3s prereqs to `hlc-401` (Pi 4): `make update-node HOST=hlc-401` + `make smoke-test HOST=hlc-401`. Verify same T087/T088 checks pass on Pi 4.
-- [ ] T091 [US5] Commit. Tag `phase6-k3s-prereqs`.
+- [ ] T091 [US5] Commit. Tag `phase7-k3s-prereqs`.
 
 **Checkpoint**: US5 complete. SC-007 verified on all 9 work-set nodes.
 

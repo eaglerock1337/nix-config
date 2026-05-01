@@ -21,7 +21,7 @@ The Makefile is the operator interface for build, validation, and per-node opera
 
 ## Targets
 
-### Inherited from `main` (Phase 0 baseline)
+### Inherited from `main` (pre-spec baseline)
 
 #### `make help`
 
@@ -29,7 +29,7 @@ Print all targets with one-line descriptions.
 
 #### `make build-image HOST=<host> [REBUILD=1]`
 
-Build the SD-card image for a host. `REBUILD=1` (added Phase 3 per FR-004) appends `--rebuild` to the underlying `nix build`, forcing re-realization regardless of the cache. Default invocation honors source-change cache invalidation (the post-mortem stale-image fix; the closure must include `modules/sd/bootstrap.nix` after Phase 3).
+Build the SD-card image for a host. `REBUILD=1` (added Phase 3 / US1 per FR-004) appends `--rebuild` to the underlying `nix build`, forcing re-realization regardless of the cache. Default invocation honors source-change cache invalidation (the post-mortem stale-image fix; the closure must include `modules/sd/bootstrap.nix` after Phase 3).
 
 #### `make flash-image HOST=<host> DEV=/dev/sdX`
 
@@ -43,7 +43,7 @@ Operator's laptop-specific dry-run / switch. `sudo nixos-rebuild dry-run --flake
 
 `nix flake update`. Re-locks all flake inputs.
 
-### Added Phase 2 Foundational
+### Added Phase 1 (Foundational)
 
 These four targets land together because every later phase's safety gate uses them.
 
@@ -81,7 +81,7 @@ All steps MUST pass. No PTY (`-t` flag) — PTY mode caused Pi login hangs durin
 
 Print the IP for a host derived from its hostname. Pure derivation per the convention; no file lookup. Non-zero exit if `HOST` does not match the expected pattern.
 
-### Added Phase 5 US3
+### Added Phase 5 (US3)
 
 #### `make provision HOST=<host> [IP=<ip>]`
 
@@ -106,7 +106,7 @@ Run `nixos-anywhere` against a freshly flashed and reachable node to install the
 
 **Idempotency** (FR-013): Re-running on a `provisioned` node is either a no-op (disko detects existing layout) or refuses with a clear message. Destructive re-provision requires explicit override (e.g. `MODE=destroy`).
 
-### Added Phase 6 US4
+### Added Phase 6 (US4)
 
 These two targets land at the start of Phase 6 — first phase that does live-node config rollouts post-provisioning.
 
@@ -116,7 +116,7 @@ Single-node `nixos-rebuild switch --target-host`. Wraps `sudo nixos-rebuild swit
 
 **Pre-conditions**:
 
-- Host is provisioned (post-Phase-5).
+- Host is provisioned (post-Phase-5 / US3).
 - Host is in the work-set; decom-set is refused.
 - `bob` reachable, `sudo -n` works (W-002).
 - `dry-run` and `build` already green for this host (operator discipline).
