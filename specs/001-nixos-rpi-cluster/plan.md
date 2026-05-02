@@ -47,13 +47,13 @@ Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS usi
 | I. Declarative Configuration | **Pass** | All state expressed as Nix. `config.txt` and EEPROM config set via NixOS module surface. Disko schema declares disk layout. No manual FAT edits. |
 | II. Reproducibility via Flakes | **Pass** | All deps locked in `flake.lock`. Pinned to specific commits. `nix flake update` is the documented advance path. |
 | III. Modular Design | **Partial (W-001 active)** | During baseline-establishment (Phase 1), small inline configs may be duplicated across host files to minimize blast radius (Constitution III phased-deferral clause). W-001 logged in `WORKAROUNDS.md`. Removed in Phase 6 when modules are reintroduced with canary validation. Non-negotiable from refinement onward. |
-| IV. Safety-First Changes | **Pass** | Every cluster-touching change: `make dry-run` → `make build` → `make update-node` (canary on `hlc-501`) → `make smoke-test` → fleet roll. Canary scope = change set (single module or phase bundle per Constitution v1.3.2 §IV). Bundle smoke-test failure triggers bisect via `/speckit-debug`. SD reflash, on-node rebuild, and remote `--target-host` all gated. No skipping dry-run. |
-| V. Pragmatic Phasing | **Pass** | W-001 (inline host configs), W-002 (passwordless wheel), W-003 (PasswordAuthentication deferred) all logged with exit conditions and target phases. |
+| IV. Safety-First Changes | **Pass** | Every cluster-touching change: `make dry-run` → `make build` → `make update-node` (canary on `hlc-501`) → `make smoke-test` → fleet roll. Canary scope = change set (single module or phase bundle per Constitution v1.3.3 §IV). Bundle smoke-test failure triggers bisect via `/speckit-debug`. SD reflash, on-node rebuild, and remote `--target-host` all gated. No skipping dry-run. |
+| V. Pragmatic Phasing | **Pass** | W-001 (inline host configs), W-002 (passwordless wheel), W-003 (PasswordAuthentication deferred) all logged with exit conditions and target phases. W-004 (`pam_systemd` disabled in bootstrap) resolved as no-op — permanent bootstrap-scoped config decision; logged and closed in `WORKAROUNDS.md`. |
 | VI. Minimal & Explicit Footprint | **Pass** | Packages alphabetically sorted with rationale comments (FR-015). No unfree additions. YAGNI applied — only the listed Makefile targets are built. |
 | VII. Standardized Build & Test Workflow | **Pass** | All targets route through Makefile. gibson uses `nix build …` (no `nixos-rebuild`); silicon uses `sudo nixos-rebuild`. Makefile targets abstract the distinction. |
 | VIII. Human-AI Collaboration Protocol | **Pass** | Operator state treated as authoritative. Conflicts raised explicitly, never silently rewritten. R-002 (mountain glyph) is the reference example: operator picked the glyph; agent flagged the rendering risk; documented presentation strategy chosen. |
 
-**Complexity violations**: none. The only tracked deviations are W-001/W-002/W-003 (all Constitution V phased workarounds, all logged with exit conditions).
+**Complexity violations**: none. Tracked deviations: W-001/W-002/W-003 (Constitution V phased workarounds, logged with exit conditions); W-004 (`pam_systemd` bootstrap PAM, resolved as no-op — permanent config decision, bootstrap-only, no exit condition needed).
 
 ---
 
@@ -370,7 +370,7 @@ After all 6 phases:
 - All 9 work-set nodes running NixOS on nvmd fork, USB-RAID root, per-host operator UX, k3s prereqs installed.
 - All 12 host configs evaluable from clean checkout (SC-002).
 - Deferred Pi 4s (`hlc-402..404`) on Debian, untouched.
-- Open ledger: W-002 (passwordless wheel → secrets management feature spec). W-001 + W-003 closed by Phase 5.
+- Open ledger: W-002 (passwordless wheel → secrets management feature spec). W-001, W-003, W-004 closed (W-004 resolved as no-op: bootstrap-permanent PAM fix, no removal needed). W-001 + W-003 closed by Phase 6.
 - The follow-on cluster-bootstrap spec starts here: flips `wantedBy`, drops k3s config, brings up the cluster. No reflashing required.
 
 ---

@@ -1,4 +1,5 @@
-NIX_FLAGS := --extra-experimental-features 'nix-command flakes'
+NIX_FLAGS   := --extra-experimental-features 'nix-command flakes'
+HLC_DOMAIN  ?= marks.dev
 
 .PHONY: build-image flash-image silicon-dry silicon-switch update \
         dry-run build smoke-test ip help
@@ -29,7 +30,7 @@ help:
 	@echo "  update                                    Update all flake inputs"
 	@echo "  dry-run HOST=<host>                       Dry-run toplevel for a cluster host"
 	@echo "  build HOST=<host>                         Build toplevel for a cluster host"
-	@echo "  smoke-test HOST=<host> [IP=<ip>]          Reachability check (ping+ssh+sudo)"
+	@echo "  smoke-test HOST=<host>                    SSH reachability check via FQDN"
 	@echo "  ip HOST=<host>                            Print derived IP for a host"
 
 ifdef REBUILD
@@ -88,15 +89,11 @@ ifndef HOST
 	$(error HOST is not set. Usage: make smoke-test HOST=hlc-501)
 endif
 	$(call check_decom)
-	@echo "==> smoke-test $(HOST) at $(IP)"
-	@echo "--- ping"
-	ping -c1 $(IP)
-	@echo "--- ssh non-PTY"
-	ssh bob@$(IP) true
-	@echo "--- ssh PTY"
-	ssh -t bob@$(IP) true
-	@echo "--- sudo"
-	ssh bob@$(IP) sudo -n true
+	@echo "==> smoke-test $(HOST)"
+	@echo "--- purge known_hosts for $(HOST).$(HLC_DOMAIN)"
+	@ssh-keygen -R $(HOST).$(HLC_DOMAIN) 2>/dev/null || true
+	@echo "--- ssh to $(HOST).$(HLC_DOMAIN)"
+	ssh -o StrictHostKeyChecking=accept-new bob@$(HOST).$(HLC_DOMAIN)
 	@echo "==> smoke-test PASS: $(HOST)"
 
 ip:

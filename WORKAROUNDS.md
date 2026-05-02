@@ -39,3 +39,15 @@ phase-exit gate and every `/speckit-plan` cycle.
 - **Target phase / feature**: Phase 5 (Operator UX) — SSH hardening is the last sub-step of that phase and closes both this entry and W-001.
 - **Opened**: 2026-04-26
 - **Resolved**: (open)
+
+---
+
+## W-004: `pam_systemd` disabled for sshd in bootstrap image
+
+- **Site(s)**: `modules/sd/bootstrap.nix` — `security.pam.services.sshd.startSession = lib.mkForce false`
+- **Deviates from**: NixOS default sshd PAM config (which sets `startSession = true`)
+- **Reason**: `pam_systemd` creates and tears down a D-Bus user session on every SSH connection. During teardown of non-PTY command sessions (`ssh host cmd`), D-Bus session cleanup blocks sshd from accepting new connections for several minutes. Observed symptom: smoke-test passes but interactive SSH immediately after is unreachable until sshd self-recovers. Bootstrap image has no need for systemd session tracking, XDG_RUNTIME_DIR, or D-Bus user session activation.
+- **Exit condition**: This module is bootstrap-only (`modules/sd/bootstrap.nix`). Full per-host configs do not import it and retain `startSession = true`. No removal needed — workaround scope is intentionally limited to the SD bootstrap environment and does not apply to provisioned nodes.
+- **Target phase / feature**: N/A — bootstrap-scoped and permanent for this module.
+- **Opened**: 2026-05-02
+- **Resolved**: 2026-05-01 (no-op resolution: fix is permanent and intentional; `modules/sd/bootstrap.nix` retains `startSession = lib.mkForce false` indefinitely; provisioned nodes are unaffected)
