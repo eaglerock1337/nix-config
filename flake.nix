@@ -86,12 +86,22 @@
         ];
       };
 
-      # T013/T041: hlc-501 via mkHlcNode. nvmd raspberry-pi-5.base + sd-image modules
-      # are imported in hosts/hlc-501/configuration.nix until modules/cluster/common.nix
-      # is established in Phase 4 (T024).
-      hlc-501 = mkHlcNode {
-        hostPath = ./hosts/hlc-501/configuration.nix;
-      };
+      # Pi 5 work-set (hlc-501..508) — provisioned nodes
+      hlc-501 = mkHlcNode { hostPath = ./hosts/hlc-501/configuration.nix; };
+      hlc-502 = mkHlcNode { hostPath = ./hosts/hlc-502/configuration.nix; };
+      hlc-503 = mkHlcNode { hostPath = ./hosts/hlc-503/configuration.nix; };
+      hlc-504 = mkHlcNode { hostPath = ./hosts/hlc-504/configuration.nix; };
+      hlc-505 = mkHlcNode { hostPath = ./hosts/hlc-505/configuration.nix; };
+      hlc-506 = mkHlcNode { hostPath = ./hosts/hlc-506/configuration.nix; };
+      hlc-507 = mkHlcNode { hostPath = ./hosts/hlc-507/configuration.nix; };
+      hlc-508 = mkHlcNode { hostPath = ./hosts/hlc-508/configuration.nix; };
+
+      # Pi 4 work-set — hlc-401 provisioned; hlc-402..404 deferred (config-only per Constitution)
+      hlc-401 = mkHlcNode { hostPath = ./hosts/hlc-401/configuration.nix; };
+      hlc-402 = mkHlcNode { hostPath = ./hosts/hlc-402/configuration.nix; };
+      hlc-403 = mkHlcNode { hostPath = ./hosts/hlc-403/configuration.nix; };
+      hlc-404 = mkHlcNode { hostPath = ./hosts/hlc-404/configuration.nix; };
+
     };
   };
 }

@@ -4,7 +4,7 @@
     ../../modules/hardware/rpi5.nix
   ];
 
-  networking.hostName = "hlc-501";
+  networking.hostName = "hlc-507";
 
   hlc.disko.usbDevice0 = "PLACEHOLDER";
   hlc.disko.usbDevice1 = "PLACEHOLDER";
