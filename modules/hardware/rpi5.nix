@@ -1,6 +1,7 @@
 { lib, inputs, ... }: {
   imports = [
     inputs.nixos-raspberrypi.nixosModules.raspberry-pi-5.base
+    inputs.nixos-raspberrypi.nixosModules.sd-image
   ];
 
   nixpkgs.hostPlatform = "aarch64-linux";
