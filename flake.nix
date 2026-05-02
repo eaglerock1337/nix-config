@@ -34,20 +34,12 @@
       };
     };
 
-    # T009: thin mkHlcNode wrapper around nixpkgs.lib.nixosSystem.
-    # Composes: home-manager module and the per-host configuration.nix.
-    # Pi-family selection is handled by the nvmd modules imported in each per-host
-    # configuration.nix (raspberry-pi-{4,5}.base). nixos-hardware Pi modules are not
-    # used — they conflict with nvmd's boot.kernelPackages and add nothing a headless
-    # nvmd-based node doesn't already get from the base module.
-    # NOT included here: nvmd cluster-common modules (raspberry-pi base + sd-image) —
-    # those belong in modules/cluster/common.nix per FR-006, landing in T024 (Phase 4).
-    # NOT included here: home-manager.users.bob wiring — deferred to T080 (Phase 6/US4).
+    # T009: thin mkHlcNode wrapper — provisioned nixosConfiguration for a cluster node.
+    # SD bootstrap images are separate derivations built by mkHlcBootstrap below.
+    # NOT included: home-manager.users.bob wiring — deferred to T064 (Phase 6/US4).
     mkHlcNode = { hostPath }:
-      # Using nixos-raspberrypi.lib.nixosSystem (wraps nixpkgs.lib.nixosSystem) so that
-      # nvmd's package overlays (raspberrypi-utils, vendor kernel/firmware, etc.) are
-      # applied automatically. It also injects nixos-raspberrypi into specialArgs, which
-      # the nvmd modules reference directly.
+      # Using nixos-raspberrypi.lib.nixosSystem so nvmd's overlays (vendor kernel,
+      # firmware, raspberrypi-utils) and specialArgs injection apply automatically.
       nixos-raspberrypi.lib.nixosSystem {
         specialArgs = { inherit inputs operatorPubkey; };
         modules = [
@@ -60,6 +52,32 @@
           hostPath
         ];
       };
+
+    # mkHlcBootstrap — builds a minimal SD bootstrap image for a single node.
+    # Hostname is the only per-node differentiator; everything else is shared.
+    # sd-image module lives here only, never in provisioned nixosConfigurations.
+    mkHlcBootstrap = { hostname, piModule }:
+      (nixos-raspberrypi.lib.nixosSystem {
+        specialArgs = { inherit inputs operatorPubkey; };
+        modules = [
+          piModule
+          inputs.nixos-raspberrypi.nixosModules.sd-image
+          ./modules/sd/bootstrap.nix
+          { networking.hostName = hostname; }
+        ];
+      }).config.system.build.sdImage;
+
+    # Host lists — used to generate SD image packages for all 12 nodes.
+    # Pi 4: hlc-401..404 (4 nodes); Pi 5: hlc-501..508 (8 nodes).
+    pi4Hosts = [ "hlc-401" "hlc-402" "hlc-403" "hlc-404" ];
+    pi5Hosts = map (n: "hlc-5${nixpkgs.lib.fixedWidthNumber 2 n}") (nixpkgs.lib.range 1 8);
+
+    # mkSdImages — generate { "<host>-sdImage" = <derivation>; } for a list of hosts.
+    mkSdImages = piModule: hosts:
+      builtins.listToAttrs (map (h: {
+        name = "${h}-sdImage";
+        value = mkHlcBootstrap { hostname = h; inherit piModule; };
+      }) hosts);
   in {
     nixosConfigurations = {
       silicon = nixpkgs.lib.nixosSystem {
@@ -103,5 +121,14 @@
       hlc-404 = mkHlcNode { hostPath = ./hosts/hlc-404/configuration.nix; };
 
     };
+
+    # SD bootstrap images — all 12 nodes (Pi 4: hlc-401..404, Pi 5: hlc-501..508).
+    # Hostname is the only per-node differentiator; all else is shared via bootstrap.nix.
+    # Built with: nix build .#packages.aarch64-linux.<host>-sdImage
+    # (Makefile target: make build-image HOST=<host>)
+    packages."aarch64-linux" =
+      mkSdImages inputs.nixos-raspberrypi.nixosModules.raspberry-pi-4.base pi4Hosts //
+      mkSdImages inputs.nixos-raspberrypi.nixosModules.raspberry-pi-5.base pi5Hosts;
+
   };
 }

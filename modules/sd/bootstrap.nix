@@ -4,6 +4,7 @@
   imports = [ ./recovery-utils.nix ];
 
   networking.hostName = lib.mkDefault "hlc-sd-bootstrap";
+  system.stateVersion = "25.11";
   networking.useDHCP = true;
 
   services.openssh = {

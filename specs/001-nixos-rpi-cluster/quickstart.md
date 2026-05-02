@@ -21,7 +21,7 @@ The runbook is sequenced by the implementation phases listed in [plan.md](./plan
 
 ## Phase 1 — Setup: Baseline reset
 
-**Goal**: Bring the running code (`flake.*`, `hosts/silicon`, `hosts/hlc-501`, `home/eaglerock.nix`, `modules/home`, `modules/hosts`, `modules/hardware/x1-carbon.nix`) back to `main`'s working state. Keep spec-kit, Claude context, `WORKAROUNDS.md`, the Makefile build-out, and `scripts/smoke-test.sh`. Delete the failed-attempt-only files (Pi 4 host configs, hlc-502..508 host configs, `modules/{cluster,motd,shell,users}`, `modules/hardware/rpi{4,5}.nix`, debug artifacts, stale `tasks.md`).
+**Goal**: Bring the running code (`flake.*`, `hosts/silicon`, `hosts/hlc-501`, `home/eaglerock.nix`, `modules/home`, `modules/hosts`, `modules/hardware/x1-carbon.nix`) back to `main`'s working state. Keep spec-kit, Claude context, `specs/WORKAROUNDS.md`, the Makefile build-out, and `scripts/smoke-test.sh`. Delete the failed-attempt-only files (Pi 4 host configs, hlc-502..508 host configs, `modules/{cluster,motd,shell,users}`, `modules/hardware/rpi{4,5}.nix`, debug artifacts, stale `tasks.md`).
 
 The full keep / revert / delete lists and the rationale are in [plan.md → Phase 1 — Setup](./plan.md#phase-1--setup-confirmed-complete). The operator commands:
 
@@ -30,7 +30,7 @@ The full keep / revert / delete lists and the rationale are in [plan.md → Phas
 git tag pre-reset-2026-04-29
 
 # Commit any existing in-progress context changes (spec/plan/research/
-# tasks/workflow.md/WORKAROUNDS.md edits made during plan/clarify/analyze)
+# tasks/workflow.md/specs/WORKAROUNDS.md edits made during plan/clarify/analyze)
 # so they survive the reset and land as their own commit before Phase 0.
 
 # Restore main's running code (including the minimal Makefile).

@@ -224,9 +224,9 @@ What `make build-image`, `make build`, and `make provision` produce.
 
 ## Workarounds Ledger Entry
 
-Each open deviation from the constitution is tracked in `WORKAROUNDS.md`. Currently W-001 (inline host configs), W-002 (passwordless wheel), W-003 (`PasswordAuthentication = true`).
+Each open deviation from the constitution is tracked in `specs/WORKAROUNDS.md`. Currently W-001 (inline host configs), W-002 (passwordless wheel), W-003 (`PasswordAuthentication = true`).
 
-**Attributes**: as defined in `WORKAROUNDS.md` (title, sites, deviates from, reason, exit condition, target phase, opened, resolved).
+**Attributes**: as defined in `specs/WORKAROUNDS.md` (title, sites, deviates from, reason, exit condition, target phase, opened, resolved).
 
 **Relationships**:
 

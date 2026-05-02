@@ -7,7 +7,7 @@
 
 Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS using the `nvmd/nixos-raspberrypi` fork, with a three-scope layered module structure, full-disk provisioning via `nixos-anywhere`/`disko`, operator shell UX (MOTD, PS1, toolbox, home-manager), and k3s OS-level prerequisites installed. Cluster bootstrap is out of scope. The implementation is sequenced as 8 phases (Phase 1–8, matching tasks.md numbering), each gated by `make smoke-test` on a canary node before any fleet roll.
 
-**Status**: Phase 1 (Setup) confirmed working by operator. Phases 3–7 pending.
+**Status**: Phases 1–4 complete. Phases 5–8 pending.
 
 ---
 
@@ -24,7 +24,7 @@ Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS usi
 
 **Storage**: Per-node disko schema; mdadm RAID1 (`/` and `/srv/usb`) + NVMe xfs (`/srv/ssd`, Pi 5 only) + SD vfat (`/boot`).
 
-**Testing**: No unit tests — NixOS config repo. Verification model: `make dry-run` → `make build` → `make update-node` (canary node) → `make smoke-test` → fleet roll (Constitution §"Safety & Change Management"). Smoke-test definition: remove SSH host keys from `~/.ssh/known_hosts` for both IP and hostname, then non-PTY SSH to both IP and hostname (`uname -a`); no `-t` flag (PTY mode caused Pi login hangs in testing).
+**Testing**: No unit tests — NixOS config repo. Verification model: `make dry-run` → `make build` → `make update-node` (canary node) → `make smoke-test` → fleet roll (Constitution §"Safety & Change Management"). Smoke-test definition: remove SSH host keys from `~/.ssh/known_hosts` for both IP and hostname, ping IP for reachability (`ping -c 1 -W 3`), then non-PTY SSH to hostname (`uname -a`); no `-t` flag (PTY mode caused Pi login hangs in testing).
 
 **Target Platform**: aarch64-linux NixOS 25.11 on RPi 4 (`bcm2711`) and RPi 5 (`bcm2712`); cross-compiled / cross-built on `gibson` (x86_64).
 
@@ -46,9 +46,9 @@ Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS usi
 | --------- | ------ | ----- |
 | I. Declarative Configuration | **Pass** | All state expressed as Nix. `config.txt` and EEPROM config set via NixOS module surface. Disko schema declares disk layout. No manual FAT edits. |
 | II. Reproducibility via Flakes | **Pass** | All deps locked in `flake.lock`. Pinned to specific commits. `nix flake update` is the documented advance path. |
-| III. Modular Design | **Partial (W-001 active)** | During baseline-establishment (Phase 1), small inline configs may be duplicated across host files to minimize blast radius (Constitution III phased-deferral clause). W-001 logged in `WORKAROUNDS.md`. Removed in Phase 6 when modules are reintroduced with canary validation. Non-negotiable from refinement onward. |
+| III. Modular Design | **Partial (W-001 active)** | During baseline-establishment (Phase 1), small inline configs may be duplicated across host files to minimize blast radius (Constitution III phased-deferral clause). W-001 logged in `specs/WORKAROUNDS.md`. Removed in Phase 6 when modules are reintroduced with canary validation. Non-negotiable from refinement onward. |
 | IV. Safety-First Changes | **Pass** | Every cluster-touching change: `make dry-run` → `make build` → `make update-node` (canary on `hlc-501`) → `make smoke-test` → fleet roll. Canary scope = change set (single module or phase bundle per Constitution v1.3.3 §IV). Bundle smoke-test failure triggers bisect via `/speckit-debug`. SD reflash, on-node rebuild, and remote `--target-host` all gated. No skipping dry-run. |
-| V. Pragmatic Phasing | **Pass** | W-001 (inline host configs), W-002 (passwordless wheel), W-003 (PasswordAuthentication deferred) all logged with exit conditions and target phases. W-004 (`pam_systemd` disabled in bootstrap) resolved as no-op — permanent bootstrap-scoped config decision; logged and closed in `WORKAROUNDS.md`. |
+| V. Pragmatic Phasing | **Pass** | W-001 (inline host configs), W-002 (passwordless wheel), W-003 (PasswordAuthentication deferred) all logged with exit conditions and target phases. W-004 (`pam_systemd` disabled in bootstrap) resolved as no-op — permanent bootstrap-scoped config decision; logged and closed in `specs/WORKAROUNDS.md`. |
 | VI. Minimal & Explicit Footprint | **Pass** | Packages alphabetically sorted with rationale comments (FR-015). No unfree additions. YAGNI applied — only the listed Makefile targets are built. |
 | VII. Standardized Build & Test Workflow | **Pass** | All targets route through Makefile. gibson uses `nix build …` (no `nixos-rebuild`); silicon uses `sudo nixos-rebuild`. Makefile targets abstract the distinction. |
 | VIII. Human-AI Collaboration Protocol | **Pass** | Operator state treated as authoritative. Conflicts raised explicitly, never silently rewritten. R-002 (mountain glyph) is the reference example: operator picked the glyph; agent flagged the rendering risk; documented presentation strategy chosen. |
@@ -63,7 +63,7 @@ Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS usi
 - `make build HOST=<host>` — full toplevel build (added Phase 1)
 - `nixos-rebuild build-vm --flake .#<host>` — VM build for boot/kernel changes when feasible; Pi-targeted aarch64 builds may not VM-test; gate skipped for hardware modules with a documented note (no Makefile target)
 - `make update-node HOST=<host>` — single-node `nixos-rebuild switch --target-host` (added Phase 6); operator manually canaries by running on one node, then `make smoke-test` to verify, then proceeding
-- `make smoke-test HOST=<host>` — remove SSH host key from `~/.ssh/known_hosts` for both node IP and hostname, then verify non-PTY SSH login succeeds on IP, then on hostname (no `-t` flag; PTY mode caused Pi login hangs during testing; each SSH check runs `uname -a`) (added Phase 1)
+- `make smoke-test HOST=<host>` — remove SSH host key from `~/.ssh/known_hosts` for both node IP and hostname, ping IP for reachability (`ping -c 1 -W 3`), then verify non-PTY SSH login succeeds on hostname (`uname -a`; no `-t` flag; PTY mode caused Pi login hangs during testing) (added Phase 1)
 - `make rollback HOST=<host>` — single-node `nixos-rebuild --rollback --target-host` (added Phase 6)
 - Automated canary (a single command that switches + smoke-tests + auto-rollbacks) is **out of scope for this spec**; the manual operator procedure above satisfies Constitution IV's canary requirement
 - Acceptance via the operator runbook in `quickstart.md`
@@ -92,10 +92,11 @@ specs/001-nixos-rpi-cluster/
 ### Source Code
 
 ```text
-flake.nix                     # Entry point: inputs, nixosConfigurations, operatorPubkey, mkHlcNode
+flake.nix                     # Entry point: inputs, nixosConfigurations, mkHlcNode, mkHlcBootstrap,
+                              #   packages.aarch64-linux (SD bootstrap images), operatorPubkey
 flake.lock                    # Locked inputs (includes nvmd/nixos-raspberrypi)
 Makefile                      # Operator interface (Constitution VII)
-WORKAROUNDS.md                # W-001/W-002/W-003 ledger (Constitution V)
+specs/WORKAROUNDS.md          # W-001/W-002/W-003 ledger (Constitution V)
 
 hosts/
 ├── silicon/                  # Workstation (unchanged except toolbox wiring)
@@ -194,7 +195,7 @@ The implementation is sequenced to satisfy the W-001 "re-introduce modules with 
 
 **Goal**: Running code (`flake.*`, `hosts/silicon`, `hosts/hlc-501`, `home/eaglerock.nix`, existing `modules/home`, `modules/hosts`, `modules/hardware/x1-carbon.nix`) at `main`'s working state. All spec/plan/research/context artifacts preserved.
 
-**Keep**: spec-kit artifacts, Claude context, `WORKAROUNDS.md`, existing Makefile build-out, `scripts/smoke-test.sh`.
+**Keep**: spec-kit artifacts, Claude context, `specs/WORKAROUNDS.md`, existing Makefile build-out, `scripts/smoke-test.sh`.
 **Delete**: Failed-attempt-only files — prior Pi 4 host configs, `hlc-502..508` host stubs from prior attempt, `modules/{cluster,motd,shell,users}` from prior attempt, `modules/hardware/rpi{4,5}.nix` from prior attempt, debug artifacts (`hlc-output.txt`, `lshw-output.txt`), stale `tasks.md`.
 
 ```bash
@@ -255,7 +256,7 @@ If any step fails, the reset is incomplete. Diagnose and re-run until green. Do 
 **Goal**: SD bootstrap config is barebones (bob + key + recovery utils + DHCP) and physically separated from per-host service modules. Stale-image bug (post-mortem root cause) closed by ensuring the sdImage derivation closure correctly depends on `modules/sd/bootstrap.nix`.
 
 1. Create `modules/sd/bootstrap.nix` (bob user, operator key, DHCP on HLC VLAN, key-only sshd, hostname placeholder) and `modules/sd/recovery-utils.nix` (alphabetical recovery package set per R-010: `curl`, `dmidecode`, `dnsutils`, `e2fsprogs`, `git`, `gptfdisk`, `htop`, `iproute2`, `lsblk`, `mdadm`, `parted`, `pciutils`, `tmux`, `usbutils`, `vim`, `xfsprogs`).
-2. Wire the SD-image module set in `flake.nix` to import only `modules/sd/*` for the SD image build path. Per-host service modules MUST be excluded from the SD image closure.
+2. Add `mkHlcBootstrap` helper and `packages.aarch64-linux` block to `flake.nix`. Each SD image is a separate derivation: Pi base module + `sd-image` + `modules/sd/bootstrap.nix` + hostname. The SD image derivation is completely independent of `nixosConfigurations` — per-host service modules, cluster scope, hardware scope, and k8s scope cannot appear in the bootstrap closure. `make build-image HOST=<host>` builds `.#packages.aarch64-linux.<host>-sdImage`.
 3. Add `REBUILD=1` opt-in to `make build-image` (passes `--rebuild` to `nix build`).
 4. Audit the sdImage derivation's input closure: change a comment in `modules/sd/bootstrap.nix`, run `make build-image HOST=hlc-501` (no `REBUILD`), confirm the output hash differs — this validates FR-004 / the post-mortem stale-image fix.
 5. Flash rebuilt SD on `hlc-501`; `make smoke-test HOST=hlc-501` after boot.
@@ -278,6 +279,18 @@ If any step fails, the reset is incomplete. Diagnose and re-run until green. Do 
 6. SC-003 testability: confirm adding a stub `hosts/hlc-509/configuration.nix` + flake entry requires no other edits.
 
 **Phase exit gate**: SC-002 + SC-003 satisfied. All 12 evaluate. Tag `phase4-scaffolding`.
+
+---
+
+## Phase 4.5 — `/speckit-debug` Skill (FR-028) *(retroactive: added 2026-05-01)*
+
+**Spec**: FR-028 | **Task**: T027a
+
+**Goal**: Create the `/speckit-debug` Claude Code skill file before Phase 6 bundle-canary. This is a pure tooling deliverable — no NixOS config change, no canary required.
+
+1. Create `.claude/skills/speckit-debug/skill.md` per FR-028 rules: operator-initiated; network-only/SSH from gibson; operator-trust model; conversational format; reads constitution + post-mortem at invocation; spec/plan on demand; degraded-mode warning if context files are unreadable.
+
+**Phase exit gate**: `/speckit-debug` skill file exists and is invocable. T027a complete.
 
 ---
 

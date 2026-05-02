@@ -118,11 +118,11 @@ Every in-scope node has the packages and OS-level configuration required to part
 
 #### Repository structure and per-host configuration
 
-- **FR-005**: The repository MUST be structured in three layered scopes plus per-node configuration. Operator-environment modules (toolbox, PS1, MOTD, home-manager) are *cross-cutting* — they are imported by the cluster scope and apply to all hosts in scope; they are not a fourth layer. The three layers, in import order from generic to specific, are:
+- **FR-005**: The repository MUST be structured in three layered scopes plus per-node configuration. Operator-environment modules (toolbox, PS1, MOTD, home-manager) are *cross-cutting* — they are imported by the cluster scope and apply to all hosts in scope; they are not a fourth layer. The three scopes, in import order from generic to specific, are:
   - generic-server / generic-cluster scope (modules reusable by any future cluster, e.g. ecto-1);
   - HLC-cluster scope (HLC-specific shared configuration);
   - device scope (rpi4 vs. rpi5 hardware modules);
-  - per-host scope (`hosts/<hostname>/`) containing only what is genuinely node-specific.
+  - per-host scope (`hosts/<hostname>/`) — not a shared scope; contains only what is genuinely node-specific.
 - **FR-006**: Top-level per-host `flake.nix` entries MUST include only minimal inclusions (per-host `configuration.nix`, cluster-specific configuration, device-specific configuration); deeper modules MUST be imported from within the appropriate scope-level module rather than enumerated at the host level.
 - **FR-007**: Per-host configuration MUST evaluate via `nixos-rebuild dry-run --flake .#<host>` from a clean checkout for all 9 in-scope hosts (`hlc-401`, `hlc-501..508`).
 - **FR-008**: Adding a new host to the repo MUST require at most two edits: a new `hosts/<hostname>/` directory and a corresponding `flake.nix` `nixosConfigurations` entry. No edits to existing per-host configurations or shared modules MUST be required.
@@ -172,13 +172,22 @@ Every in-scope node has the packages and OS-level configuration required to part
   - `update` — `nix flake update`.
   - `dry-run HOST=<host>` — single-host closure evaluation (gibson uses `nix build --dry-run`; silicon uses `nixos-rebuild dry-run`).
   - `build HOST=<host>` — full single-host toplevel build.
-  - `smoke-test HOST=<host>` — single-node reachability check: remove SSH host key from `~/.ssh/known_hosts` for both the node IP and hostname (prevent stale-key failures on reflash), then verify non-PTY SSH login succeeds on both IP and hostname (no `-t` flag; PTY mode caused Pi login hangs during testing; plain `ssh` with a simple command such as `uname -a` is the correct form).
+  - `smoke-test HOST=<host>` — single-node reachability check: remove SSH host key from `~/.ssh/known_hosts` for both the node IP and hostname (prevent stale-key failures on reflash), then verify IP reachability via `ping -c 1 -W 3 <IP>`, then verify non-PTY SSH login succeeds on the hostname (no `-t` flag; PTY mode caused Pi login hangs during testing; plain `ssh` with a simple command such as `uname -a` is the correct form).
   - `ip HOST=<host>` — derive a node's IP from its hostname per the HLC IP convention.
   - `provision HOST=<host>` — `nixos-anywhere` wrapper for the first install of a node onto USB-RAID + NVMe.
   - `update-node HOST=<host>` — single-node `nixos-rebuild switch --target-host` for post-provisioning configuration updates.
   - `rollback HOST=<host>` — single-node `nixos-rebuild --rollback --target-host`.
 
   `IP=<ip>` parameters on host-targeting targets MUST be optional, derived from `HOST` per the HLC IP convention; an explicit override is accepted for non-standard situations. SSH-login convenience targets are out of scope; operators connect via `ssh bob@<hostname>`. Cluster-operations automation (automated single-command canary, cluster-wide rolling deploys, `encrypt-secret` integration) is **out of scope for this spec** — see Out of Scope below.
+
+#### Debug skill (`/speckit-debug`)
+
+- **FR-028**: A `/speckit-debug` Claude Code skill MUST exist for this project at `.claude/skills/speckit-debug/skill.md`. Its behavior is governed by the following rules, derived from the post-mortem and cluster constraints:
+  1. **Operator-initiated**: The skill starts from the operator's description of the issue. No automatic context pre-loading occurs at invocation.
+  2. **Network-only**: All diagnostic steps MUST be achievable headlessly over SSH from gibson. The skill MUST NOT suggest any step requiring physical access (HDMI, serial console, keyboard, power cycling without operator confirmation). Cluster nodes are permanently headless; this is a hard constraint with no exceptions. Where a Makefile target exists for a diagnostic action, the skill MUST prefer it over raw CLI invocation (Constitution §VII).
+  3. **Operator-trust model**: Operator observations are the primary source of truth. If the skill's reasoning conflicts with what the operator reports, the skill MUST surface the disagreement for discussion — it MUST NOT silently adopt a different hypothesis or dismiss the operator's observation. Operators can be mistaken; when the skill suspects an error it asks, it does not assume.
+  4. **Conversational format**: The skill conducts an unstructured conversational debug session. No fixed output template is required.
+  5. **Context**: At invocation the skill reads the project constitution and `specs/001-nixos-rpi-cluster/post-mortem-26-04-29.md` to internalize the cluster constraints and operator-collaboration rules. The spec and plan are read on demand if the issue requires them. If either file is unreadable at invocation, the skill MUST warn the operator and proceed in degraded mode using its embedded principles rather than failing silently.
 
 #### Hardware and firmware
 
@@ -248,6 +257,14 @@ Every in-scope node has the packages and OS-level configuration required to part
 
 ### Session 2026-04-30
 
-- Q9: smoke-test implementation — PTY or non-PTY SSH? → A: Non-PTY only. `ssh -t` caused the Pi to hang at login during testing; normal non-PTY SSH from desktop works correctly. Smoke test MUST: (1) remove SSH host key from `~/.ssh/known_hosts` for both node IP and hostname before testing; (2) verify non-PTY SSH login succeeds on the IP; (3) verify non-PTY SSH login succeeds on the hostname. PTY test (`ssh -t`) is removed from scope. Resolved in FR-024 `smoke-test` target.
-- Q10: SD bootstrap PAM/sshd blocking — root cause and fix? → A: `pam_systemd` D-Bus session teardown after non-PTY SSH commands blocks sshd accept for several minutes. Fix: `security.pam.services.sshd.startSession = lib.mkForce false` in `modules/sd/bootstrap.nix` (W-004 in WORKAROUNDS.md — resolved as no-op; permanent bootstrap-scoped fix, no removal needed). Provisioned nodes unaffected. Reflected in Edge Cases.
+- Q9: smoke-test implementation — PTY or non-PTY SSH? → A: Non-PTY only. `ssh -t` caused the Pi to hang at login during testing; normal non-PTY SSH from desktop works correctly. Smoke test MUST: (1) remove SSH host key from `~/.ssh/known_hosts` for both node IP and hostname before testing; (2) verify IP reachability via `ping -c 1 -W 3 <IP>`; (3) verify non-PTY SSH login succeeds on the hostname (`uname -a`, no `-t`). PTY test (`ssh -t`) is removed from scope. Resolved in FR-024 `smoke-test` target.
+- Q10: SD bootstrap PAM/sshd blocking — root cause and fix? → A: `pam_systemd` D-Bus session teardown after non-PTY SSH commands blocks sshd accept for several minutes. Fix: `security.pam.services.sshd.startSession = lib.mkForce false` in `modules/sd/bootstrap.nix` (W-004 in specs/WORKAROUNDS.md — resolved as no-op; permanent bootstrap-scoped fix, no removal needed). Provisioned nodes unaffected. Reflected in Edge Cases.
 - Q8: Phase rollout cadence — per-module canary or phase bundle? → A: **Phase bundle is the default cadence for US4** (Option B); operator MAY sub-chunk to per-module or sub-bundle scope at implementation time per the "Per-phase cadence" section in `tasks.md`. Constitution v1.3.2 §IV admits all three canary scopes (single module, sub-bundle, full phase bundle) so long as the canary + smoke-test gate is honored before any fleet roll. Default flow: `/speckit-implement` runs all module-creation tasks within a phase, then a single canary on `hlc-501` with the full bundle. Smoke-test green → fleet roll. On smoke-test fail → rollback + bisect via the `/speckit-debug` skill (comment out / git-revert new modules, reintroduce one at a time) to isolate the breaking module. Downstream amendments applied: W-001 ledger admits phase-bundle scope as the default exit path; Constitution IV PATCH bump (v1.3.1 → v1.3.2) clarifies canary scope = change set; plan Phase 5 phasing notes updated; tasks.md US4 restructured around a single canary at T083 with bisect-on-fail. FR-024's manual-canary procedure (`update-node` → `smoke-test` → manual `rollback`) still applies; only the *scope* of one canary expands from one module to one bundle (operator's choice).
+
+### Session 2026-05-01
+
+- Q11: `/speckit-debug` trigger — auto-load context or operator-described? → A: Operator describes the issue; skill starts from operator's description with no automatic context pre-loading. Resolved in FR-028.
+- Q12: `/speckit-debug` physical-access constraint? → A: Hard constraint. Cluster nodes are fully headless; zero physical-access debugging paths are permitted. All diagnostic steps MUST be achievable over the network via SSH from gibson. The skill MUST NOT suggest HDMI, serial console, keyboard, or any step requiring physical access to a node. Resolved in FR-028.
+- Q13: `/speckit-debug` operator-trust model? → A: Operator observations are the primary source of truth, but operators can make mistakes. The skill MAY surface an alternative hypothesis if it conflicts with the operator's report, but MUST discuss the disagreement explicitly rather than silently pursuing a different theory. The post-mortem failure mode (agent assumed operator was wrong, delayed diagnosis) is the anti-pattern to avoid. Resolved in FR-028.
+- Q14: `/speckit-debug` output format? → A: Conversational. No fixed output structure or template; the skill adapts to the issue as described. Resolved in FR-028.
+- Q15: `/speckit-debug` context loading? → A: Skill reads the project constitution and `post-mortem-26-04-29.md` at invocation to ground operator-trust rules and cluster constraints. Spec and plan are consulted on demand if the issue requires them. Resolved in FR-028.

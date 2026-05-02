@@ -38,7 +38,7 @@ Concrete rules:
 
 - **Always run `/speckit-analyze` between `plan` and `tasks`.** It catches the spec ↔ plan ↔ research drift that compounds into incidents.
 - **Never `/speckit-implement` more than one phase per cycle.** Phase tags are bisect anchors; one phase per cycle keeps each anchor meaningful.
-- **WORKAROUNDS.md is reviewed at every `/speckit-plan` cycle** (Constitution V mandate). New deviations require a ledger entry in the same commit.
+- **specs/WORKAROUNDS.md is reviewed at every `/speckit-plan` cycle** (Constitution V mandate). New deviations require a ledger entry in the same commit.
 - **`/speckit-taskstoissues` is optional for solo work.** Useful only when collaborating; for now, `tasks.md` + commit messages are the source of truth.
 
 ## 2. Debugging patterns — there is no `/debug` skill
@@ -85,7 +85,7 @@ After several canary cycles produce a stable set of routine read-only Bash invoc
 When starting a new feature on this repo:
 
 1. **Constitution review** — re-read `.specify/memory/constitution.md`. If a principle needs to change, that's a separate constitution amendment commit, not a quiet drift inside the feature.
-2. **Workarounds review** — read `WORKAROUNDS.md`. Does the new feature interact with an open workaround? If so, does it close it, extend it, or leave it untouched?
+2. **Workarounds review** — read `specs/WORKAROUNDS.md`. Does the new feature interact with an open workaround? If so, does it close it, extend it, or leave it untouched?
 3. **`/speckit-specify`** — capture WHAT and WHY. Stay out of HOW.
 4. **`/speckit-clarify`** — loop until no high-impact unknowns remain.
 5. **`/speckit-plan`** — capture HOW: research, data model, contracts, quickstart.

@@ -42,7 +42,7 @@ ifndef HOST
 	$(error HOST is not set. Usage: make build-image HOST=hlc-501)
 endif
 	time nix build $(NIX_FLAGS) \
-		.#nixosConfigurations.$(HOST).config.system.build.sdImage \
+		.#packages.aarch64-linux.$(HOST)-sdImage \
 		$(_REBUILD_FLAG) \
 		-L
 
@@ -90,8 +90,11 @@ ifndef HOST
 endif
 	$(call check_decom)
 	@echo "==> smoke-test $(HOST)"
-	@echo "--- purge known_hosts for $(HOST).$(HLC_DOMAIN)"
+	@echo "--- ping $(IP)"
+	ping -c 1 -W 3 $(IP)
+	@echo "--- purge known_hosts for $(HOST).$(HLC_DOMAIN) and $(IP)"
 	@ssh-keygen -R $(HOST).$(HLC_DOMAIN) 2>/dev/null || true
+	@ssh-keygen -R $(IP) 2>/dev/null || true
 	@echo "--- ssh to $(HOST).$(HLC_DOMAIN)"
 	ssh -o StrictHostKeyChecking=accept-new bob@$(HOST).$(HLC_DOMAIN)
 	@echo "==> smoke-test PASS: $(HOST)"

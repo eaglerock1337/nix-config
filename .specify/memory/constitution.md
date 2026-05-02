@@ -74,7 +74,7 @@ duplicating a small inline config across N host files instead of importing a
 shared module — when doing so reduces blast radius for an unknown regression.
 Any such deferral MUST:
 
-1. Be logged in `WORKAROUNDS.md` with an explicit exit condition (typically
+1. Be logged in `specs/WORKAROUNDS.md` with an explicit exit condition (typically
    "removed once Phase C reintroduces module X with canary validation");
 2. Be removed at the refinement stage (Phase C onwards) without exception.
 
@@ -141,7 +141,7 @@ host configs deferring Principle III.
 
 Each workaround MUST:
 
-1. Have an entry in `WORKAROUNDS.md` (see Governance) with: short title, the
+1. Have an entry in `specs/WORKAROUNDS.md` (see Governance) with: short title, the
    principle or future state it deviates from, the exit condition (what must
    be true to remove it), and a target phase or feature spec where it ends.
 2. Have a code-comment at the deviation site referencing the ledger entry.
@@ -314,7 +314,7 @@ Only `make dry-run` (or equivalent `nix build` on gibson) is permitted.
 
 - **Indentation**: 2 spaces, no tabs
 - **Comments**: explain *why*, not *what*; well-named identifiers carry the
-  what. Workaround sites MUST comment-link to the relevant `WORKAROUNDS.md`
+  what. Workaround sites MUST comment-link to the relevant `specs/WORKAROUNDS.md`
   entry (Principle V).
 - **Colors**: use `modules/home/colors.nix` values — no inline hex outside
   that module
@@ -337,9 +337,9 @@ Amendments require:
 4. Dry-run and apply any config changes the amendment mandates
 5. Commit with message: `docs: amend constitution to vX.Y.Z (<summary>)`
 
-### WORKAROUNDS.md ledger (Principle V requirement)
+### specs/WORKAROUNDS.md ledger (Principle V requirement)
 
-`WORKAROUNDS.md` is a flat-file ledger at the repo root. Each entry has the
+`specs/WORKAROUNDS.md` is a flat-file ledger at `specs/`. Each entry has the
 form:
 
 ```markdown

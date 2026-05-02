@@ -1,13 +1,15 @@
 { lib, inputs, ... }: {
   imports = [
     inputs.nixos-raspberrypi.nixosModules.raspberry-pi-4.base
-    inputs.nixos-raspberrypi.nixosModules.sd-image
+    # sd-image lives in flake.nix mkHlcBootstrap — not here; provisioned configs
+    # never include the SD image module (fileSystems from disko/rpi4.nix in Phase 5)
   ];
 
   nixpkgs.hostPlatform = "aarch64-linux";
+  nixpkgs.buildPlatform = "x86_64-linux";
 
-  # Stub root FS so the config evaluates before disko is wired in Phase 5.
-  # disko/rpi4.nix will override with the real mdadm RAID layout.
+  # Placeholder root; disko/rpi4.nix (T029) overrides with real mdadm RAID layout.
+  # Safe here because sd-image is no longer in this module — no initramfs conflict.
   fileSystems."/" = lib.mkDefault {
     device = "/dev/md0";
     fsType = "ext4";
