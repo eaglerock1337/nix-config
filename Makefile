@@ -96,7 +96,7 @@ endif
 	@ssh-keygen -R $(HOST).$(HLC_DOMAIN) 2>/dev/null || true
 	@ssh-keygen -R $(IP) 2>/dev/null || true
 	@echo "--- ssh to $(HOST).$(HLC_DOMAIN)"
-	ssh -o StrictHostKeyChecking=accept-new bob@$(HOST).$(HLC_DOMAIN)
+	ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 bob@$(HOST).$(HLC_DOMAIN) uname -a
 	@echo "==> smoke-test PASS: $(HOST)"
 
 ip:

@@ -20,7 +20,7 @@ phase-exit gate and every `/speckit-plan` cycle.
 
 ## W-002: Passwordless `wheel` sudo (`security.sudo.wheelNeedsPassword = false`)
 
-- **Site(s)**: After Phase 0, no inline `security.sudo` settings exist on any host (silicon + `main`'s `hlc-501`). As Phase 6 introduces `modules/users/operator.nix`, `bob`'s passwordless wheel will land there. Future per-host sites: every node that imports the operator module.
+- **Site(s)**: After Phase 0, no inline `security.sudo` settings exist on any host (silicon + `main`'s `hlc-501`). As Phase 6 introduces `modules/users/operator.nix`, `bob`'s passwordless wheel will land there. Future per-host sites: every node that imports the operator module. **Bootstrap-scoped extension (2026-05-02)**: `modules/sd/bootstrap.nix` also sets `security.sudo.wheelNeedsPassword = false` so the bootstrap image supports the `--use-remote-sudo` canary path before the operator module exists; bootstrap scope is permanent for that module (mirrors W-004 disposition) and does not propagate to provisioned hosts.
 - **Deviates from**: Eventual passwordless-via-key+sops hardened state
 - **Reason**: `nixos-rebuild switch --target-host bob@<ip> --use-remote-sudo` (the canary remote-update path) requires `sudo -n true` to succeed without an interactive password prompt. Sops-managed credentials are not yet provisioned. Passwordless wheel on a key-only-ssh node is the standard NixOS bring-up posture; closes when secrets management lands.
 - **Exit condition**: sops-nix integration deployed; bob's sudo authorization driven by an age-decrypted credential or an alternate hardened mechanism.
@@ -63,3 +63,15 @@ phase-exit gate and every `/speckit-plan` cycle.
 - **Target phase / feature**: Architecture change (2026-05-02); disko fileSystems wired in Phase 5 (T028/T029).
 - **Opened**: 2026-05-02
 - **Resolved**: 2026-05-02 (architecture change — sd-image removed from hardware modules; bootstrap images separated into flake.nix packages block)
+
+---
+
+## W-006: NixOS firewall disabled on SD bootstrap image
+
+- **Site(s)**: `modules/sd/bootstrap.nix` — `networking.firewall.enable = false`
+- **Deviates from**: NixOS default (`networking.firewall.enable = true`)
+- **Reason**: nf_conntrack TCP state machine is corrupted by SSH session teardown in the Pi5 vendor kernel 6.12.47. Symptom: after any SSH session closes, TCP fails in both directions (outbound SYN-ACK never matched by conntrack INPUT chain; inbound TCP SYNs also dropped) while ICMP continues to work. Hang lasts ~10 minutes until stale SYN_SENT conntrack entries time out. Bootstrap image is on a trusted private management LAN (10.23.50.0/24); the only inbound service is sshd on port 22 with key-only auth. Firewall provides no meaningful security benefit in this context.
+- **Exit condition**: Kernel bug fixed upstream in nvmd fork / Pi5 vendor kernel, or bootstrap image moves to a kernel version where this is not present. If the provisioned (non-bootstrap) host configs also hit this issue, a targeted nftables workaround (accept-all from management subnet, bypass conntrack) should be applied there instead of disabling the firewall globally.
+- **Target phase / feature**: Kernel regression fix in nvmd nixos-raspberrypi upstream; no current spec task.
+- **Opened**: 2026-05-02
+- **Resolved**: (open)
