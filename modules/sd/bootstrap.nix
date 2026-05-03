@@ -1,4 +1,4 @@
-{ operatorPubkey, lib, ... }:
+{ operatorPubkey, lib, pkgs, ... }:
 
 {
   imports = [ ./recovery-utils.nix ];
@@ -7,14 +7,65 @@
   system.stateVersion = "25.11";
   networking.useDHCP = true;
 
-  services.openssh = {
-    enable = true;
-    settings.PasswordAuthentication = false;
-    settings.KbdInteractiveAuthentication = false;
+  # --- SSH server: dropbear (bisect for Pi5 SSH hang) ---
+  # OpenSSH 10.2p1 sshd-session split-binary architecture is suspected of
+  # wedging the listener socket on session teardown. Dropbear is single-process,
+  # no PAM, no D-Bus — isolates the variable.
+  # See: specs/001-nixos-rpi-cluster/breakfix-26-05-02-pi5-ssh-hang.md
+  services.openssh.enable = false;
+
+  systemd.services.dropbear-init = {
+    description = "Generate dropbear host keys on first boot";
+    wantedBy = [ "multi-user.target" ];
+    before = [ "dropbear.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      mkdir -p /etc/dropbear
+      [ -f /etc/dropbear/dropbear_ed25519_host_key ] || \
+        ${pkgs.dropbear}/bin/dropbearkey -t ed25519 \
+          -f /etc/dropbear/dropbear_ed25519_host_key
+      [ -f /etc/dropbear/dropbear_rsa_host_key ] || \
+        ${pkgs.dropbear}/bin/dropbearkey -t rsa -s 4096 \
+          -f /etc/dropbear/dropbear_rsa_host_key
+    '';
   };
 
-  # pam_systemd creates/destroys D-Bus user sessions on every SSH connect;
-  # teardown after non-PTY sessions blocks sshd accept for several minutes.
+  systemd.services.dropbear = {
+    description = "Dropbear SSH server";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network.target" "dropbear-init.service" ];
+    requires = [ "dropbear-init.service" ];
+    serviceConfig = {
+      ExecStart = lib.concatStringsSep " " [
+        "${pkgs.dropbear}/bin/dropbear"
+        "-F"            # foreground (systemd manages lifecycle)
+        "-E"            # log to stderr → journal
+        "-p 22"         # listen port
+        "-r /etc/dropbear/dropbear_rsa_host_key"
+        "-r /etc/dropbear/dropbear_ed25519_host_key"
+      ];
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+  };
+
+  # bob's authorized keys — managed independently of openssh module since
+  # dropbear reads ~/.ssh/authorized_keys directly.
+  system.activationScripts.bobAuthorizedKeys = {
+    text = ''
+      install -d -m 700 -o bob -g users /home/bob/.ssh
+      printf '%s\n' '${operatorPubkey}' > /home/bob/.ssh/authorized_keys
+      chmod 600 /home/bob/.ssh/authorized_keys
+      chown bob:users /home/bob/.ssh/authorized_keys
+    '';
+    deps = [ "users" ];
+  };
+
+  # pam_systemd off — retained as defense-in-depth; dropbear doesn't use PAM
+  # but prevents regression if openssh is re-enabled later.
   security.pam.services.sshd.startSession = lib.mkForce false;
 
   # W-006: nf_conntrack TCP state machine corrupted by SSH session teardown in
@@ -63,10 +114,41 @@
   users.users.bob = {
     isNormalUser = true;
     extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = [ operatorPubkey ];
+  };
+
+  # --- Hang watcher: auto-capture diagnostics when SSH port becomes unreachable ---
+  # The Pi5 SSH hang is transient (5-10 min self-recovery). This timer captures
+  # triage data automatically even if the operator isn't watching. Sentinel file
+  # prevents repeated captures within the same hang window.
+  systemd.services.hlc-hang-watcher = {
+    description = "Detect SSH port hang and auto-capture diagnostics";
+    serviceConfig.Type = "oneshot";
+    path = [ pkgs.bash pkgs.coreutils ];
+    script = ''
+      SENTINEL="/tmp/hlc-hang-active"
+
+      if timeout 5 bash -c 'echo > /dev/tcp/127.0.0.1/22' 2>/dev/null; then
+        rm -f "$SENTINEL"
+        exit 0
+      fi
+
+      # Port unreachable — capture once per hang window
+      if [ -f "$SENTINEL" ]; then
+        exit 0
+      fi
+
+      touch "$SENTINEL"
+      echo "$(date -Iseconds): SSH port 22 unreachable — capturing diagnostics"
+      /run/current-system/sw/bin/hlc-triage
+    '';
+  };
+
+  systemd.timers.hlc-hang-watcher = {
+    description = "Check SSH port reachability every 30s";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnBootSec = "60s";
+      OnUnitActiveSec = "30s";
+    };
   };
 }
-
-sudo ethtool -k end0 | grep -E "tcp-segmentation|generic-segmentation|generic-receive|large-receive"
-
-nix --extra-experimental-features 'nix-command flakes' flake show github:nvmd/nixos-raspberrypi 2>&1 | grep -iE "kernel|linux"   
