@@ -8,6 +8,7 @@
   imports = [ ];
 
   environment.systemPackages = with pkgs; [
+    bsdgames
     dosbox
     fuse-emulator
     protonplus

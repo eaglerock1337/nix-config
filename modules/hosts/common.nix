@@ -17,7 +17,19 @@
     min-free = "${toString (1 * 1024 * 1024 * 1024)}";
     # Stops GC when free space reaches 5GB
     max-free = "${toString (5 * 1024 * 1024 * 1024)}";
+    # nvmd/nixos-raspberrypi binary cache — prebuilt aarch64 kernels/firmware
+    substituters = [
+      "https://cache.nixos.org"
+      "https://nixos-raspberrypi.cachix.org"
+    ];
+    trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI="
+    ];
   };
+
+  # Cross-compile aarch64 via qemu when cache misses occur
+  boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
   # Set your time zone.
   time.timeZone = "America/New_York";

@@ -15,5 +15,8 @@
     fsType = "ext4";
   };
 
+  # Use the new generational bootloader (replaces deprecated kernelboot)
+  boot.loader.raspberry-pi.bootloader = "kernel";
+
   # TODO Phase 5: config.txt + EEPROM + NVMe + thermal
 }
