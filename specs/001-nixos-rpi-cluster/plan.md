@@ -16,7 +16,7 @@ Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS usi
 **Language/Version**: Nix (NixOS 25.11 stable). Target platform: aarch64-linux (RPi 4 `bcm2711`, RPi 5 `bcm2712`). Build host: `gibson` (x86_64 NixOS, cross-compiles aarch64 images).
 **Primary Dependencies**:
 
-- `github:nvmd/nixos-raspberrypi` (Pi hardware modules; confirmed working as of operator test 2026-04-30)
+- `github:nvmd/nixos-raspberrypi` (Pi hardware modules; confirmed working as of operator test 2026-04-30). Binary cache: `nixos-raspberrypi.cachix.org` (key: `nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=`). Build hosts MUST have this substituter configured and `boot.binfmt.emulatedSystems = [ "aarch64-linux" ]` enabled for qemu fallback on cache misses.
 - `github:nix-community/disko` (declarative disk layout for provisioning)
 - `github:nix-community/nixos-anywhere` (remote install onto target hardware)
 - `github:nix-community/home-manager` (user environment, integrated into NixOS)
@@ -26,7 +26,7 @@ Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS usi
 
 **Testing**: No unit tests — NixOS config repo. Verification model: `make dry-run` → `make build` → `make update-node` (canary node) → `make smoke-test` → fleet roll (Constitution §"Safety & Change Management"). Smoke-test definition: remove SSH host keys from `~/.ssh/known_hosts` for both IP and hostname, ping IP for reachability (`ping -c 1 -W 3`), then non-PTY SSH to hostname (`uname -a`); no `-t` flag (PTY mode caused Pi login hangs in testing).
 
-**Target Platform**: aarch64-linux NixOS 25.11 on RPi 4 (`bcm2711`) and RPi 5 (`bcm2712`); cross-compiled / cross-built on `gibson` (x86_64).
+**Target Platform**: aarch64-linux NixOS 25.11 on RPi 4 (`bcm2711`) and RPi 5 (`bcm2712`); cross-compiled / cross-built on `gibson` or `silicon` (x86_64).
 
 **Project Type**: NixOS flake-based system configuration repository.
 
@@ -304,7 +304,7 @@ If any step fails, the reset is incomplete. Diagnose and re-run until green. Do 
    - Both: `/boot` on SD vfat, `/` and `/srv/usb` on 2-disk mdadm RAID1 (ext4).
    - Pi 5 only: `/srv/ssd` on NVMe (xfs).
    - Use `/dev/disk/by-id/` paths parameterized via `config.hlc.disko.{usbDevice0,usbDevice1,nvmeDevice}`.
-2. Expand `modules/hardware/rpi{4,5}.nix` with `config.txt` headless profile (FR-025, R-011) and per-family thermal settings (FR-027, R-012).
+2. Expand `modules/hardware/rpi{4,5}.nix` with `config.txt` headless profile (FR-025, R-011) and per-family thermal settings (FR-027, R-012). Note: `boot.loader.raspberry-pi.bootloader = "kernel"` already set (R-015); add `configurationLimit` (3–5 generations) alongside config.txt settings.
 3. Create `modules/hardware/rpi-eeprom.nix` — idempotent one-shot systemd service to apply EEPROM config (FR-026, R-013): `BOOT_ORDER=0xf14`, `BOOT_UART=1`, Pi 5 extras (`WAKE_ON_GPIO=0`, `POWER_OFF_ON_HALT=1`). Gated by a marker file to prevent re-run.
 4. Add `make provision HOST=<host>` target (per contracts/makefile-targets.md §"Added Phase 5 US3").
 5. Provision `hlc-501`: `make provision HOST=hlc-501`. Confirm reboots into USB array root, `/srv/ssd` on NVMe, `/srv/usb` mounted. `make smoke-test HOST=hlc-501` green.
@@ -418,3 +418,5 @@ All technical decisions are in [research.md](./research.md):
 | R-011 | `config.txt` headless server profile: `gpu_mem=16`, audio off, BT off, no splash |
 | R-012 | Thermal policy: Pi 4 passive 1750 MHz modest OC; Pi 5 stock 2.4 GHz + kernel fan curve |
 | R-013 | EEPROM config: `BOOT_ORDER`, `BOOT_UART`, `POWER_OFF_ON_HALT` (Pi 5), `WAKE_ON_GPIO` (Pi 5) |
+| R-014 | Binary cache: `nixos-raspberrypi.cachix.org` substituter + binfmt emulation on build hosts |
+| R-015 | Bootloader migration: `kernelboot` → `kernel` (nvmd PR#61); set in rpi4/rpi5 hardware modules |

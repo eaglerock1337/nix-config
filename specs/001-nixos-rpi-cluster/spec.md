@@ -219,7 +219,7 @@ Every in-scope node has the packages and OS-level configuration required to part
 
 ## Assumptions
 
-- The operator workstation is `gibson` (Ryzen, NixOS); all cross-compile and image builds run there. `silicon` is the operator laptop and is not a build host.
+- Either `gibson` (Ryzen desktop, nix daemon) or `silicon` (ThinkPad X1 Carbon, NixOS) may be used as the build host for aarch64 cross-compilation and SD image builds. Both require the `nixos-raspberrypi.cachix.org` binary cache configured as a substituter and `aarch64-linux` binfmt emulation enabled for cache-miss fallback. Makefile targets abstract the host-specific build commands (Constitution VII).
 - The HLC VLAN (`10.23.50.0/24`) and Unifi infrastructure (Dream Machine SE, Switch Pro 48, PiHole DNS) are already in place per the network section of the post-mortem; static DHCP reservations and DNS entries for in-scope hosts will be added as needed.
 - Hardware is already on hand and physically installed: 1× Raspberry Pi 4 (`hlc-401`), 8× Raspberry Pi 5 (`hlc-501..508`), 2× 64 GB USB-3 drives per node, 1× 1 TB NVMe per Pi 5, official heatsink+fan on Pi 5s, heatsinks on Pi 4s.
 - The `nvmd/nixos-raspberrypi` `main` branch is the recommended consumption point per its README; the repo's `develop` branch is consulted for documentation but not pinned.

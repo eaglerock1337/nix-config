@@ -314,6 +314,51 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 ---
 
+## R-014 — Binary cache and cross-compilation prerequisites
+
+**Decision**: All x86_64 build hosts (`gibson`, `silicon`) MUST configure the nvmd Cachix binary cache as a substituter and enable aarch64-linux binfmt emulation via qemu. Cache URL: `https://nixos-raspberrypi.cachix.org`. Public key: `nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=`.
+
+**Rationale**:
+
+- The nvmd flake publishes prebuilt aarch64 kernels and firmware to Cachix. Without this substituter, build hosts attempt to cross-compile the Pi kernel locally — which fails on hosts without binfmt emulation and takes 30+ minutes even with it.
+- Pi 5 (`bcm2712`) kernel cache hits confirmed 2026-05-03. Pi 4 (`bcm2711`) kernel had a cache miss on the same date; binfmt/qemu fallback handled it but slowly.
+- Cache hits depend on the `nixpkgs` revision in the nvmd flake's lockfile matching (or being close to) the consuming project's nixpkgs pin. On major divergence, expect cache misses.
+- `boot.binfmt.emulatedSystems = [ "aarch64-linux" ]` on NixOS hosts (silicon) provides qemu-user-static emulation for any aarch64 derivation not in cache. Gibson (non-NixOS nix daemon) needs equivalent qemu-binfmt configured via its host OS.
+
+**Alternatives considered**:
+
+- Build only on gibson with native aarch64 emulation: rejected — silicon is also a valid build host; both should work.
+- Use nvmd's `nixosSystem` helper with `trustCaches = true` exclusively: considered — the helper auto-trusts the cache, but system-level substituter config is more reliable and covers all build paths (SD images, dry-runs, ad-hoc `nix build`).
+
+**Open follow-ups**:
+
+- Monitor Pi 4 kernel cache coverage across nvmd releases; if consistently missing, consider pushing built Pi 4 kernels to a project-owned Cachix cache.
+- Configure gibson's nix daemon with the same substituter once gibson is set up for cluster builds.
+
+---
+
+## R-015 — Bootloader migration: `kernelboot` → `kernel`
+
+**Decision**: Set `boot.loader.raspberry-pi.bootloader = "kernel"` in both `modules/hardware/rpi4.nix` and `modules/hardware/rpi5.nix`. The SD bootstrap images are left on the nvmd default (currently `kernelboot`).
+
+**Rationale**:
+
+- The nvmd project deprecated `kernelboot` in favor of `kernel` (see nvmd PR#61). The `kernel` bootloader provides real generational rollback support — each NixOS generation gets its own directory on the FIRMWARE partition with matched kernel + DTBs + overlays, eliminating the FAT32 symlink hacks of `kernelboot`.
+- Key advantages: atomic installs, rescue boot by editing one `config.txt` line, lazy writes for SD longevity, and `configurationLimit` for storage control.
+- Each generation costs ~53 MB on the FIRMWARE partition. `configurationLimit` should be set to 3–5 when Phase 5 wires up config.txt (T030/T031).
+- SD bootstrap images don't need generational rollback — they're throwaway. Leaving them on the default avoids unnecessary divergence.
+
+**Alternatives considered**:
+
+- Stay on `kernelboot`: rejected — deprecated; will be removed in future nvmd versions.
+- Set `kernelboot-legacy-unsupported` to silence warning: rejected — just delays the inevitable migration.
+
+**Open follow-ups**:
+
+- Set `configurationLimit` alongside other config.txt settings in Phase 5 (T030/T031).
+
+---
+
 ## Cross-cutting notes
 
 - **No NEEDS CLARIFICATION markers in the spec.** All clarification questions from `/speckit-clarify` (sessions 2026-04-29 — Q1..Q7) are resolved and reflected in FR-009, FR-017, SC-002, and User Story 5 acceptance scenario 2.
