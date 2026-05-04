@@ -49,6 +49,9 @@
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
           }
+          # T028/T029: disko NixOS module provides disko.devices option; imported here
+          # so hardware modules (rpi4.nix, rpi5.nix) can set disk layouts.
+          disko.nixosModules.disko
           hostPath
         ];
       };

@@ -153,6 +153,7 @@
     curl
     wget
     httpie          # Human-friendly curl
+    fping
     dig
     iperf3
     mtr             # Traceroute+ping

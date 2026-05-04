@@ -2,7 +2,7 @@ NIX_FLAGS   := --extra-experimental-features 'nix-command flakes'
 HLC_DOMAIN  ?= marks.dev
 
 .PHONY: build-image flash-image silicon-dry silicon-switch update \
-        dry-run build smoke-test ip help
+        dry-run build smoke-test ip provision help
 
 # Derive IP from HOST via hlc-VNN → 10.23.50.(V*10+N) convention.
 # count ≤ 9:  octet = V*10+N  (e.g. hlc-501 → 51)
@@ -32,6 +32,7 @@ help:
 	@echo "  build HOST=<host>                         Build toplevel for a cluster host"
 	@echo "  smoke-test HOST=<host>                    SSH reachability check via FQDN"
 	@echo "  ip HOST=<host>                            Print derived IP for a host"
+	@echo "  provision HOST=<host> [IP=<ip>]          Provision node with nixos-anywhere"
 
 ifdef REBUILD
 _REBUILD_FLAG := --rebuild
@@ -105,3 +106,16 @@ ifndef HOST
 endif
 	@if [ -z '$(IP)' ]; then echo "ERROR: cannot derive IP for HOST=$(HOST)" >&2; exit 1; fi
 	@echo $(IP)
+
+# Phase 5 (US3) targets ———————————————————————————————————————————————————————
+
+provision:
+ifndef HOST
+	$(error HOST is not set. Usage: make provision HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> provision $(HOST) at $(IP)"
+	nix run $(NIX_FLAGS) github:nix-community/nixos-anywhere -- \
+		--flake .#$(HOST) \
+		--target-host root@$(IP) \
+		--disko-mode disko
