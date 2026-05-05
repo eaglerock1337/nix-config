@@ -154,7 +154,7 @@
 
 ### Wire Modules into Cluster Scope
 
-- [ ] T063 [US4] Update `modules/cluster/common.nix`: replace stub TODO comments with real imports — `imports = [ ../shell/utilities.nix ../shell/common.nix ../shell/prompt.nix ../motd/default.nix ../users/operator.nix ]`. The `../k8s/prereqs.nix` import will be added in T084 (Phase 7); add a stub comment `# TODO Phase 7: import ../k8s/prereqs.nix` here as placeholder.
+- [ ] T063 [US4] Update `modules/cluster/common.nix`: (1) replace stub TODO comments with real imports — `imports = [ ../shell/utilities.nix ../shell/common.nix ../shell/prompt.nix ../motd/default.nix ../users/operator.nix ]`; (2) **remove** the inline `users.users.bob` block and the `security.sudo.wheelNeedsPassword = false` line — these definitions move to `modules/users/operator.nix` (T057); (3) add a stub comment `# TODO Phase 7: import ../k8s/prereqs.nix` as placeholder for T084. Removing the inline bob user closes the W-001 inline-host pattern for `modules/cluster/common.nix`.
 - [ ] T064 [US4] Update `modules/cluster/hlc/default.nix`: set `hlc.motd.banner` to the exact HLC ASCII banner text from `specs/001-nixos-rpi-cluster/post-mortem-26-04-29.md` (copy verbatim — verify character-for-character). Wire home-manager for `bob`: integrate `home-manager.users.bob = import ../../home/bob.nix;` (match the integration pattern used for `eaglerock` in `hosts/silicon/` or the top-level flake — check existing home-manager wiring to get the exact attribute path right).
 - [ ] T065 [US4] Run `make dry-run HOST=hlc-501` then `make build HOST=hlc-501` after T063–T064. Fix any evaluation errors before the canary deploy.
 
