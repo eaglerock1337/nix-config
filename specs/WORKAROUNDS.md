@@ -72,6 +72,6 @@ phase-exit gate and every `/speckit-plan` cycle.
 - **Deviates from**: NixOS default (`networking.firewall.enable = true`)
 - **Reason**: nf_conntrack TCP state machine is corrupted by SSH session teardown in the Pi5 vendor kernel 6.12.47. Symptom: after any SSH session closes, TCP fails in both directions (outbound SYN-ACK never matched by conntrack INPUT chain; inbound TCP SYNs also dropped) while ICMP continues to work. Hang lasts ~10 minutes until stale SYN_SENT conntrack entries time out. Bootstrap image is on a trusted private management LAN (10.23.50.0/24); the only inbound service is sshd on port 22 with key-only auth. Firewall provides no meaningful security benefit in this context.
 - **Exit condition**: Kernel bug fixed upstream in nvmd fork / Pi5 vendor kernel, or bootstrap image moves to a kernel version where this is not present. If the provisioned (non-bootstrap) host configs also hit this issue, a targeted nftables workaround (accept-all from management subnet, bypass conntrack) should be applied there instead of disabling the firewall globally.
-- **Target phase / feature**: Kernel regression fix in nvmd nixos-raspberrypi upstream; no current spec task.
+- **Target phase / feature**: Kernel regression fix in nvmd nixos-raspberrypi upstream. Tracked via Phase 8 T097/T098 doc sweep — if still unresolved at spec close-out, open a follow-on issue to monitor nvmd kernel updates and remove the flag once confirmed fixed.
 - **Opened**: 2026-05-02
 - **Resolved**: (open)

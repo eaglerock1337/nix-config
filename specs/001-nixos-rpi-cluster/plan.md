@@ -303,7 +303,7 @@ If any step fails, the reset is incomplete. Diagnose and re-run until green. Do 
 1. Create `disko/rpi4.nix` and `disko/rpi5.nix` per R-004:
    - Both: `/boot` on SD vfat, `/` and `/srv/usb` on 2-disk mdadm RAID1 (ext4).
    - Pi 5 only: `/srv/ssd` on NVMe (xfs).
-   - Use `/dev/disk/by-id/` paths parameterized via `config.hlc.disko.{usbDevice0,usbDevice1,nvmeDevice}`.
+   - Use `/dev/disk/by-path/` paths (not `by-id/`) per FR-010a. Convention: a-drive = left port = `platform-xhci-hcd.0-usb-0:1:1.0-scsi-0:0:0:0`, b-drive = right port = `platform-xhci-hcd.1-usb-0:1:1.0-scsi-0:0:0:0`. This pattern is consistent across all Pi 5 nodes. Pre-provision check: both drives MUST show a `usbv3` alias in `/dev/disk/by-path/`; re-seat any that show `usbv2`. Paths exposed via `config.hlc.disko.{usbDevice0,usbDevice1,nvmeDevice}` NixOS options.
 2. Expand `modules/hardware/rpi{4,5}.nix` with `config.txt` headless profile (FR-025, R-011) and per-family thermal settings (FR-027, R-012). Note: `boot.loader.raspberry-pi.bootloader = "kernel"` already set (R-015); add `configurationLimit` (3–5 generations) alongside config.txt settings.
 3. Create `modules/hardware/rpi-eeprom.nix` — idempotent one-shot systemd service to apply EEPROM config (FR-026, R-013): `BOOT_ORDER=0xf14`, `BOOT_UART=1`, Pi 5 extras (`WAKE_ON_GPIO=0`, `POWER_OFF_ON_HALT=1`). Gated by a marker file to prevent re-run.
 4. Add `make provision HOST=<host>` target (per contracts/makefile-targets.md §"Added Phase 5 US3").
@@ -408,7 +408,7 @@ All technical decisions are in [research.md](./research.md):
 | R-001 | Upstream Pi NixOS source: `nvmd/nixos-raspberrypi` main branch ✅ confirmed working |
 | R-002 | Mountain-glyph `⛰` presentation: `U+FE0E` text selector + `hlc.prompt.mountainGlyph` ASCII fallback |
 | R-003 | k3s enabled-but-stopped: `services.k3s.enable = true` + `wantedBy = mkForce []` |
-| R-004 | Disko schemas: two files (`rpi4.nix`, `rpi5.nix`); ext4 for RAID, xfs for NVMe |
+| R-004 | Disko schemas: two files (`rpi4.nix`, `rpi5.nix`); ext4 for RAID, xfs for NVMe; `by-path/` disk identification (USB port deterministic; `xhci-hcd.0`=left/a, `xhci-hcd.1`=right/b) |
 | R-005 | Boot order: EEPROM `BOOT_ORDER = 0xf14` (USB-first, SD-fallback) |
 | R-006 | `make build-image` rebuild: `REBUILD=1` opt-in + derivation closure correctness |
 | R-007 | `nixos-anywhere` invocation: from gibson as `root@<ip>`, `--disko-mode disko` |

@@ -7,7 +7,8 @@
 #
 # No NVMe on Pi 4 — /srv/ssd mount is absent (FR-010, FR-014).
 # Device paths are set per-host in hosts/hlc-4NN/configuration.nix via hlc.disko.*
-# options. Fill in real /dev/disk/by-id/ paths before running `make provision`.
+# options. Fill in real /dev/disk/by-path/ paths before running `make provision`.
+# USB: confirm Pi 4 by-path patterns via `ls -la /dev/disk/by-path/ | grep us` on hlc-401.
 {
   disko.devices = {
     disk = {

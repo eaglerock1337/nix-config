@@ -17,17 +17,17 @@
       usbDevice0 = lib.mkOption {
         type = lib.types.str;
         default = "PLACEHOLDER";
-        description = "First USB storage device path (by-id); filled before provisioning.";
+        description = "First USB storage device path (by-path); filled before provisioning.";
       };
       usbDevice1 = lib.mkOption {
         type = lib.types.str;
         default = "PLACEHOLDER";
-        description = "Second USB storage device path (by-id); filled before provisioning.";
+        description = "Second USB storage device path (by-path); filled before provisioning.";
       };
       nvmeDevice = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "NVMe device path (by-id); null on Pi 4 nodes (no NVMe).";
+        description = "NVMe device path (by-path); null on Pi 4 nodes (no NVMe).";
       };
     };
   };

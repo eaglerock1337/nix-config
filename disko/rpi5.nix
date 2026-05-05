@@ -7,7 +7,11 @@
 #   /srv/ssd        — NVMe xfs (Pi 5 M.2 HAT); omitted when nvmeDevice is null
 #
 # Device paths are set per-host in hosts/hlc-5NN/configuration.nix via hlc.disko.*
-# options. Fill in real /dev/disk/by-id/ paths before running `make provision`.
+# options. Fill in real /dev/disk/by-path/ paths before running `make provision`.
+# USB (identical across all Pi 5 nodes — fixed SoC addresses, FR-010a):
+#   left (a-drive):  platform-xhci-hcd.0-usb-0:1:1.0-scsi-0:0:0:0
+#   right (b-drive): platform-xhci-hcd.1-usb-0:1:1.0-scsi-0:0:0:0
+# NVMe: /dev/nvme0n1 (only one NVMe slot per Pi 5; no ambiguity)
 {
   disko.devices = {
     disk = {
