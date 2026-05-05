@@ -120,7 +120,8 @@ endif
 	nix run $(NIX_FLAGS) github:nix-community/nixos-anywhere -- \
 		--flake .#$(HOST) \
 		--target-host bob@$(IP) \
-		--disko-mode disko
+		--disko-mode disko \
+		--phases disko,install,reboot
 
 update-node:
 ifndef HOST
@@ -141,3 +142,4 @@ endif
 	sudo nixos-rebuild --rollback --flake .#$(HOST) \
 		--target-host bob@$(IP) \
 		--use-remote-sudo
+

@@ -78,6 +78,42 @@ phase-exit gate and every `/speckit-plan` cycle.
 
 ---
 
+## W-008: TCP timestamps disabled on SD bootstrap image
+
+- **Site(s)**: `modules/sd/bootstrap.nix` — `boot.kernel.sysctl."net.ipv4.tcp_timestamps" = 0`
+- **Deviates from**: NixOS / kernel default (`net.ipv4.tcp_timestamps = 1`, RFC 1323 PAWS enabled)
+- **Reason**: 2026-05-05 testing confirmed the SSH-hang root cause is **not** conntrack as W-006 originally hypothesised: `nf_conntrack`, `nf_conntrack_ipv{4,6}`, and `nf_nat` are blacklisted via `boot.blacklistedKernelModules`; `lsmod` empty; `nft list ruleset` empty; W-007 `PerSourcePenalties=no` confirmed live in `sshd -T`. Yet a single non-PTY `ssh bob@hlc-501 '<cmd>'` invocation reliably wedges outbound TCP for ~265s while ICMP continues to work — three samples (264s, 273s, 265s) cluster tightly, indicating a kernel-deterministic timeout (matches `tcp_retries2=15` exhaustion path). Wedge is in the kernel TCP stack itself, not netfilter. `tcp_timestamps=0` is a known mitigation for several Pi vendor kernel TCP regressions; the bootstrap LAN is trusted v4-only and has no PAWS dependency, so cost is nil.
+- **Exit condition**: Either (a) Pi5 vendor kernel regression fixed upstream in nvmd nixos-raspberrypi and bootstrap image picks up a kernel where the wedge no longer reproduces with `tcp_timestamps=1`, or (b) full root-cause identified and a more targeted fix applied. If (a) succeeds, this entry resolves and W-006 should be re-evaluated for similar removal.
+- **Target phase / feature**: Kernel regression follow-up alongside W-006; doc sweep at Phase 8 T097/T098. If still unresolved at spec close-out, open follow-on issue tracking nvmd kernel updates.
+- **Opened**: 2026-05-05
+- **Resolved**: (open)
+
+---
+
+## W-009: TCP retransmit cap reduced (`tcp_retries2 = 5`)
+
+- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` — `boot.kernel.sysctl."net.ipv4.tcp_retries2" = 5`. Module is staged but **not yet imported anywhere** as of opening; wire-up will land alongside the workable-state declaration.
+- **Deviates from**: Kernel default `tcp_retries2 = 15` (RFC 1122 §4.2.3.5 R2 ≥ 100s).
+- **Reason**: The W-008 wedge has a recovery floor at `tcp_retries2` exhaustion. Three observed samples (264s, 273s, 265s) match the default-15 backoff schedule. Cutting to 5 collapses the recovery floor to ~25–30s, making the wedge invisible to operator workflow even when the underlying root cause is still present. Trade-off: established TCP sessions will give up faster on transient packet loss; HLC is LAN-only, low-loss, so the trade-off is favourable. Operator workflow also benefits from `make smoke-test` retries succeeding within seconds rather than minutes.
+- **Exit condition**: Removed once the underlying TCP wedge is root-caused and fixed (W-006 / W-008 path) or once the vendor kernel ships with the regression patched. Until then this is a workflow-friendliness band-aid, not a correctness fix.
+- **Target phase / feature**: Vendor-kernel mitigations follow-up alongside W-006 / W-008. Doc sweep at Phase 8 T097/T098.
+- **Opened**: 2026-05-05
+- **Resolved**: (open)
+
+---
+
+## W-010: Root SSH key in bootstrap image + `--phases disko,install,reboot` in `make provision`
+
+- **Site(s)**: `modules/sd/bootstrap.nix` — `users.users.root.openssh.authorizedKeys.keys = [ operatorPubkey ]`; `Makefile` — `--phases disko,install,reboot` on the `provision` target.
+- **Deviates from**: Principle of minimal root exposure; nixos-anywhere default kexec-based provisioning flow.
+- **Reason**: Pi4/Pi5 vendor kernel 6.12.47 kexec fails unconditionally with `Can't kexec: CPUs are stuck in the kernel`. Root cause: `vc4`, `brcmfmac`, and other Pi hardware drivers do not implement kexec quiesce callbacks, leaving CPUs in non-interruptible kernel state when kexec attempts to halt all CPUs and load the new kernel. The `kexec_file_load` syscall returns `EBUSY`. Without kexec, nixos-anywhere's `--phases disko,install,reboot` path installs its ephemeral temp key directly to `root@<target>` before running disko and nixos-install. If `root` has no authorized keys, ssh-copy-id loops indefinitely. Adding the operator pubkey to root unblocks the install. Bootstrap image is throwaway; management LAN is trusted (10.23.50.0/24); key-only auth.
+- **Exit condition**: Either (a) nvmd nixos-raspberrypi vendor kernel gains proper kexec quiesce support in vc4/brcmfmac (restore kexec path, remove root key + --phases override), or (b) nixos-anywhere adds a non-root sudo path for the no-kexec phases (remove root key entry, keep --phases). Remove when kexec provision flow works end-to-end on Pi.
+- **Target phase / feature**: Vendor-kernel follow-up alongside W-006/W-008/W-009. Doc sweep at Phase 8 T097/T098.
+- **Opened**: 2026-05-05
+- **Resolved**: (open)
+
+---
+
 ## W-006: NixOS firewall disabled on SD bootstrap image
 
 - **Site(s)**: `modules/sd/bootstrap.nix` — `networking.firewall.enable = false`
