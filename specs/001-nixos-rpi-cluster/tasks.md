@@ -134,8 +134,8 @@
 
 ### Add Phase 6 Makefile Targets
 
-- [ ] T051 Add `make update-node HOST=<host> [IP=<ip>]` to `Makefile`: wraps `sudo nixos-rebuild switch --flake .#<host> --target-host bob@<IP> --use-remote-sudo`. Derives IP from HOST per HLC convention unless `IP=` is provided. Refuses decom-set hosts with error message.
-- [ ] T052 Add `make rollback HOST=<host> [IP=<ip>]` to `Makefile`: wraps `sudo nixos-rebuild --rollback --flake .#<host> --target-host bob@<IP> --use-remote-sudo`. Same IP-derivation and decom-set guard.
+- [X] T051 Add `make update-node HOST=<host> [IP=<ip>]` to `Makefile`: wraps `sudo nixos-rebuild switch --flake .#<host> --target-host bob@<IP> --use-remote-sudo`. Derives IP from HOST per HLC convention unless `IP=` is provided. Refuses decom-set hosts with error message.
+- [X] T052 Add `make rollback HOST=<host> [IP=<ip>]` to `Makefile`: wraps `sudo nixos-rebuild --rollback --flake .#<host> --target-host bob@<IP> --use-remote-sudo`. Same IP-derivation and decom-set guard.
 
 ### Create US4 Modules (Bundle — all before canary)
 

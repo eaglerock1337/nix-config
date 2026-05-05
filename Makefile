@@ -2,7 +2,7 @@ NIX_FLAGS   := --extra-experimental-features 'nix-command flakes'
 HLC_DOMAIN  ?= marks.dev
 
 .PHONY: build-image flash-image silicon-dry silicon-switch update \
-        dry-run build smoke-test ip provision help
+        dry-run build smoke-test ip provision update-node rollback help
 
 # Derive IP from HOST via hlc-VNN → 10.23.50.(V*10+N) convention.
 # count ≤ 9:  octet = V*10+N  (e.g. hlc-501 → 51)
@@ -33,6 +33,8 @@ help:
 	@echo "  smoke-test HOST=<host>                    SSH reachability check via FQDN"
 	@echo "  ip HOST=<host>                            Print derived IP for a host"
 	@echo "  provision HOST=<host> [IP=<ip>]          Provision node with nixos-anywhere"
+	@echo "  update-node HOST=<host> [IP=<ip>]        Deploy config update to a provisioned node"
+	@echo "  rollback HOST=<host> [IP=<ip>]           Roll back to prior NixOS generation"
 
 ifdef REBUILD
 _REBUILD_FLAG := --rebuild
@@ -107,7 +109,7 @@ endif
 	@if [ -z '$(IP)' ]; then echo "ERROR: cannot derive IP for HOST=$(HOST)" >&2; exit 1; fi
 	@echo $(IP)
 
-# Phase 5 (US3) targets ———————————————————————————————————————————————————————
+# Phase 5–6 (US3–US4) targets ————————————————————————————————————————————————
 
 provision:
 ifndef HOST
@@ -117,5 +119,26 @@ endif
 	@echo "==> provision $(HOST) at $(IP)"
 	nix run $(NIX_FLAGS) github:nix-community/nixos-anywhere -- \
 		--flake .#$(HOST) \
-		--target-host root@$(IP) \
+		--target-host bob@$(IP) \
+		--use-remote-sudo \
 		--disko-mode disko
+
+update-node:
+ifndef HOST
+	$(error HOST is not set. Usage: make update-node HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> update-node $(HOST) at $(IP)"
+	sudo nixos-rebuild switch --flake .#$(HOST) \
+		--target-host bob@$(IP) \
+		--use-remote-sudo
+
+rollback:
+ifndef HOST
+	$(error HOST is not set. Usage: make rollback HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> rollback $(HOST) at $(IP)"
+	sudo nixos-rebuild --rollback --flake .#$(HOST) \
+		--target-host bob@$(IP) \
+		--use-remote-sudo
