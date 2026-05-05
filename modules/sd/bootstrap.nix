@@ -11,6 +11,9 @@
   # Without this, udev lacks the mdadm rules to create /dev/md/<name> symlinks
   # after mdadm --create, causing disko to fail with "timeout waiting for /dev/md/usb-raid".
   boot.swraid.enable = true;
+  # Silence "Neither MAILADDR nor PROGRAM" eval warning; mdmon needs one set.
+  # Bootstrap has no mail infra; route to root as a no-op.
+  boot.swraid.mdadmConf = "MAILADDR root";
 
   services.openssh = {
     enable = true;
