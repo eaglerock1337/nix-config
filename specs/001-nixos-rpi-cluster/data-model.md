@@ -89,8 +89,7 @@ The post-provisioning disk layout for a Cluster Node.
 | Mount | Backing | Filesystem | Notes |
 |-------|---------|------------|-------|
 | `/boot` | SD card | vfat (firmware) | Required for Pi firmware boot. Contains kernel, initramfs, device tree, U-Boot configuration. |
-| `/` | mdadm RAID1 across `usbDevice0` + `usbDevice1` | ext4 | Root filesystem; durable against single USB-drive loss. |
-| `/srv/usb` | Same RAID1 array (different LV / partition) | ext4 | Storage path for workloads that want pre-replicated USB-backed storage. |
+| `/` | mdadm RAID1 across `usbDevice0` + `usbDevice1` | ext4 | Root filesystem; single partition, full array (~28.6 GiB); durable against single USB-drive loss. |
 | `/srv/ssd` | NVMe (`nvmeDevice`) | xfs | Pi 5 only. Mount-point absent on Pi 4 nodes. |
 
 **Recovery layout** (when USB drives are absent or RAID1 is degraded beyond mount):

@@ -2,8 +2,7 @@
 # Disko schema for Raspberry Pi 5 cluster nodes (T028)
 # Layout:
 #   /boot/firmware  — SD card vfat (mmcblk0p1); declared in modules/hardware/rpi5.nix
-#   /               — mdadm RAID1 across two USB drives, ext4
-#   /srv/usb        — mdadm RAID1 remaining space, ext4 (workload data)
+#   /               — mdadm RAID1 across two USB drives, ext4 (full array, ~28.6 GiB)
 #   /srv/ssd        — NVMe xfs (Pi 5 M.2 HAT); omitted when nvmeDevice is null
 #
 # Device paths are set per-host in hosts/hlc-5NN/configuration.nix via hlc.disko.*
@@ -75,21 +74,12 @@
           type = "gpt";
           partitions = {
             root = {
-              # 50 GiB for root — generous for NixOS store, logs, k3s images;
-              # remaining space goes to /srv/usb for workload data
-              size = "50G";
+              # USB drives are ~28.6 GiB; single partition uses full array
+              size = "100%";
               content = {
                 type = "filesystem";
                 format = "ext4";
                 mountpoint = "/";
-              };
-            };
-            usb = {
-              size = "100%"; # remaining space
-              content = {
-                type = "filesystem";
-                format = "ext4";
-                mountpoint = "/srv/usb";
               };
             };
           };

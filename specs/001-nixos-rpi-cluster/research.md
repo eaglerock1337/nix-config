@@ -76,11 +76,12 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 ## R-004 — Disko schemas: Pi 4 vs Pi 5 (USB RAID1 root, NVMe data, SD recovery)
 
-**Decision**: Two disko schemas — `disko/rpi4.nix` and `disko/rpi5.nix`. Both define `/boot` on the SD-card device and `/` plus `/srv/usb` on a 2-disk mdadm RAID1 across the two USB drives. `disko/rpi5.nix` additionally defines `/srv/ssd` on the NVMe device. Filesystems: ext4 for `/` (durability, journaling, well-understood recovery); ext4 for `/srv/usb` (matches `/`); xfs for `/srv/ssd` (better for large-file Longhorn workloads, though Longhorn itself is out of scope for this spec — picking xfs now keeps the option open). Device names are passed in via NixOS module arguments (`config.hlc.disko.usbDevice0`, `usbDevice1`, `nvmeDevice`) so they can be overridden per host where physical layout differs.
+**Decision**: Two disko schemas — `disko/rpi4.nix` and `disko/rpi5.nix`. Both define `/boot` on the SD-card device and `/` on a 2-disk mdadm RAID1 across the two USB drives (single partition, full array; drives are ~30 GB / ~28.6 GiB usable — too small to split further). `disko/rpi5.nix` additionally defines `/srv/ssd` on the NVMe device. Filesystems: ext4 for `/` (durability, journaling, well-understood recovery); xfs for `/srv/ssd` (better for large-file Longhorn workloads, though Longhorn itself is out of scope for this spec — picking xfs now keeps the option open). Device names are passed in via NixOS module arguments (`config.hlc.disko.usbDevice0`, `usbDevice1`, `nvmeDevice`) so they can be overridden per host where physical layout differs.
 
 **Rationale**:
 
 - USB RAID1 mirror for `/` matches FR-010 and the durability requirement: a single USB-drive failure must not take a node down.
+- Single partition (no `/srv/usb` split): drives are ~30 GB / ~28.6 GiB; splitting would leave ~8 GiB for workload data which is not useful. Full array used for `/`. `/srv/usb` partition dropped 2026-05-05 (confirmed during first provision attempt — sgdisk rejected the 50G partition size on ~28.6 GiB device).
 - mdadm (rather than ZFS or btrfs RAID): operator's existing toolchain expectation per post-mortem; mdadm's failure modes are well-understood; both ZFS and btrfs raise complexity (kernel module licensing for ZFS; btrfs RAID1 still has known caveats on small disks).
 - ext4 for `/`: smallest blast radius. xfs on `/srv/ssd` because the NVMe is intended for high-throughput workload data later (Longhorn, databases) and xfs scales better for large files.
 - Device-name parameterization is the same pattern silicon already uses for hardware-specific values; keeps the disko schemas reusable without per-host duplication.

@@ -22,7 +22,7 @@ Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS usi
 - `github:nix-community/home-manager` (user environment, integrated into NixOS)
 - `github:NixOS/nixos-hardware` (generic Pi modules layered under nvmd)
 
-**Storage**: Per-node disko schema; mdadm RAID1 (`/` and `/srv/usb`) + NVMe xfs (`/srv/ssd`, Pi 5 only) + SD vfat (`/boot`).
+**Storage**: Per-node disko schema; mdadm RAID1 (`/`, full array ~28.6 GiB) + NVMe xfs (`/srv/ssd`, Pi 5 only) + SD vfat (`/boot`).
 
 **Testing**: No unit tests — NixOS config repo. Verification model: `make dry-run` → `make build` → `make update-node` (canary node) → `make smoke-test` → fleet roll (Constitution §"Safety & Change Management"). Smoke-test definition: remove SSH host keys from `~/.ssh/known_hosts` for both IP and hostname, ping IP for reachability (`ping -c 1 -W 3`), then non-PTY SSH to hostname (`uname -a`); no `-t` flag (PTY mode caused Pi login hangs in testing).
 
@@ -147,7 +147,7 @@ modules/
     └── prereqs.nix           # k3s enabled-but-stopped, container deps, kernel/sysctl, k9s
 
 disko/
-├── rpi4.nix                  # Disko schema: Pi 4 (SD /boot + USB RAID1 + /srv/usb)
+├── rpi4.nix                  # Disko schema: Pi 4 (SD /boot + USB RAID1 single partition for /)
 └── rpi5.nix                  # Disko schema: Pi 5 (adds NVMe /srv/ssd)
 
 home/
@@ -301,13 +301,13 @@ If any step fails, the reset is incomplete. Diagnose and re-run until green. Do 
 **Goal**: Provisioning workflow installs full per-host NixOS onto USB-RAID + NVMe. Boot order locked to USB-first, SD-fallback.
 
 1. Create `disko/rpi4.nix` and `disko/rpi5.nix` per R-004:
-   - Both: `/boot` on SD vfat, `/` and `/srv/usb` on 2-disk mdadm RAID1 (ext4).
+   - Both: `/boot` on SD vfat, `/` on 2-disk mdadm RAID1 (ext4, full array; drives are ~30 GB / ~28.6 GiB usable — single partition, no `/srv/usb`).
    - Pi 5 only: `/srv/ssd` on NVMe (xfs).
    - Use `/dev/disk/by-path/` paths (not `by-id/`) per FR-010a. Convention: a-drive = left port = `platform-xhci-hcd.0-usb-0:1:1.0-scsi-0:0:0:0`, b-drive = right port = `platform-xhci-hcd.1-usb-0:1:1.0-scsi-0:0:0:0`. This pattern is consistent across all Pi 5 nodes. Pre-provision check: both drives MUST show a `usbv3` alias in `/dev/disk/by-path/`; re-seat any that show `usbv2`. Paths exposed via `config.hlc.disko.{usbDevice0,usbDevice1,nvmeDevice}` NixOS options.
 2. Expand `modules/hardware/rpi{4,5}.nix` with `config.txt` headless profile (FR-025, R-011) and per-family thermal settings (FR-027, R-012). Note: `boot.loader.raspberry-pi.bootloader = "kernel"` already set (R-015); add `configurationLimit` (3–5 generations) alongside config.txt settings.
 3. Create `modules/hardware/rpi-eeprom.nix` — idempotent one-shot systemd service to apply EEPROM config (FR-026, R-013): `BOOT_ORDER=0xf14`, `BOOT_UART=1`, Pi 5 extras (`WAKE_ON_GPIO=0`, `POWER_OFF_ON_HALT=1`). Gated by a marker file to prevent re-run.
 4. Add `make provision HOST=<host>` target (per contracts/makefile-targets.md §"Added Phase 5 US3").
-5. Provision `hlc-501`: `make provision HOST=hlc-501`. Confirm reboots into USB array root, `/srv/ssd` on NVMe, `/srv/usb` mounted. `make smoke-test HOST=hlc-501` green.
+5. Provision `hlc-501`: `make provision HOST=hlc-501`. Confirm reboots into USB array root, `/srv/ssd` on NVMe. `make smoke-test HOST=hlc-501` green.
 6. Recovery test (FR-011, SC-005): power down `hlc-501`, detach USB drives, power on. SD recovery boots; `make smoke-test HOST=hlc-501` green; SSH in, run `mdadm --examine`. Re-attach USB drives, normal boot resumes.
 7. Provision remaining work-set serially: `make provision HOST=hlc-502` … `hlc-508`, then `hlc-401`. `make smoke-test HOST=<host>` after each. (No automation wrapper — operator manual loop.)
 8. `hlc-401` provisioning validates Pi 4 path: `/srv/ssd` absent without error.
@@ -393,8 +393,7 @@ After all 6 phases:
 | Mount | FS | Rationale |
 | ----- | -- | --------- |
 | `/boot` | vfat | Pi firmware requirement |
-| `/` | ext4 | Durability, journaling, well-understood RAID1 recovery |
-| `/srv/usb` | ext4 | Consistent with `/`; workload data; mdadm handles redundancy |
+| `/` | ext4 | Durability, journaling, well-understood RAID1 recovery; full array (~28.6 GiB) — single partition |
 | `/srv/ssd` | xfs | Better for large-file / Longhorn-class workloads; deferred to future spec but xfs now avoids a reformatting step later |
 
 ---

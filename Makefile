@@ -120,6 +120,7 @@ endif
 	nix run $(NIX_FLAGS) github:nix-community/nixos-anywhere -- \
 		--flake .#$(HOST) \
 		--target-host bob@$(IP) \
+		--use-remote-sudo \
 		--disko-mode disko \
 		--phases disko,install,reboot
 

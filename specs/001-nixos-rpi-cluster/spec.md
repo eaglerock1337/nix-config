@@ -43,18 +43,18 @@ The operator can build (`nixos-rebuild dry-run --flake .#<host>`) a NixOS config
 
 ### User Story 3 — Full-Disk Provisioning with USB RAID Root and NVMe Data Volume (Priority: P3)
 
-After a node is reachable on the SD baseline, the operator runs `nixos-anywhere` (from gibson or on the node itself) to install the full per-host NixOS configuration onto persistent storage. The result: `/boot` remains on the SD card; `/` lives on a 2-disk USB-3 mdadm RAID1 mirror; on Pi 5 nodes, `/srv/ssd` is mounted from a 1 TB NVMe drive; on all nodes, the USB RAID is also exposed at `/srv/usb` for storage workloads. The Pi prefers booting from the USB array when present and falls back to the SD-card live environment for recovery if the USB array is unavailable.
+After a node is reachable on the SD baseline, the operator runs `nixos-anywhere` (from gibson or on the node itself) to install the full per-host NixOS configuration onto persistent storage. The result: `/boot` remains on the SD card; `/` lives on a 2-disk USB-3 mdadm RAID1 mirror (single partition, full ~28.6 GiB array); on Pi 5 nodes, `/srv/ssd` is mounted from a 1 TB NVMe drive. The Pi prefers booting from the USB array when present and falls back to the SD-card live environment for recovery if the USB array is unavailable.
 
 **Why this priority**: This is the durable runtime configuration the cluster needs. The SD-only baseline (Story 1) is provisioning scaffolding; without USB-backed root and NVMe data volume, the nodes cannot host real workloads.
 
-**Independent Test**: For a representative Pi 5 node and the Pi 4 node (`hlc-401`), the operator runs the documented `nixos-anywhere` workflow against the SD-baseline node and, after reboot, confirms: `/` is on the mdadm array, `/srv/ssd` is the NVMe (Pi 5 only), `/srv/usb` is mounted, and removing the USB drives + rebooting brings the Pi back into the SD-card recovery environment with `mdadm` available to inspect the array.
+**Independent Test**: For a representative Pi 5 node and the Pi 4 node (`hlc-401`), the operator runs the documented `nixos-anywhere` workflow against the SD-baseline node and, after reboot, confirms: `/` is on the mdadm array and `/srv/ssd` is the NVMe (Pi 5 only), and removing the USB drives + rebooting brings the Pi back into the SD-card recovery environment with `mdadm` available to inspect the array.
 
 **Acceptance Scenarios**:
 
 1. **Given** a Pi 5 node booted on the SD baseline with two USB drives and an NVMe attached, **When** operator runs the provisioning workflow, **Then** the node reboots into NixOS with `/` on the mdadm RAID1 mirror and `/srv/ssd` mounted from the NVMe.
 2. **Given** a provisioned Pi 5 node, **When** the USB array is healthy, **Then** the system boots from the USB array and the SD card is used only for `/boot`.
 3. **Given** a provisioned node with the USB drives physically removed, **When** the operator powers the Pi on, **Then** the Pi falls back to the SD-card recovery environment and exposes `mdadm` and other utilities for repair.
-4. **Given** the Pi 4 node `hlc-401` (no NVMe), **When** the same workflow runs, **Then** the node provisions with `/` on USB RAID1 and `/srv/usb` available; `/srv/ssd` is absent without error.
+4. **Given** the Pi 4 node `hlc-401` (no NVMe), **When** the same workflow runs, **Then** the node provisions with `/` on USB RAID1; `/srv/ssd` is absent without error.
 5. **Given** the operator runs the provisioning workflow against an already-provisioned node, **When** they re-run the same target, **Then** the operation is either idempotent or fails with a clear, documented message — never silently corrupts the array.
 
 ---
@@ -133,14 +133,13 @@ Every in-scope node has the packages and OS-level configuration required to part
 
 - **FR-010**: After provisioning via `nixos-anywhere`/`disko`, each in-scope node MUST have:
   - `/boot` on the SD card;
-  - `/` on a 2-disk USB-3 mdadm RAID1 mirror;
-  - `/srv/usb` exposed for storage workloads (sourced from the same USB RAID);
+  - `/` on a 2-disk USB-3 mdadm RAID1 mirror (full array, single partition; drives are ~30 GB / ~28.6 GiB usable);
   - `/srv/ssd` on the 1 TB NVMe (Pi 5 nodes only; Pi 4 nodes do not mount this path and MUST NOT fail because of its absence).
 - **FR-010a**: USB RAID disks MUST be identified in disko by `/dev/disk/by-path/` using the non-versioned `platform-xhci-hcd.N-usb-0:1:1.0-scsi-0:0:0:0` pattern, where `N=0` is the left (a) port and `N=1` is the right (b) port. Operator convention: a-drives are always inserted in the left USB port, b-drives in the right USB port, as viewed from the operator's perspective. This convention applies to all Pi 5 nodes; path correctness MUST be validated by confirming both drives show a `usbv3` alias in `/dev/disk/by-path/` before provisioning (a `usbv2` alias indicates the drive negotiated at USB 2.0 speed and the connection should be re-seated).
 - **FR-011**: The boot order MUST prefer the USB array when healthy and fall back to the SD-card recovery environment when the USB array is absent or unbootable. Recovery from SD MUST be possible without operator intervention beyond removing/replacing USB drives.
 - **FR-012**: The provisioning workflow (`nixos-anywhere` invocation + `disko` schema) MUST be invokable from `gibson` against a SD-baseline node. Operator MAY also invoke it on the node itself; both paths MUST be documented. `nixos-anywhere` MUST connect as `bob` (root SSH is not available on the SD bootstrap image); this requires `bob` to have passwordless sudo on the bootstrap image and `nixos-anywhere` to be invoked with `--use-remote-sudo`.
 - **FR-013**: Provisioning MUST be re-runnable. Re-running on an already-provisioned node MUST either be idempotent or refuse with a documented message; it MUST NOT silently corrupt the existing array or filesystem.
-- **FR-014**: Filesystem choices for `/`, `/srv/usb`, and `/srv/ssd` MUST be selected for their use case (durability for `/`, throughput-friendly for `/srv/ssd`) and documented in the plan; this spec does not pin specific filesystems.
+- **FR-014**: Filesystem choices for `/` and `/srv/ssd` MUST be selected for their use case (durability for `/`, throughput-friendly for `/srv/ssd`) and documented in the plan; this spec does not pin specific filesystems.
 
 #### Operator UX (shell, MOTD, toolbox, home-manager)
 
@@ -202,7 +201,7 @@ Every in-scope node has the packages and OS-level configuration required to part
 - **Cluster node**: A physical Pi with hostname (`hlc-401`, `hlc-501..508`), Pi family (rpi4 or rpi5), IP, MAC, role tag.
 - **SD bootstrap image**: A bootable SD-card image whose only purpose is to bring a Pi to a reachable state for `nixos-anywhere` and to serve as a recovery environment if the USB array fails.
 - **Per-host NixOS configuration**: The full configuration applied after provisioning; lives at `hosts/<hostname>/` and pulls from cluster, device, and operator-environment scopes.
-- **USB RAID pair**: Two USB-3 drives configured as mdadm RAID1; root filesystem and `/srv/usb` source.
+- **USB RAID pair**: Two ~30 GB USB-3 drives (~28.6 GiB usable) configured as mdadm RAID1; single partition for root filesystem.
 - **NVMe volume**: 1 TB NVMe per Pi 5; mounted at `/srv/ssd`.
 - **Toolbox module**: Single shared NixOS module installing the operator's CLI utility set across all NixOS hosts.
 
@@ -223,7 +222,7 @@ Every in-scope node has the packages and OS-level configuration required to part
 
 - Either `gibson` (Ryzen desktop, nix daemon) or `silicon` (ThinkPad X1 Carbon, NixOS) may be used as the build host for aarch64 cross-compilation and SD image builds. Both require the `nixos-raspberrypi.cachix.org` binary cache configured as a substituter and `aarch64-linux` binfmt emulation enabled for cache-miss fallback. Makefile targets abstract the host-specific build commands (Constitution VII).
 - The HLC VLAN (`10.23.50.0/24`) and Unifi infrastructure (Dream Machine SE, Switch Pro 48, PiHole DNS) are already in place per the network section of the post-mortem; static DHCP reservations and DNS entries for in-scope hosts will be added as needed.
-- Hardware is already on hand and physically installed: 1× Raspberry Pi 4 (`hlc-401`), 8× Raspberry Pi 5 (`hlc-501..508`), 2× 64 GB USB-3 drives per node, 1× 1 TB NVMe per Pi 5, official heatsink+fan on Pi 5s, heatsinks on Pi 4s.
+- Hardware is already on hand and physically installed: 1× Raspberry Pi 4 (`hlc-401`), 8× Raspberry Pi 5 (`hlc-501..508`), 2× 32 GB USB-3 drives per node (~28.6 GiB usable; verified 2026-05-05), 1× 1 TB NVMe per Pi 5, official heatsink+fan on Pi 5s, heatsinks on Pi 4s.
 - The `nvmd/nixos-raspberrypi` `main` branch is the recommended consumption point per its README; the repo's `develop` branch is consulted for documentation but not pinned.
 - The existing Debian k3s cluster on `hlc-301..308` and `hlc-401..404` is allowed to degrade as `hlc-401` is rebuilt onto NixOS; full migration of workloads off the Debian cluster is the responsibility of a follow-on spec.
 - The existing `silicon` configuration will be refactored only as needed to share modules with cluster nodes (toolbox, home-manager defaults). Workstation-specific modules (i3, polybar, etc.) remain workstation-only.
