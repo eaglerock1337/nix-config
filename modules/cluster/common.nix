@@ -5,6 +5,9 @@
   services.openssh.enable = true;
   users.mutableUsers = false;
 
+  # W-002: passwordless wheel until sops-nix secrets management lands (Phase 6+)
+  security.sudo.wheelNeedsPassword = false;
+
   # Operator user; moved to modules/users/operator.nix in Phase 6
   users.users.bob = {
     isNormalUser = true;

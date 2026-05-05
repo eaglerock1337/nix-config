@@ -15,13 +15,16 @@
 
   # SD card vfat partition used as firmware/boot partition.
   # disko handles the USB RAID root; this mount is declared here so nixos-install
-  # knows to mount mmcblk0p1 at /boot/firmware during provisioning.
+  # creates /boot/firmware and mounts mmcblk0p1 there before running the bootloader.
+  # nofail intentionally omitted: without it nixos-install silently skips creating
+  # the mountpoint, causing the Pi firmware cp to fail (confirmed 2026-05-05).
+  # The SD card is always present on Pi hardware so mandatory mount is safe.
   # The SD bootstrap root (mmcblk0p2) is intentionally left untouched by disko —
   # it remains as an operator-accessible recovery environment.
   fileSystems."/boot/firmware" = lib.mkDefault {
     device = "/dev/mmcblk0p1";
     fsType = "vfat";
-    options = [ "nofail" "umask=0077" ];
+    options = [ "umask=0077" ];
   };
 
   # Use the generational bootloader (replaces deprecated kernelboot; nvmd PR#61)
