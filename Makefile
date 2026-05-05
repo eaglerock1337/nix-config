@@ -124,6 +124,13 @@ ifndef HOST
 endif
 	$(call check_decom)
 	@echo "==> provision-stage1 $(HOST): disko (partition + format + mount)"
+	# W-012: set global mdadm resync speed to 0 before disko runs. A freshly-created
+	# RAID1 immediately starts a resync that generates continuous udev events, causing
+	# disko's udevadm settle (hardcoded 120s timeout) to fail. speed_limit_max=0
+	# prevents the resync from starting; the provisioned NixOS config does not inherit
+	# this setting and post-provision resync runs at normal kernel default speed.
+	ssh bob@$(HOST).$(HLC_DOMAIN) \
+		"echo 0 | sudo tee /proc/sys/dev/raid/speed_limit_max > /dev/null"
 	# W-010: --phases skips kexec (fails on Pi vendor kernel 6.12.x)
 	nix run $(NIX_FLAGS) github:nix-community/nixos-anywhere -- \
 		--flake .#$(HOST) \

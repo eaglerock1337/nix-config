@@ -135,3 +135,15 @@ phase-exit gate and every `/speckit-plan` cycle.
 - **Target phase / feature**: Kernel regression fix in nvmd nixos-raspberrypi upstream. Tracked via Phase 8 T097/T098 doc sweep — if still unresolved at spec close-out, open a follow-on issue to monitor nvmd kernel updates and remove the flag once confirmed fixed.
 - **Opened**: 2026-05-02
 - **Resolved**: (open)
+
+---
+
+## W-012: Set `dev.raid.speed_limit_max=0` before disko runs in `make provision-stage1`
+
+- **Site(s)**: `Makefile` — `provision-stage1` target; `ssh bob@$(HOST).$(HLC_DOMAIN) "echo 0 | sudo tee /proc/sys/dev/raid/speed_limit_max"` immediately before the nixos-anywhere disko phase.
+- **Deviates from**: Default mdadm resync behaviour (kernel default `speed_limit_max` = 200,000 KB/s).
+- **Reason**: When disko creates a new mdadm RAID1 array, the kernel immediately begins an initial resync. On Pi hardware the resync runs at ~28 KB/s over USB 3.0 (slow due to USB overhead), generating continuous udev events. disko's post-create `udevadm settle --timeout=120` fails because the udev queue never empties while the resync is active — exit code 1, provision aborts before any filesystem is formatted. Confirmed on hlc-503 (2026-05-05). Setting `speed_limit_max=0` globally before `mdadm --create` prevents the resync from starting; udevadm settle completes immediately; disko formats and mounts the array normally.
+- **Exit condition**: disko gains support for passing `--assume-clean` to the `mdadm --create` invocation (which skips the initial resync entirely without requiring a global sysctl), OR disko's udevadm settle becomes tolerant of ongoing mdadm activity. Until then the pre-disko sysctl is required on all Pi provisioning.
+- **Target phase / feature**: disko upstream. Doc sweep at Phase 8 T097/T098. Open a follow-on issue at spec close-out if unresolved.
+- **Opened**: 2026-05-05
+- **Resolved**: (open)
