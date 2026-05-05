@@ -117,6 +117,7 @@ ifndef HOST
 endif
 	$(call check_decom)
 	@echo "==> provision $(HOST) at $(IP)"
+	# W-010: --phases skips kexec (fails on Pi vendor kernel 6.12.x)
 	nix run $(NIX_FLAGS) github:nix-community/nixos-anywhere -- \
 		--flake .#$(HOST) \
 		--target-host bob@$(IP) \

@@ -102,12 +102,12 @@ phase-exit gate and every `/speckit-plan` cycle.
 
 ---
 
-## W-010: Root SSH key in bootstrap image + `--phases disko,install,reboot` in `make provision`
+## W-010: `--phases disko,install,reboot` in `make provision` (skips kexec)
 
-- **Site(s)**: `modules/sd/bootstrap.nix` — `users.users.root.openssh.authorizedKeys.keys = [ operatorPubkey ]`; `Makefile` — `--phases disko,install,reboot` on the `provision` target.
-- **Deviates from**: Principle of minimal root exposure; nixos-anywhere default kexec-based provisioning flow.
-- **Reason**: Pi4/Pi5 vendor kernel 6.12.47 kexec fails unconditionally with `Can't kexec: CPUs are stuck in the kernel`. Root cause: `vc4`, `brcmfmac`, and other Pi hardware drivers do not implement kexec quiesce callbacks, leaving CPUs in non-interruptible kernel state when kexec attempts to halt all CPUs and load the new kernel. The `kexec_file_load` syscall returns `EBUSY`. Without kexec, nixos-anywhere's `--phases disko,install,reboot` path installs its ephemeral temp key directly to `root@<target>` before running disko and nixos-install. If `root` has no authorized keys, ssh-copy-id loops indefinitely. Adding the operator pubkey to root unblocks the install. Bootstrap image is throwaway; management LAN is trusted (10.23.50.0/24); key-only auth.
-- **Exit condition**: Either (a) nvmd nixos-raspberrypi vendor kernel gains proper kexec quiesce support in vc4/brcmfmac (restore kexec path, remove root key + --phases override), or (b) nixos-anywhere adds a non-root sudo path for the no-kexec phases (remove root key entry, keep --phases). Remove when kexec provision flow works end-to-end on Pi.
+- **Site(s)**: `Makefile` — `--phases disko,install,reboot` on the `provision` target.
+- **Deviates from**: nixos-anywhere default kexec-based provisioning flow.
+- **Reason**: Pi4/Pi5 vendor kernel 6.12.47 kexec fails unconditionally with `Can't kexec: CPUs are stuck in the kernel`. Root cause: `vc4`, `brcmfmac`, and other Pi hardware drivers do not implement kexec quiesce callbacks, leaving CPUs in non-interruptible kernel state when kexec attempts to halt all CPUs and load the new kernel. The `kexec_file_load` syscall returns `EBUSY`. `--phases disko,install,reboot` skips the kexec step entirely and provisions directly on the running SD bootstrap system. Provisioning connects as `bob` (confirmed working 2026-05-05).
+- **Exit condition**: nvmd nixos-raspberrypi vendor kernel gains proper kexec quiesce support in vc4/brcmfmac — restore default nixos-anywhere flow (drop `--phases` override) once kexec works end-to-end on Pi.
 - **Target phase / feature**: Vendor-kernel follow-up alongside W-006/W-008/W-009. Doc sweep at Phase 8 T097/T098.
 - **Opened**: 2026-05-05
 - **Resolved**: (open)
