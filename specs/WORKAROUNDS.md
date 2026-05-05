@@ -104,11 +104,23 @@ phase-exit gate and every `/speckit-plan` cycle.
 
 ## W-010: Root SSH key in bootstrap image + `--phases disko,install,reboot` in `make provision`
 
-- **Site(s)**: `modules/sd/bootstrap.nix` — `users.users.root.openssh.authorizedKeys.keys = [ operatorPubkey ]`; `Makefile` — `--phases disko,install,reboot` on the `provision` target.
+- **Site(s)**: `modules/sd/bootstrap.nix` — `users.users.root.openssh.authorizedKeys.keys = [ operatorPubkey ]`; `Makefile` — `provision` target uses `--phases disko` then `--phases install,reboot` (split by W-011 firmware mount step); root SSH required for both the W-011 intermediate mount and the install phase.
 - **Deviates from**: nixos-anywhere default kexec-based provisioning flow; principle of minimal root exposure.
 - **Reason**: Two related issues. (1) Pi4/Pi5 vendor kernel 6.12.47 kexec fails unconditionally with `Can't kexec: CPUs are stuck in the kernel` — `vc4`, `brcmfmac`, and other Pi hardware drivers do not implement kexec quiesce callbacks; `kexec_file_load` returns `EBUSY`. `--phases disko,install,reboot` skips kexec entirely. (2) The nixos-anywhere install phase (copying Nix store closure + running nixos-install) requires root SSH access on the target; `bob` with passwordless sudo is insufficient for this phase. Confirmed 2026-05-05: disko phase works as `bob`, install phase requires `root@`. Bootstrap image is throwaway; management LAN is trusted (10.23.50.0/24); key-only auth.
 - **Exit condition**: Either (a) nvmd vendor kernel gains kexec support (restores default nixos-anywhere flow, removes both deviations), or (b) nixos-anywhere adds a non-root path for the no-kexec install phase (removes root key entry, keeps `--phases`). Remove when kexec provision works end-to-end on Pi.
 - **Target phase / feature**: Vendor-kernel follow-up alongside W-006/W-008/W-009. Doc sweep at Phase 8 T097/T098.
+- **Opened**: 2026-05-05
+- **Resolved**: (open)
+
+---
+
+## W-011: Explicit `/boot/firmware` mount between disko and install phases in `make provision`
+
+- **Site(s)**: `Makefile` — `provision` target; `ssh root@$(HOST).$(HLC_DOMAIN) "mkdir -p /mnt/boot/firmware && mount /dev/mmcblk0p1 /mnt/boot/firmware"` between the disko and install phases.
+- **Deviates from**: Single-invocation `nixos-anywhere` provisioning flow.
+- **Reason**: nixos-anywhere does not mount pre-existing filesystems absent from the disko schema before running the nixos-install bootloader phase. The Pi firmware bootloader installer (`nixos-generations-builder.sh`) is called during the install phase and requires `/boot/firmware` to be mounted to copy firmware files. `mmcblk0p1` (the SD card vfat firmware partition) is not managed by disko — it is a pre-existing partition from the bootstrap image — so disko does not mount it. Result: the bootloader cp fails with `No such file or directory` for `/boot/firmware`. Confirmed on hlc-502 (2026-05-05): `/mnt/boot` absent from the freshly-installed ext4 root after the disko phase; mmcblk0p1 unmounted. Fix: split provision into `--phases disko` then explicit mount then `--phases install,reboot`.
+- **Exit condition**: nixos-anywhere gains support for mounting pre-existing filesystems (not managed by disko) before the bootloader phase, OR the Pi firmware bootloader installer is changed to mount its own target partition. Until then this intermediate mount step is required for any Pi host provisioned via nixos-anywhere.
+- **Target phase / feature**: nixos-anywhere upstream behavior. Doc sweep at Phase 8 T097/T098. If still unresolved at spec close-out, open a follow-on issue tracking nixos-anywhere updates.
 - **Opened**: 2026-05-05
 - **Resolved**: (open)
 

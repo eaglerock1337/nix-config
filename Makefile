@@ -2,7 +2,9 @@ NIX_FLAGS   := --extra-experimental-features 'nix-command flakes'
 HLC_DOMAIN  ?= marks.dev
 
 .PHONY: build-image flash-image silicon-dry silicon-switch update \
-        dry-run build smoke-test ip provision update-node rollback help
+        dry-run build smoke-test ip \
+        provision provision-stage1 provision-mount provision-stage2 \
+        update-node rollback help
 
 # Derive IP from HOST via hlc-VNN → 10.23.50.(V*10+N) convention.
 # count ≤ 9:  octet = V*10+N  (e.g. hlc-501 → 51)
@@ -32,7 +34,10 @@ help:
 	@echo "  build HOST=<host>                         Build toplevel for a cluster host"
 	@echo "  smoke-test HOST=<host>                    SSH reachability check via FQDN"
 	@echo "  ip HOST=<host>                            Print derived IP for a host"
-	@echo "  provision HOST=<host> [IP=<ip>]          Provision node with nixos-anywhere"
+	@echo "  provision HOST=<host>                    Full provision (stage1 + mount + stage2)"
+	@echo "  provision-stage1 HOST=<host>             disko: partition + format + mount disks"
+	@echo "  provision-mount HOST=<host>              Mount /boot/firmware (W-011)"
+	@echo "  provision-stage2 HOST=<host>             Install NixOS + bootloader + reboot"
 	@echo "  update-node HOST=<host> [IP=<ip>]        Deploy config update to a provisioned node"
 	@echo "  rollback HOST=<host> [IP=<ip>]           Roll back to prior NixOS generation"
 
@@ -111,18 +116,45 @@ endif
 
 # Phase 5–6 (US3–US4) targets ————————————————————————————————————————————————
 
-provision:
+provision: provision-stage1 provision-mount provision-stage2
+
+provision-stage1:
 ifndef HOST
 	$(error HOST is not set. Usage: make provision HOST=hlc-501)
 endif
 	$(call check_decom)
-	@echo "==> provision $(HOST) at $(IP)"
+	@echo "==> provision-stage1 $(HOST): disko (partition + format + mount)"
 	# W-010: --phases skips kexec (fails on Pi vendor kernel 6.12.x)
 	nix run $(NIX_FLAGS) github:nix-community/nixos-anywhere -- \
 		--flake .#$(HOST) \
-		--target-host bob@$(IP) \
+		--target-host bob@$(HOST).$(HLC_DOMAIN) \
 		--disko-mode disko \
-		--phases disko,install,reboot
+		--phases disko
+
+provision-mount:
+ifndef HOST
+	$(error HOST is not set. Usage: make provision HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> provision-mount $(HOST): mount firmware partition"
+	# W-011: nixos-anywhere does not mount pre-existing filesystems absent from the
+	# disko schema before the bootloader phase. The Pi firmware bootloader installer
+	# (nixos-generations-builder.sh) requires /boot/firmware to be mounted before it
+	# can copy firmware files. Mount mmcblk0p1 here so the install phase finds it.
+	ssh root@$(HOST).$(HLC_DOMAIN) \
+		"mkdir -p /mnt/boot/firmware && mount /dev/mmcblk0p1 /mnt/boot/firmware"
+
+provision-stage2:
+ifndef HOST
+	$(error HOST is not set. Usage: make provision HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> provision-stage2 $(HOST): install NixOS + bootloader + reboot"
+	nix run $(NIX_FLAGS) github:nix-community/nixos-anywhere -- \
+		--flake .#$(HOST) \
+		--target-host bob@$(HOST).$(HLC_DOMAIN) \
+		--disko-mode disko \
+		--phases install,reboot
 
 update-node:
 ifndef HOST
