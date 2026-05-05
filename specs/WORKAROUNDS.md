@@ -66,6 +66,18 @@ phase-exit gate and every `/speckit-plan` cycle.
 
 ---
 
+## W-007: `PerSourcePenalties` disabled on SD bootstrap image
+
+- **Site(s)**: `modules/sd/bootstrap.nix` — `services.openssh.settings.PerSourcePenalties = "no"`
+- **Deviates from**: OpenSSH 10.2+ default (`PerSourcePenalties yes` — `crash:90 authfail:5 noauth:1 grace-exceeded:10 refuseconnection:10 max:600 min:15`)
+- **Reason**: `nixos-anywhere` provisioning opens many short-lived SSH connections from gibson in rapid succession (ssh-copy-id key install, fact-gathering, kexec staging). Default penalty policy interprets the burst as abuse — `noauth:1` per non-authenticating close, stacked ≥ `min:15` — and starts dropping new SYNs from the gibson source IP for 15–600s while RSTing in-flight connections. Symptoms: `make provision` hangs at `### Gathering machine facts ###` or fails at `ssh-copy-id` with `Connection timed out`; `nc -z <node> 22` from gibson times out while ICMP succeeds and `bob` can still log in from a different source IP. The hang-watcher localhost probes generate noise but trip a separate per-source bucket (127.0.0.1) and do not affect the gibson penalty count. Confirmed via `sshd -T | grep persource` showing the OpenSSH 10.2p1 defaults active in the bootstrap image.
+- **Exit condition**: Provisioned-host configs (post-`nixos-anywhere`) keep the OpenSSH default (`PerSourcePenalties yes`) — they are not subject to provision-burst traffic. SD bootstrap image is throwaway and on the trusted `10.23.50.0/24` management LAN with key-only auth; PerSourcePenalties contributes no defensive value in that scope.
+- **Target phase / feature**: N/A — bootstrap-scoped and permanent for this module (mirrors W-004 / W-006 disposition).
+- **Opened**: 2026-05-04
+- **Resolved**: (open — bootstrap-scoped permanent)
+
+---
+
 ## W-006: NixOS firewall disabled on SD bootstrap image
 
 - **Site(s)**: `modules/sd/bootstrap.nix` — `networking.firewall.enable = false`

@@ -11,6 +11,10 @@
     enable = true;
     settings.PasswordAuthentication = false;
     settings.KbdInteractiveAuthentication = false;
+    # W-007: OpenSSH 10.2 default PerSourcePenalties penalises nixos-anywhere's
+    # rapid short-conn provision burst from gibson; resulting penalty drops
+    # subsequent SYNs for 15-600s. Bootstrap LAN is trusted; safe to disable.
+    settings.PerSourcePenalties = "no";
   };
 
   # pam_systemd creates/destroys D-Bus user sessions on every SSH connect;
