@@ -118,7 +118,7 @@ After the baseline reset, the branch's running code is identical to `main`, the 
 1. Add `disko/rpi4.nix` and `disko/rpi5.nix` per [research.md R-004](./research.md). Use `/dev/disk/by-id/` paths, parameterized via NixOS module arguments.
 2. Set `BOOT_ORDER = 0xf14` on each in-scope Pi via `rpi-eeprom-config` from a one-shot service in `modules/hardware/rpi-eeprom.nix`. (Run on first boot of the SD baseline; idempotent thereafter.)
 3. Add `make provision HOST=<host>` target wrapping `nixos-anywhere`.
-4. Provision `hlc-501`: `make provision HOST=hlc-501`. Confirm the node reboots into the new root, `/` is on the mdadm array, `/srv/ssd` is on NVMe; `make smoke-test HOST=hlc-501` green.
+4. Provision `hlc-501`: `make provision HOST=hlc-501`. Confirm the node reboots into the new root, `/` is on the mdadm array, `/srv` is on NVMe; `make smoke-test HOST=hlc-501` green.
 5. Recovery test (FR-011, SC-005): power down `hlc-501`, physically detach both USB drives, power up. Confirm SD recovery environment loads with `mdadm` available; `make smoke-test HOST=hlc-501` against the recovery environment also passes.
 6. Re-attach USB drives, power cycle. Confirm normal boot resumes.
 7. Provision the remaining work-set serially: `make provision HOST=hlc-502` … `hlc-508`, then `hlc-401`. One node at a time; `make smoke-test HOST=<host>` after each. (No `make provision-all` wrapper — operator runs the loop manually; cluster-wide automation is out of scope.)

@@ -43,18 +43,18 @@ The operator can build (`nixos-rebuild dry-run --flake .#<host>`) a NixOS config
 
 ### User Story 3 — Full-Disk Provisioning with USB RAID Root and NVMe Data Volume (Priority: P3)
 
-After a node is reachable on the SD baseline, the operator runs `nixos-anywhere` (from gibson or on the node itself) to install the full per-host NixOS configuration onto persistent storage. The result: `/boot` remains on the SD card; `/` lives on a 2-disk USB-3 mdadm RAID1 mirror (single partition, full ~28.6 GiB array); on Pi 5 nodes, `/srv/ssd` is mounted from a 1 TB NVMe drive. The Pi prefers booting from the USB array when present and falls back to the SD-card live environment for recovery if the USB array is unavailable.
+After a node is reachable on the SD baseline, the operator runs `nixos-anywhere` (from gibson or on the node itself) to install the full per-host NixOS configuration onto persistent storage. The result: `/boot` remains on the SD card; `/` lives on a 2-disk USB-3 mdadm RAID1 mirror (single partition, full ~28.6 GiB array); on Pi 5 nodes, `/srv` is mounted from a 1 TB NVMe drive. The Pi prefers booting from the USB array when present and falls back to the SD-card live environment for recovery if the USB array is unavailable.
 
 **Why this priority**: This is the durable runtime configuration the cluster needs. The SD-only baseline (Story 1) is provisioning scaffolding; without USB-backed root and NVMe data volume, the nodes cannot host real workloads.
 
-**Independent Test**: For a representative Pi 5 node and the Pi 4 node (`hlc-401`), the operator runs the documented `nixos-anywhere` workflow against the SD-baseline node and, after reboot, confirms: `/` is on the mdadm array and `/srv/ssd` is the NVMe (Pi 5 only), and removing the USB drives + rebooting brings the Pi back into the SD-card recovery environment with `mdadm` available to inspect the array.
+**Independent Test**: For a representative Pi 5 node and the Pi 4 node (`hlc-401`), the operator runs the documented `nixos-anywhere` workflow against the SD-baseline node and, after reboot, confirms: `/` is on the mdadm array and `/srv` is the NVMe (Pi 5 only), and removing the USB drives + rebooting brings the Pi back into the SD-card recovery environment with `mdadm` available to inspect the array.
 
 **Acceptance Scenarios**:
 
-1. **Given** a Pi 5 node booted on the SD baseline with two USB drives and an NVMe attached, **When** operator runs the provisioning workflow, **Then** the node reboots into NixOS with `/` on the mdadm RAID1 mirror and `/srv/ssd` mounted from the NVMe.
+1. **Given** a Pi 5 node booted on the SD baseline with two USB drives and an NVMe attached, **When** operator runs the provisioning workflow, **Then** the node reboots into NixOS with `/` on the mdadm RAID1 mirror and `/srv` mounted from the NVMe.
 2. **Given** a provisioned Pi 5 node, **When** the USB array is healthy, **Then** the system boots from the USB array and the SD card is used only for `/boot`.
 3. **Given** a provisioned node with the USB drives physically removed, **When** the operator powers the Pi on, **Then** the Pi falls back to the SD-card recovery environment and exposes `mdadm` and other utilities for repair.
-4. **Given** the Pi 4 node `hlc-401` (no NVMe), **When** the same workflow runs, **Then** the node provisions with `/` on USB RAID1; `/srv/ssd` is absent without error.
+4. **Given** the Pi 4 node `hlc-401` (no NVMe), **When** the same workflow runs, **Then** the node provisions with `/` on USB RAID1; `/srv` is absent without error.
 5. **Given** the operator runs the provisioning workflow against an already-provisioned node, **When** they re-run the same target, **Then** the operation is either idempotent or fails with a clear, documented message — never silently corrupts the array.
 
 ---
@@ -96,7 +96,7 @@ Every in-scope node has the packages and OS-level configuration required to part
 ### Edge Cases
 
 - A USB drive in the RAID1 pair fails mid-provision — the install should fail loudly and leave a recoverable state, not a half-written array.
-- A Pi 5 NVMe is missing or not detected — the system boots and `/srv/ssd` is simply absent (logged), rather than failing.
+- A Pi 5 NVMe is missing or not detected — the system boots and `/srv` is simply absent (logged), rather than failing.
 - `nixos-anywhere` loses SSH partway through — the SD baseline must remain intact so the operator can retry.
 - The SD baseline image is rebuilt but the binary cache returns a stale artifact — the documented rebuild path must invalidate the cache (the post-mortem traced multi-day debugging to this exact failure mode).
 - Operator SSH key changes — recovery is by reflashing the SD baseline (the SD bootstrap config is the keying root), not by editing a deployed node.
@@ -134,12 +134,12 @@ Every in-scope node has the packages and OS-level configuration required to part
 - **FR-010**: After provisioning via `nixos-anywhere`/`disko`, each in-scope node MUST have:
   - `/boot` on the SD card;
   - `/` on a 2-disk USB-3 mdadm RAID1 mirror (full array, single partition; drives are ~30 GB / ~28.6 GiB usable);
-  - `/srv/ssd` on the 1 TB NVMe (Pi 5 nodes only; Pi 4 nodes do not mount this path and MUST NOT fail because of its absence).
+  - `/srv` on the 1 TB NVMe (Pi 5 nodes only; Pi 4 nodes do not mount this path and MUST NOT fail because of its absence).
 - **FR-010a**: USB RAID disks MUST be identified in disko by `/dev/disk/by-path/` using the non-versioned `platform-xhci-hcd.N-usb-0:1:1.0-scsi-0:0:0:0` pattern, where `N=0` is the left (a) port and `N=1` is the right (b) port. Operator convention: a-drives are always inserted in the left USB port, b-drives in the right USB port, as viewed from the operator's perspective. This convention applies to all Pi 5 nodes; path correctness MUST be validated by confirming both drives show a `usbv3` alias in `/dev/disk/by-path/` before provisioning (a `usbv2` alias indicates the drive negotiated at USB 2.0 speed and the connection should be re-seated).
 - **FR-011**: The boot order MUST prefer the USB array when healthy and fall back to the SD-card recovery environment when the USB array is absent or unbootable. Recovery from SD MUST be possible without operator intervention beyond removing/replacing USB drives.
 - **FR-012**: The provisioning workflow (`nixos-anywhere` invocation + `disko` schema) MUST be invokable from `gibson` against a SD-baseline node. Operator MAY also invoke it on the node itself; both paths MUST be documented. `nixos-anywhere` MUST connect as `bob`; this requires `bob` to have passwordless sudo on the bootstrap image. No explicit sudo flag is needed on the `nixos-anywhere` invocation — passwordless sudo on the target is sufficient (confirmed 2026-05-05).
 - **FR-013**: Provisioning MUST be re-runnable. Re-running on an already-provisioned node MUST either be idempotent or refuse with a documented message; it MUST NOT silently corrupt the existing array or filesystem.
-- **FR-014**: Filesystem choices for `/` and `/srv/ssd` MUST be selected for their use case (durability for `/`, throughput-friendly for `/srv/ssd`) and documented in the plan; this spec does not pin specific filesystems.
+- **FR-014**: Filesystem choices for `/` and `/srv` MUST be selected for their use case (durability for `/`, throughput-friendly for `/srv`) and documented in the plan; this spec does not pin specific filesystems.
 
 #### Operator UX (shell, MOTD, toolbox, home-manager)
 
@@ -202,7 +202,7 @@ Every in-scope node has the packages and OS-level configuration required to part
 - **SD bootstrap image**: A bootable SD-card image whose only purpose is to bring a Pi to a reachable state for `nixos-anywhere` and to serve as a recovery environment if the USB array fails.
 - **Per-host NixOS configuration**: The full configuration applied after provisioning; lives at `hosts/<hostname>/` and pulls from cluster, device, and operator-environment scopes.
 - **USB RAID pair**: Two ~30 GB USB-3 drives (~28.6 GiB usable) configured as mdadm RAID1; single partition for root filesystem.
-- **NVMe volume**: 1 TB NVMe per Pi 5; mounted at `/srv/ssd`.
+- **NVMe volume**: 1 TB NVMe per Pi 5; mounted at `/srv`.
 - **Toolbox module**: Single shared NixOS module installing the operator's CLI utility set across all NixOS hosts.
 
 ## Success Criteria *(mandatory)*
@@ -267,7 +267,7 @@ Every in-scope node has the packages and OS-level configuration required to part
 - Q: How should USB disks be identified in disko? → A: By `/dev/disk/by-path/` using the non-versioned `platform-xhci-hcd.N-usb-0:1:1.0-scsi-0:0:0:0` pattern. Controller index `N=0` = left (a) port, `N=1` = right (b) port. Operator always inserts a-drives left, b-drives right. Confirmed hlc-501: disk-a = `platform-xhci-hcd.0-usb-0:1:1.0-scsi-0:0:0:0` → sda; disk-b = `platform-xhci-hcd.1-usb-0:1:1.0-scsi-0:0:0:0` → sdb. Resolved in FR-010a.
 - Q: Must both RAID drives show `usbv3` before provisioning? → A: Yes. A `usbv2` alias means the drive negotiated USB 2.0 speed (transient; re-seating fixes it). Provisioning MUST NOT proceed until both drives show `usbv3`. Resolved in FR-010a.
 - Q: Does USB insertion order affect disko disk identification? → A: Insertion order affects kernel device names (`sda`/`sdb`) but NOT `/dev/disk/by-path/` identifiers. Confirmed on hlc-504: plugging B before A caused B→`sda`, A→`sdb`, but by-path still correctly maps `xhci-hcd.0`→left(A) and `xhci-hcd.1`→right(B). Disko operates on by-path, so RAID is built correctly regardless of insertion order. This validates FR-010a's by-path rationale. Resolved in Edge Cases.
-- Note (hardware status as of 2026-05-04): Nodes verified online with all 3 disks present: hlc-501, hlc-503, hlc-504, hlc-505, hlc-506, hlc-508. Nodes with issues (not yet provisionable): hlc-502, hlc-507. hlc-401 (Pi 4) still being compiled/tested. Not blocking spec — provisioning proceeds against verified nodes; hlc-502/507 addressed once hardware issues resolved.
+- Note (hardware status as of 2026-05-08): All work-set nodes online and provisionable except hlc-503 and hlc-507 (hardware issues; tracked in Makefile `DECOM_HOSTS`). All online Pi 5 nodes confirmed: mdadm array at `/dev/md127` mounted as `/`, NVMe present and confirmed working. hlc-401 online and ready. Phase 5 gate may be tagged with documented exceptions for nodes tracked in `DECOM_HOSTS`; those nodes are provisioned once hardware issues resolve.
 - Q: Provisioning SSH user — root or bob? → A: `bob` is the only SSH user on the SD bootstrap image (passwordless key auth); root SSH login is not available. The `nixos-anywhere` provisioning workflow MUST connect as `bob` (not root). Resolved in FR-012 and FR-020.
 - Q: Does SD bootstrap `bob` need passwordless sudo for nixos-anywhere? → A: Yes, already configured. `bob` has passwordless sudo in the bootstrap image (`modules/sd/bootstrap.nix`). `nixos-anywhere` connects as `bob@<host>`; no explicit sudo flag is required on the invocation — passwordless sudo on the target is sufficient (confirmed 2026-05-05). This is bootstrap-scoped only; full per-host sudo policy is independent. Resolved in FR-012.
 

@@ -3,7 +3,7 @@
 # Layout:
 #   /boot/firmware  — SD card vfat (mmcblk0p1); declared in modules/hardware/rpi5.nix
 #   /               — mdadm RAID1 across two USB drives, ext4 (full array, ~28.6 GiB)
-#   /srv/ssd        — NVMe xfs (Pi 5 M.2 HAT); omitted when nvmeDevice is null
+#   /srv            — NVMe xfs (Pi 5 M.2 HAT); omitted when nvmeDevice is null
 #
 # Device paths are set per-host in hosts/hlc-5NN/configuration.nix via hlc.disko.*
 # options. Fill in real /dev/disk/by-path/ paths before running `make provision`.
@@ -58,7 +58,7 @@
               content = {
                 type = "filesystem";
                 format = "xfs";
-                mountpoint = "/srv/ssd";
+                mountpoint = "/srv";
               };
             };
           };
