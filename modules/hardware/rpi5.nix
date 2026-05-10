@@ -11,7 +11,6 @@
   ];
 
   nixpkgs.hostPlatform = "aarch64-linux";
-  nixpkgs.buildPlatform = "x86_64-linux";
 
   # SD card vfat partition used as firmware/boot partition.
   # disko handles the USB RAID root; this mount is declared here so nixos-install

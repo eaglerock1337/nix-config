@@ -14,7 +14,7 @@ _DERIVED_IP = $(shell echo '$(HOST)' | awk -F- 'NF==2 {v=substr($$2,1,1)+0; n=su
 IP ?= $(_DERIVED_IP)
 
 # Decommissioned set — these hosts dry-run and build only; no live-node ops
-DECOM_HOSTS := hlc-402 hlc-403 hlc-404 hlc-503 hlc-507
+DECOM_HOSTS := hlc-402 hlc-403 hlc-404 hlc-507
 
 define check_decom
 	@if echo '$(DECOM_HOSTS)' | tr ' ' '\n' | grep -qx '$(HOST)'; then \
