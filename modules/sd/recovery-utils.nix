@@ -105,6 +105,7 @@ in
     parted      # partition editor
     pciutils    # PCIe device info; provides lspci
     strace      # syscall tracer for process-level debugging
+    smartmontools # SMART disk health; provides smartctl
     sysstat     # sar/iostat/mpstat for system performance
     tcpdump     # network packet capture
     tmux        # terminal multiplexer
