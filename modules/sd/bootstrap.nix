@@ -1,4 +1,4 @@
-{ operatorPubkey, lib, pkgs, ... }:
+{ operatorPubkeys, lib, pkgs, ... }:
 
 {
   imports = [ ./recovery-utils.nix ];
@@ -54,12 +54,12 @@
   users.users.bob = {
     isNormalUser = true;
     extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = [ operatorPubkey ];
+    openssh.authorizedKeys.keys = operatorPubkeys;
   };
 
   # W-010: root SSH key required for nixos-anywhere --phases disko,install,reboot.
   # Pi vendor kernel kexec fails ("CPUs are stuck in the kernel" — vc4/brcmfmac
   # drivers lack quiesce callbacks). Without kexec, nixos-anywhere installs its
   # temp key to root directly. Bootstrap image is throwaway; trusted LAN; key-only.
-  users.users.root.openssh.authorizedKeys.keys = [ operatorPubkey ];
+  users.users.root.openssh.authorizedKeys.keys = operatorPubkeys;
 }

@@ -2,6 +2,7 @@
   imports = [
     ../common.nix
     ./hosts.nix
+    ./raid-fallback.nix
   ];
 
   options.hlc = {
@@ -35,5 +36,11 @@
   config = {
     # networking.fqdn is auto-derived as "${hostName}.${domain}" — do NOT assign directly
     networking.domain = "marks.dev";
+
+    # Allow bob to receive nix store paths via `nix copy` from gibson (W-013).
+    # gibson has no nixos-rebuild; deployment uses `nix build` + `nix copy --to
+    # ssh-ng://bob@<node>` + remote `switch-to-configuration`. trusted-users
+    # grants store write access through the nix daemon.
+    nix.settings.trusted-users = [ "root" "bob" ];
   };
 }

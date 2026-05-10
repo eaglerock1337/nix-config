@@ -163,8 +163,16 @@ ifndef HOST
 endif
 	$(call check_decom)
 	@echo "==> update-node $(HOST) at $(IP)"
-	sudo nixos-rebuild switch --flake .#$(HOST) \
-		--target-host bob@$(IP)
+	# gibson has no nixos-rebuild (W-013); build locally, copy closure, activate remotely.
+	# Requires bob in nix.settings.trusted-users on the target (set in hlc/default.nix).
+	nix build $(NIX_FLAGS) \
+		.#nixosConfigurations.$(HOST).config.system.build.toplevel -L \
+	&& TOPLEVEL=$$(readlink -f result) \
+	&& echo "==> Copying closure to $(HOST)..." \
+	&& nix copy $(NIX_FLAGS) --to ssh-ng://bob@$(IP) $$TOPLEVEL \
+	&& echo "==> Activating on $(HOST)..." \
+	&& ssh bob@$(IP) "sudo nix-env -p /nix/var/nix/profiles/system --set $$TOPLEVEL" \
+	&& ssh bob@$(IP) "sudo $$TOPLEVEL/bin/switch-to-configuration switch"
 
 rollback:
 ifndef HOST
@@ -172,7 +180,7 @@ ifndef HOST
 endif
 	$(call check_decom)
 	@echo "==> rollback $(HOST) at $(IP)"
-	sudo nixos-rebuild --rollback --flake .#$(HOST) \
-		--target-host bob@$(IP) \
-		--use-remote-sudo
+	# Roll back to the previous NixOS generation on the remote node.
+	ssh bob@$(IP) "sudo nix-env --rollback -p /nix/var/nix/profiles/system"
+	ssh bob@$(IP) "sudo /nix/var/nix/profiles/system/bin/switch-to-configuration switch"
 

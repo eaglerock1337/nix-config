@@ -7,6 +7,8 @@
 
   networking.hostName = "hlc-403";
 
+  hlc.rescueIp = "10.23.50.43";
+
   hlc.disko.usbDevice0 = "PLACEHOLDER";
   hlc.disko.usbDevice1 = "PLACEHOLDER";
   hlc.disko.nvmeDevice = null;  # Pi 4: no NVMe

@@ -21,8 +21,11 @@
   let
     system = "x86_64-linux";
 
-    # T008: operator's gibson SSH public key — used in bootstrap + per-host configs
-    operatorPubkey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC2MfZmJMxQx3NGjPn92I1/n7pBTne/0aw0xVvgebFriN1UMKcEQagG3QzmM/4+zj001UGNKFK7FOlnTx6b8dz2mEC/ejYFG6R2Vtd6coxShjQDL2Nw3B/FMfky+jOBQ7viyODEiPhQlrO2FrQcd0BgjzHPvH0qtu12Ej2bo27abkIpyCEJyLf/xFKIyZ/RyFWaF8FOA4tpXpXvNa73QijvymMk2gY2HuLQVGYGPAVsLBEUbmAV7oN3inPcbawmjAgV5X23AoMr9F5pZbxdmZ61FUwWvaBjRdTopgfkI1RXZ52P27CJTjC3ndmlSgfV2Ht1iQ9VQmY5ShxFET9Wr6jz eaglerock@gibson";
+    # Operator SSH public keys — all keys that should access cluster nodes
+    operatorPubkeys = [
+      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC2MfZmJMxQx3NGjPn92I1/n7pBTne/0aw0xVvgebFriN1UMKcEQagG3QzmM/4+zj001UGNKFK7FOlnTx6b8dz2mEC/ejYFG6R2Vtd6coxShjQDL2Nw3B/FMfky+jOBQ7viyODEiPhQlrO2FrQcd0BgjzHPvH0qtu12Ej2bo27abkIpyCEJyLf/xFKIyZ/RyFWaF8FOA4tpXpXvNa73QijvymMk2gY2HuLQVGYGPAVsLBEUbmAV7oN3inPcbawmjAgV5X23AoMr9F5pZbxdmZ61FUwWvaBjRdTopgfkI1RXZ52P27CJTjC3ndmlSgfV2Ht1iQ9VQmY5ShxFET9Wr6jz eaglerock@gibson"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOK+Z0E+vIXJMcVO0Pv81vZNHoF4JuS08r2t7rAEWhm4 eaglerock@nixos"
+    ];
 
     unstable = import nixpkgs-unstable {
       inherit system;
@@ -41,7 +44,7 @@
       # Using nixos-raspberrypi.lib.nixosSystem so nvmd's overlays (vendor kernel,
       # firmware, raspberrypi-utils) and specialArgs injection apply automatically.
       nixos-raspberrypi.lib.nixosSystem {
-        specialArgs = { inherit inputs operatorPubkey; };
+        specialArgs = { inherit inputs operatorPubkeys; };
         modules = [
           home-manager.nixosModules.home-manager
           {
@@ -61,7 +64,7 @@
     # sd-image module lives here only, never in provisioned nixosConfigurations.
     mkHlcBootstrap = { hostname, piModule }:
       (nixos-raspberrypi.lib.nixosSystem {
-        specialArgs = { inherit inputs operatorPubkey; };
+        specialArgs = { inherit inputs operatorPubkeys; };
         modules = [
           piModule
           inputs.nixos-raspberrypi.nixosModules.sd-image
