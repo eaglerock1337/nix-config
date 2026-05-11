@@ -132,12 +132,12 @@
 
 **Module layout** (per spec Session 2026-05-11 Q16–Q19):
 
-- `modules/hosts/common.nix` — TOP-LEVEL CATCHALL (D1): truly universal only — imports shell tier + users/operator; sets nix.settings, time, locale, openssh, allowUnfree, binfmt. NO user definitions, NO PS1, NO docker. Consumed by `modules/hosts/workstation.nix` and `modules/cluster/common.nix`.
-- `modules/hosts/workstation.nix` — workstation tier (C4/C7): imports common.nix; adds silicon `programs.bash.promptInit` (Gruvbox PS1), `nr`/`ndr` helpers, `virtualisation.docker.enable`. Consumed by silicon only.
-- `modules/shell/{utilities,common}.nix` — generic baseline (packages, bash, aliases); consumed via `modules/hosts/common.nix`.
-- `modules/users/operator.nix` — option-driven; option `system.operator = { name; pubkeys; extraGroups ? ["wheel"]; description ? ""; }`; generates `users.users.${name}` + key-only SSH hardening. Consumed via `modules/hosts/common.nix`.
+- `modules/hosts/common.nix` — TOP-LEVEL CATCHALL (D1): truly universal — imports shell tier + users/operator; sets nix.settings, time, locale, openssh, allowUnfree; defines universal `nr`/`ndr` shell functions (works on workstation + cluster). NO user-instance definitions, NO PS1, NO docker, NO security policy. Consumed by `modules/hosts/workstation.nix` and `modules/cluster/common.nix`.
+- `modules/hosts/workstation.nix` — workstation tier (C4/C7): imports common.nix; adds silicon `programs.bash.promptInit` (Gruvbox PS1), `virtualisation.docker.enable`, `boot.binfmt.emulatedSystems = [ "aarch64-linux" ]`. Consumed by silicon only.
+- `modules/shell/{utilities,common}.nix` — generic baseline (packages incl. `neovim` + `vim`, bash, aliases, `EDITOR=nvim`); consumed via `modules/hosts/common.nix`.
+- `modules/users/operator.nix` — option-driven; option `system.operator = { name; pubkeys; extraGroups ? ["wheel"]; description ? ""; }`; generates `users.users.${name}` ONLY (no security policy). Consumed via `modules/hosts/common.nix`.
 - `modules/cluster/{motd,prompt}.nix` — generic cluster-tier mechanism modules. `motd.nix` options `cluster.motd.{banner,quote}`. `prompt.nix` option `cluster.prompt.glyph` (default `"-"`; generic fallback).
-- `modules/cluster/common.nix` — imports `../hosts/common.nix` + `./motd.nix` + `./prompt.nix`. No duplicate openssh/operator/shell setup. `cloneOperatorRepos` activationScript parameterized via `config.system.operator.name`.
+- `modules/cluster/common.nix` — imports `../hosts/common.nix` + `./motd.nix` + `./prompt.nix`. Cluster-only security policy (`PasswordAuthentication=false`, `KbdInteractiveAuthentication=false`, `wheelNeedsPassword=false`) lives here so workstations are unaffected. `cloneOperatorRepos` activationScript parameterized via `config.system.operator.name` and gated on `cfg.name != null`.
 - `modules/cluster/hlc/default.nix` — HLC scope: defines `hlc.prompt.glyph` option (default `"☁️🏔️☁️"` emoji; text fallback `"☁⛰︎☁"`); sets `cluster.motd.*`, `cluster.prompt.glyph = config.hlc.prompt.glyph`, `system.operator` (bob); REMOVES stale `options.hlc.motd.banner` stub.
 - `hosts/silicon/configuration.nix` — silicon scope (C5): imports `modules/hosts/workstation.nix` + workstation modules; sets `system.operator` (eaglerock with description/extraGroups inline).
 - `modules/home/{base,server,workstation}.nix` — home-manager tiers; cluster-specific home bits inline in `home/bob.nix`.
@@ -151,8 +151,8 @@
 
 ### Create Shell Tier (Bundle — all before canary)
 
-- [X] T053 [P] [US4] Create `modules/shell/utilities.nix`: define `environment.systemPackages = with pkgs; [ ... ]` with the FULL package list copied from existing `modules/hosts/common.nix` (Q18: unify). Includes all current workstation packages — `k9s`, `kubectl`, `kubernetes-helm`, `kind`, `minikube`, `bat`, `eza`, `fd`, `ripgrep`, `fzf`, `dust`, `duf`, `tree`, `zoxide`, `jq`, `yq`, `sd`, `git`, `busybox`, `killall`, `micro`, `less`, `glow`, `htop`, `btop`, `lsof`, `strace`, `iotop`, `dool`, `ncdu`, `efibootmgr`, `caffeine-ng`, `curl`, `wget`, `httpie`, `fping`, `dnsutils`, `iperf3`, `mtr`, `nmap`, `socat`, `rsync`, `openssh`, `gnupg`, `gnutls`, `age`, `pinentry-curses`, `pinentry-gnome3`, `pass`, `tmux`, `entr`, `delta`, `unzip`, `zip`, `file`, `man-db`, `tldr`, `neofetch`, `nh` — plus cluster-only ops tools `mdadm`, `parted`, `pciutils`, `usbutils`, `iproute2`, `tcpdump`, `vim`. Preserve thematic section dividers (`# --- Editors & Viewers ---`, etc.). FR-015 requirement: EVERY package MUST have an inline `# comment` describing its purpose; add comments for entries that lack them today (`curl`, `wget`, `dnsutils`, `iperf3`, `mtr`, `nmap`, `socat`, `rsync`, `openssh`, `gnupg`, `gnutls`, `age`, `pinentry-*`, `pass`, `tmux`, `entr`, `delta`, `unzip`, `zip`, `file`, `man-db`, `tldr`, `neofetch`, `nh`, `kubectl`, `k9s`, `kubernetes-helm`, `minikube`, `kind`, etc.). Keep within `with pkgs;` scope.
-- [X] T054 [P] [US4] Create `modules/shell/common.nix`: set `programs.bash.enable = true`; `users.defaultUserShell = pkgs.bash`; define `programs.bash.shellAliases = { ll = "ls -la"; la = "ls -A"; ".." = "cd .."; "..." = "cd ../.."; k = "kubectl"; }`; set `environment.variables.EDITOR = "vim"`.
+- [X] T053 [P] [US4] Create `modules/shell/utilities.nix`: define `environment.systemPackages = with pkgs; [ ... ]` with the FULL package list copied from existing `modules/hosts/common.nix` (Q18: unify). Includes all current workstation packages — `k9s`, `kubectl`, `kubernetes-helm`, `kind`, `minikube`, `bat`, `eza`, `fd`, `ripgrep`, `fzf`, `dust`, `duf`, `tree`, `zoxide`, `jq`, `yq`, `sd`, `git`, `busybox`, `killall`, `micro`, `less`, `glow`, `htop`, `btop`, `lsof`, `strace`, `iotop`, `dool`, `ncdu`, `efibootmgr`, `caffeine-ng`, `curl`, `wget`, `httpie`, `fping`, `dnsutils`, `iperf3`, `mtr`, `nmap`, `socat`, `rsync`, `openssh`, `gnupg`, `gnutls`, `age`, `pinentry-curses`, `pinentry-gnome3`, `pass`, `tmux`, `entr`, `delta`, `unzip`, `zip`, `file`, `man-db`, `tldr`, `neofetch`, `nh` — plus cluster-only ops tools `mdadm`, `parted`, `pciutils`, `usbutils`, `iproute2`, `tcpdump`, `vim` — plus `neovim` (default editor for all hosts; paired with `EDITOR=nvim` in T054). Preserve thematic section dividers (`# --- Editors & Viewers ---`, etc.). FR-015 requirement: EVERY package MUST have an inline `# comment` describing its purpose; add comments for entries that lack them today. Keep within `with pkgs;` scope.
+- [X] T054 [P] [US4] Create `modules/shell/common.nix`: set `programs.bash.enable = true`; `users.defaultUserShell = pkgs.bash`; define `programs.bash.shellAliases = { ll = "ls -la"; la = "ls -A"; ".." = "cd .."; "..." = "cd ../.."; k = "kubectl"; }`; set `environment.variables.EDITOR = "nvim"` (neovim is provided system-wide by T053; vim remains as fallback).
 
 ### Create Cluster-Tier Mechanism Modules
 
@@ -168,39 +168,39 @@
 
 ### Create Option-Driven Operator Module
 
-- [X] T057 [P] [US4] Create `modules/users/operator.nix`: option-driven operator user. Define options under `system.operator`:
-  - `system.operator.name` (string, no default) — login name (e.g. `"bob"`, `"eaglerock"`, `"slimer"`).
-  - `system.operator.pubkeys` (listOf str, no default) — SSH authorized keys.
+- [X] T057 [P] [US4] Create `modules/users/operator.nix`: option-driven operator user (ACCOUNT GENERATION ONLY — cluster-only security policy lives in `modules/cluster/common.nix` per T064). Define options under `system.operator`:
+  - `system.operator.name` (nullOr str, default null) — login name (e.g. `"bob"`, `"eaglerock"`, `"slimer"`). Null skips account generation.
+  - `system.operator.pubkeys` (listOf str, default []) — SSH authorized keys.
   - `system.operator.extraGroups` (listOf str, default = `["wheel"]`) — supplementary groups (HLC bob keeps default; silicon eaglerock sets `["wheel" "networkmanager" "docker"]`).
   - `system.operator.description` (string, default = `""`) — user description (e.g. `"Peter Marks"` for eaglerock, `"HLC cluster operator"` for bob).
-  Generate `users.users.${cfg.name} = { isNormalUser = true; extraGroups = cfg.extraGroups; openssh.authorizedKeys.keys = cfg.pubkeys; description = cfg.description; shell = pkgs.bash; }`. Set `security.sudo.wheelNeedsPassword = false` with comment `# W-002: passwordless wheel during cluster transition; remove once sops-nix secrets management lands (feature 002)`. Define key-only SSH hardening: `services.openssh.settings.PasswordAuthentication = false; services.openssh.settings.KbdInteractiveAuthentication = false;` with comment `# W-003 closed: key-only SSH enforced post-provisioning`. Module is imported globally (cluster + workstation); the operator user materializes only when a host sets `system.operator.name`.
+  Generate `users.users.${cfg.name} = { isNormalUser = true; extraGroups = cfg.extraGroups; openssh.authorizedKeys.keys = cfg.pubkeys; description = cfg.description; shell = pkgs.bash; }` only when `cfg.name != null`. Module is imported globally via `modules/hosts/common.nix` (cluster + workstation). NO security overrides here — workstations keep NixOS defaults (password sudo, password SSH); cluster security policy is enforced separately.
 
 ### Create Home-Manager Tiers
 
-- [X] T058 [US4] Update existing `modules/home/base.nix` (already consumed by silicon): keep current shared content (vim/neovim/git/bash defaults, fontconfig). Fix `programs.bash.shellAliases.ll`/`la` — currently reference `exa` (retired upstream); update to `eza` to match `T053` package set. Drop eaglerock-only `gpnr` alias from base (move to `home/eaglerock.nix` or `modules/home/workstation.nix`). Add any cross-cutting defaults missing today that should apply to both bob and eaglerock. Verify no workstation-specific content leaks in here.
+- [X] T058 [US4] Update existing `modules/home/base.nix` (already consumed by silicon): keep current shared content (vim/neovim/git/bash defaults, fontconfig). Fix `programs.bash.shellAliases.ll`/`la` — currently reference `exa` (retired upstream); update to `eza` to match `T053` package set. KEEP `gpnr` alias here (pairs with the universal `nr` shell function in `modules/hosts/common.nix` per T063; useful for both bob on cluster and eaglerock on silicon). Verify no workstation-specific content leaks in here.
 - [X] T059 [P] [US4] Create `modules/home/server.nix`: `imports = [ ./base.nix ]`; add server-only config — `programs.tmux = { enable = true; shortcut = "a"; historyLimit = 50000; clock24 = true; }`, `home.sessionVariables.KUBECONFIG = "$HOME/.kube/config"`. This tier is consumed by all cluster operator home files (`home/bob.nix` today; future `home/<ecto-operator>.nix`).
-- [X] T060 [P] [US4] Create `modules/home/workstation.nix`: `imports = [ ./base.nix ./ui.nix ./i3.nix ./polybar.nix ./dunst.nix ./dev.nix ./vscode.nix ]` (matches current `home/eaglerock.nix` import list exactly). These workstation-only modules MUST NOT be imported anywhere outside `workstation.nix`.
+- [X] T060 [P] [US4] Create `modules/home/workstation.nix`: `imports = [ ./base.nix ./ui.nix ./i3.nix ./polybar.nix ./dunst.nix ./dev.nix ./vscode.nix ]` (matches current `home/eaglerock.nix` import list exactly). These workstation-only modules MUST NOT be imported anywhere outside `workstation.nix`. NO `gpnr` alias here — it lives in `modules/home/base.nix` (universal; usable on cluster too).
 - [X] T061 [P] [US4] Create `home/bob.nix`: `{ pkgs, ... }: { imports = [ ../modules/home/server.nix ]; home.username = "bob"; home.homeDirectory = "/home/bob"; home.stateVersion = "25.11"; programs.home-manager.enable = true; }`. HLC-specific home bits (e.g. cluster-themed shell greeting, kubeconfig paths specific to HLC) inline HERE — no `modules/home/hlc.nix` overlay file (Q17).
 - [X] T062 [US4] Refactor `home/eaglerock.nix`: replace the current inline import list with `imports = [ ../modules/home/workstation.nix ]`. Preserve any eaglerock-specific overrides outside the imports block. Verify with `make local-dry` — must succeed with no evaluation errors.
 
 ### Wire Modules into Cluster + Workstation Scopes
 
 - [X] T063 [US4] Refactor `modules/hosts/common.nix` as TOP-LEVEL CATCHALL (per D1; consumed by both workstations and cluster nodes) AND extract workstation-only bits into a new `modules/hosts/workstation.nix` (per C4/C5/C7).
-  - **modules/hosts/common.nix** keeps ONLY truly universal content:
+  - **modules/hosts/common.nix** keeps universal content:
     1. `imports = [ ../shell/utilities.nix ../shell/common.nix ../users/operator.nix ];`
     2. nix.settings, time.timeZone, i18n.*, allowUnfree
     3. `services.openssh.enable = true` (single source of truth — cluster inherits)
-    4. `boot.binfmt.emulatedSystems = [ "aarch64-linux" ]`
+    4. `programs.bash.interactiveShellInit = '' nr() {...} ndr() {...} '';` (universal: `nr`/`ndr` work on workstation AND cluster nodes)
     5. DROP the inline `environment.systemPackages` block (moved to `modules/shell/utilities.nix` per T053)
     6. DROP `programs.bash.promptInit` (silicon-specific PS1 — moves to workstation.nix)
-    7. DROP `programs.bash.interactiveShellInit` (`nr`/`ndr` workstation helpers — moves to workstation.nix)
-    8. DROP `users.users.eaglerock = { ... }` inline block (per C5 — eaglerock specifics move to `hosts/silicon/configuration.nix`)
-    9. DROP `virtualisation.docker.enable = true` (per C7 — moves to workstation.nix)
+    7. DROP `users.users.eaglerock = { ... }` inline block (per C5 — eaglerock specifics move to `hosts/silicon/configuration.nix`)
+    8. DROP `virtualisation.docker.enable = true` (per C7 — moves to workstation.nix)
+    9. DROP `boot.binfmt.emulatedSystems` (cluster nodes are aarch64 — can't emulate themselves; moves to workstation.nix)
   - **CREATE `modules/hosts/workstation.nix`** (new — workstation-tier system module):
     1. `imports = [ ./common.nix ];`
     2. `programs.bash.promptInit = '' ... '';` (silicon's Gruvbox PS1 — moved verbatim from common.nix)
-    3. `programs.bash.interactiveShellInit = '' nr() {...} ndr() {...} '';`
-    4. `virtualisation.docker.enable = true;`
+    3. `virtualisation.docker.enable = true;`
+    4. `boot.binfmt.emulatedSystems = [ "aarch64-linux" ];` (workstation cross-compiles cluster images)
     5. NOTE: this module does NOT set `system.operator.*` — eaglerock specifics live in the silicon host file.
   - **Update `hosts/silicon/configuration.nix`**:
     1. `imports = [ ../../modules/hosts/workstation.nix ../../modules/hosts/grub.nix ../../modules/hosts/desktop-ui.nix ../../modules/hosts/gaming.nix ../../modules/hardware/x1-carbon.nix ./hardware-configuration.nix ];` (swap `common.nix` for `workstation.nix`).
@@ -210,7 +210,7 @@
     5. `system.operator.extraGroups = [ "wheel" "networkmanager" "docker" ];` (preserve existing eaglerock groups).
   - **Update `flake.nix` `nixosConfigurations.silicon.specialArgs`**: add `inherit operatorPubkeys;` (currently passed to cluster only).
   - Run `make local-dry` — must succeed; verify `users.users.eaglerock` materializes correctly via `system.operator`.
-- [X] T064 [US4] Update `modules/cluster/common.nix`: (1) replace stub TODO comments with real imports — `imports = [ ../hosts/common.nix ./prompt.nix ./motd.nix ]` (cluster inherits shell tier + operator module + openssh + nix.settings + time/locale via `../hosts/common.nix`; no separate import needed); (2) **remove** the inline `users.users.bob` block and the `security.sudo.wheelNeedsPassword = false` line — produced by `modules/users/operator.nix` (T057) once `system.operator.name` is set in the HLC scope (T065); (3) **remove** duplicate `services.openssh.enable = true` line (now set by catchall hosts/common.nix only); (4) parameterize `system.activationScripts.cloneOperatorRepos` (per C6): replace literal `bobHome = "/home/bob"` with `operatorHome = "/home/${config.system.operator.name}"` and `chown bob:users` with `chown ${config.system.operator.name}:users`; (5) keep stub comment `# TODO Phase 7: import ../k8s/prereqs.nix` as placeholder for T084. Removing the inline bob user closes the W-001 inline-host pattern for `modules/cluster/common.nix`.
+- [X] T064 [US4] Update `modules/cluster/common.nix`: (1) replace stub TODO comments with real imports — `imports = [ ../hosts/common.nix ./prompt.nix ./motd.nix ]` (cluster inherits shell tier + operator module + openssh + nix.settings + time/locale via `../hosts/common.nix`); (2) **remove** the inline `users.users.bob` block — produced by `modules/users/operator.nix` (T057) once `system.operator.name = "bob"` is set in the HLC scope (T065); (3) **remove** duplicate `services.openssh.enable = true` line (now set by catchall hosts/common.nix only); (4) **ADD cluster-only security policy here** (split from T057): `security.sudo.wheelNeedsPassword = false` with W-002 comment; `services.openssh.settings.PasswordAuthentication = false` and `KbdInteractiveAuthentication = false` with W-003 comment. Workstations skip these defaults by NOT importing `modules/cluster/common.nix`. (5) parameterize `system.activationScripts.cloneOperatorRepos` (per C6): replace literal `bobHome = "/home/bob"` with `operatorHome = "/home/${config.system.operator.name}"` and `chown bob:users` with `chown ${config.system.operator.name}:users`; wrap in `lib.mkIf (config.system.operator.name != null)`. (6) keep stub comment `# TODO Phase 7: import ../k8s/prereqs.nix` as placeholder for T084. Removing the inline bob user closes the W-001 inline-host pattern for `modules/cluster/common.nix`.
 - [X] T065 [US4] Update `modules/cluster/hlc/default.nix`:
   1. **Remove** the stale `options.hlc.motd.banner` placeholder declaration (introduced as a Phase 4 stub in T018; superseded by `cluster.motd.banner` from T056).
   2. **Add** `options.hlc.prompt.glyph` (string, default = `"☁️🏔️☁️"`) — full HLC glyph sequence. Default uses emoji presentation (U+FE0F variation selectors) — cloud + snow-capped mountain + cloud. Per-host fallback: set to `"☁⛰︎☁"` (text-presentation; U+FE0E selectors) for terminals where emoji renders double-width and breaks the prompt alignment.
