@@ -12,6 +12,9 @@
     git
   ];
 
+  # W-010: root SSH for nixos-anywhere provisioning and recovery operations
+  users.users.root.openssh.authorizedKeys.keys = operatorPubkeys;
+
   # Operator user; moved to modules/users/operator.nix in Phase 6
   users.users.bob = {
     isNormalUser = true;
