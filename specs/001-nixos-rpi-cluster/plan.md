@@ -7,7 +7,7 @@
 
 Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS using the `nvmd/nixos-raspberrypi` fork, with a three-scope layered module structure, full-disk provisioning via `nixos-anywhere`/`disko`, operator shell UX (MOTD, PS1, toolbox, home-manager), and k3s OS-level prerequisites installed. Cluster bootstrap is out of scope. The implementation is sequenced as 8 phases (Phase 1–8, matching tasks.md numbering), each gated by `make smoke-test` on a canary node before any fleet roll.
 
-**Status**: Phases 1–4 complete. Phases 5–8 pending.
+**Status**: Phases 1–5 complete. Phases 6–8 pending.
 
 ---
 
@@ -48,12 +48,12 @@ Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS usi
 | II. Reproducibility via Flakes | **Pass** | All deps locked in `flake.lock`. Pinned to specific commits. `nix flake update` is the documented advance path. |
 | III. Modular Design | **Partial (W-001 active)** | During baseline-establishment (Phase 1), small inline configs may be duplicated across host files to minimize blast radius (Constitution III phased-deferral clause). W-001 logged in `specs/WORKAROUNDS.md`. Removed in Phase 6 when modules are reintroduced with canary validation. Non-negotiable from refinement onward. |
 | IV. Safety-First Changes | **Pass** | Every cluster-touching change: `make dry-run` → `make build` → `make update-node` (canary on `hlc-501`) → `make smoke-test` → fleet roll. Canary scope = change set (single module or phase bundle per Constitution v1.3.3 §IV). Bundle smoke-test failure triggers bisect via `/speckit-debug`. SD reflash, on-node rebuild, and remote `--target-host` all gated. No skipping dry-run. |
-| V. Pragmatic Phasing | **Pass** | W-001 (inline host configs), W-002 (passwordless wheel), W-003 (PasswordAuthentication deferred) all logged with exit conditions and target phases. W-004 (`pam_systemd` disabled in bootstrap) resolved as no-op — permanent bootstrap-scoped config decision; logged and closed in `specs/WORKAROUNDS.md`. |
+| V. Pragmatic Phasing | **Pass** | W-001 (inline host configs), W-002 (passwordless wheel), W-003 (PasswordAuthentication deferred) all logged with exit conditions and target phases. W-004 (`pam_systemd` bootstrap PAM), W-005 (fileSystems stub) both resolved. W-006 (firewall disabled bootstrap), W-007 (PerSourcePenalties disabled bootstrap), W-008 (TCP timestamps disabled bootstrap), W-009 (tcp_retries2 reduced), W-010 (root SSH + --phases in provision), W-011 (explicit /boot/firmware mount between disko and install) — all bootstrap-scoped or vendor-kernel mitigations, logged with exit conditions in `specs/WORKAROUNDS.md`. |
 | VI. Minimal & Explicit Footprint | **Pass** | Packages alphabetically sorted with rationale comments (FR-015). No unfree additions. YAGNI applied — only the listed Makefile targets are built. |
 | VII. Standardized Build & Test Workflow | **Pass** | All targets route through Makefile. gibson uses `nix build …` (no `nixos-rebuild`); silicon uses `sudo nixos-rebuild`. Makefile targets abstract the distinction. |
 | VIII. Human-AI Collaboration Protocol | **Pass** | Operator state treated as authoritative. Conflicts raised explicitly, never silently rewritten. R-002 (mountain glyph) is the reference example: operator picked the glyph; agent flagged the rendering risk; documented presentation strategy chosen. |
 
-**Complexity violations**: none. Tracked deviations: W-001/W-002/W-003 (Constitution V phased workarounds, logged with exit conditions); W-004 (`pam_systemd` bootstrap PAM, resolved as no-op — permanent config decision, bootstrap-only, no exit condition needed).
+**Complexity violations**: none. Tracked deviations: W-001/W-002/W-003 (Constitution V phased workarounds, logged with exit conditions); W-004/W-005 (resolved); W-006/W-007/W-008/W-009/W-010/W-011 (bootstrap-scoped or vendor-kernel mitigations, all logged in `specs/WORKAROUNDS.md` with exit conditions).
 
 ---
 

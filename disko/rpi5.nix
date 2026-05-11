@@ -46,7 +46,7 @@
           };
         };
       };
-    } // lib.optionalAttrs (config.hlc.disko.nvmeDevice != null) {
+    } // lib.optionalAttrs (config.hlc.disko.nvmeDevice != null && !config.hlc.disko.skipNvmeFormat) {
       nvme = {
         type = "disk";
         device = config.hlc.disko.nvmeDevice;

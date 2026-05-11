@@ -4,6 +4,7 @@ HLC_DOMAIN  ?= marks.dev
 .PHONY: build-image flash-image silicon-dry silicon-switch update \
         dry-run build smoke-test ip \
         provision provision-stage1 provision-mount provision-stage2 \
+        reprovision reprovision-stage1 \
         update-node rollback help
 
 # Derive IP from HOST via hlc-VNN → 10.23.50.(V*10+N) convention.
@@ -23,6 +24,21 @@ define check_decom
 	fi
 endef
 
+# Abort if root filesystem is on md OR any md array is assembled.
+# Uses output comparison — SSH failure (empty output) also aborts (fail-safe).
+define check_raid_clear
+	@echo "==> pre-flight: checking $(HOST) has no RAID (root device or assembled array)"
+	@raid_status=$$(ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+		bob@$(HOST).$(HLC_DOMAIN) \
+		'{ df / | grep -q /dev/md || grep -q "^md[0-9]" /proc/mdstat; } && echo RAID || echo CLEAR' \
+		2>/dev/null); \
+	if [ "$$raid_status" != "CLEAR" ]; then \
+		echo "ERROR: $(HOST) has active RAID or md root filesystem — live provisioned node detected."; \
+		echo "       Boot from SD card before provisioning, or use 'make rollback HOST=$(HOST)'."; \
+		exit 1; \
+	fi
+endef
+
 help:
 	@echo "Targets:"
 	@echo "  build-image HOST=<host> [REBUILD=1]      Build SD card image for a pi node"
@@ -38,6 +54,8 @@ help:
 	@echo "  provision-stage1 HOST=<host>             disko: partition + format + mount disks"
 	@echo "  provision-mount HOST=<host>              Mount /boot/firmware (W-011)"
 	@echo "  provision-stage2 HOST=<host>             Install NixOS + bootloader + reboot"
+	@echo "  reprovision HOST=<host>                  Reprovision USB RAID; preserve NVMe /srv data"
+	@echo "  reprovision-stage1 HOST=<host>           disko USB RAID only (NVMe skipped)"
 	@echo "  update-node HOST=<host> [IP=<ip>]        Deploy config update to a provisioned node"
 	@echo "  rollback HOST=<host> [IP=<ip>]           Roll back to prior NixOS generation"
 
@@ -123,6 +141,7 @@ ifndef HOST
 	$(error HOST is not set. Usage: make provision HOST=hlc-501)
 endif
 	$(call check_decom)
+	$(call check_raid_clear)
 	@echo "==> provision-stage1 $(HOST): disko (partition + format + mount)"
 	# W-010: --phases skips kexec (fails on Pi vendor kernel 6.12.x)
 	# W-012: mdadm resync stopped by udev rule in modules/sd/bootstrap.nix
@@ -156,6 +175,24 @@ endif
 		--target-host bob@$(HOST).$(HLC_DOMAIN) \
 		--disko-mode disko \
 		--phases install,reboot
+
+reprovision: reprovision-stage1 provision-mount provision-stage2
+
+reprovision-stage1:
+ifndef HOST
+	$(error HOST is not set. Usage: make reprovision HOST=hlc-501)
+endif
+	$(call check_decom)
+	$(call check_raid_clear)
+	@echo "==> reprovision-stage1 $(HOST): disko USB RAID only (NVMe at /srv preserved)"
+	# Uses $(HOST)-bare flake output: skipNvmeFormat=true excludes NVMe from disko.
+	# Install phase (provision-stage2) uses full .#$(HOST) config so fstab includes /srv.
+	# W-010, W-012 apply here as for provision-stage1.
+	nix run $(NIX_FLAGS) github:nix-community/nixos-anywhere -- \
+		--flake .#$(HOST)-bare \
+		--target-host bob@$(HOST).$(HLC_DOMAIN) \
+		--disko-mode disko \
+		--phases disko
 
 update-node:
 ifndef HOST
