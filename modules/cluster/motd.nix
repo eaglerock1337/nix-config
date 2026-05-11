@@ -27,7 +27,7 @@ in {
   };
 
   config = {
-    users.motd = ''
+    environment.etc."motd".text = ''
       ${cfg.banner}
 
             Cluster node: ${config.networking.fqdn}
