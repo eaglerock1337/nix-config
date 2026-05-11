@@ -4,6 +4,13 @@ Per current constitution § Pragmatic Phasing (Principle V). Each entry is
 append-only; mark `Resolved` in-place when removed. Reviewed at every
 phase-exit gate and every `/speckit-plan` cycle.
 
+Outstanding workarounds listed first in numerical order; resolved workarounds
+listed below under a separate header, also in numerical order.
+
+---
+
+## Outstanding Workarounds
+
 ---
 
 ## W-001: Inline minimal host configs (defers Principle III)
@@ -42,6 +49,94 @@ phase-exit gate and every `/speckit-plan` cycle.
 
 ---
 
+## W-010: Root SSH key in bootstrap + provisioned images + `--phases disko,install,reboot` in `make provision`
+
+- **Site(s)**: `modules/sd/bootstrap.nix` — `users.users.root.openssh.authorizedKeys.keys = [ operatorPubkey ]`; `modules/cluster/common.nix` — same setting on provisioned hosts (root SSH needed for re-provisioning and recovery operations); `Makefile` — `provision` target uses `--phases disko` then `--phases install,reboot` (split by W-011 firmware mount step); root SSH required for both the W-011 intermediate mount and the install phase.
+- **Deviates from**: nixos-anywhere default kexec-based provisioning flow; principle of minimal root exposure.
+- **Reason**: Two related issues. (1) Pi4/Pi5 vendor kernel 6.12.47 kexec fails unconditionally with `Can't kexec: CPUs are stuck in the kernel` — `vc4`, `brcmfmac`, and other Pi hardware drivers do not implement kexec quiesce callbacks; `kexec_file_load` returns `EBUSY`. `--phases disko,install,reboot` skips kexec entirely. (2) The nixos-anywhere install phase (copying Nix store closure + running nixos-install) requires root SSH access on the target; `bob` with passwordless sudo is insufficient for this phase. Confirmed 2026-05-05: disko phase works as `bob`, install phase requires `root@`. Bootstrap image is throwaway; management LAN is trusted (10.23.50.0/24); key-only auth.
+- **Exit condition**: Either (a) nvmd vendor kernel gains kexec support (restores default nixos-anywhere flow, removes both deviations), or (b) nixos-anywhere adds a non-root path for the no-kexec install phase (removes root key entry, keeps `--phases`). Remove when kexec provision works end-to-end on Pi.
+- **Target phase / feature**: Vendor-kernel kexec support follow-up. Doc sweep at Phase 8 T097/T098.
+- **Opened**: 2026-05-05
+- **Resolved**: (open)
+
+---
+
+## W-011: Explicit `/boot/firmware` mount between disko and install phases in `make provision`
+
+- **Site(s)**: `Makefile` — `provision` target; `ssh root@$(HOST).$(HLC_DOMAIN) "mkdir -p /mnt/boot/firmware && mount /dev/mmcblk0p1 /mnt/boot/firmware"` between the disko and install phases.
+- **Deviates from**: Single-invocation `nixos-anywhere` provisioning flow.
+- **Reason**: nixos-anywhere does not mount pre-existing filesystems absent from the disko schema before running the nixos-install bootloader phase. The Pi firmware bootloader installer (`nixos-generations-builder.sh`) is called during the install phase and requires `/boot/firmware` to be mounted to copy firmware files. `mmcblk0p1` (the SD card vfat firmware partition) is not managed by disko — it is a pre-existing partition from the bootstrap image — so disko does not mount it. Result: the bootloader cp fails with `No such file or directory` for `/boot/firmware`. Confirmed on hlc-502 (2026-05-05): `/mnt/boot` absent from the freshly-installed ext4 root after the disko phase; mmcblk0p1 unmounted. Fix: split provision into `--phases disko` then explicit mount then `--phases install,reboot`.
+- **Exit condition**: nixos-anywhere gains support for mounting pre-existing filesystems (not managed by disko) before the bootloader phase, OR the Pi firmware bootloader installer is changed to mount its own target partition. Until then this intermediate mount step is required for any Pi host provisioned via nixos-anywhere.
+- **Target phase / feature**: nixos-anywhere upstream behavior. Doc sweep at Phase 8 T097/T098. If still unresolved at spec close-out, open a follow-on issue tracking nixos-anywhere updates.
+- **Opened**: 2026-05-05
+- **Resolved**: (open)
+
+---
+
+## W-012: `--no-check-sigs` on `nix copy` in `make update-node`
+
+- **Site(s)**: `Makefile` — `update-node` target, `nix copy` invocation
+- **Deviates from**: Nix store path integrity verification (Constitution Principle II — reproducibility)
+- **Reason**: gibson has no signing key; locally-built closures are unsigned. Target nodes have `require-sigs = true` (NixOS default). Even with `bob` in `trusted-users`, unsigned paths are rejected by the remote nix daemon. `--no-check-sigs` bypasses signature verification on copy, allowing unsigned paths to be accepted.
+- **Exit condition**: gibson has a signing keypair; private key signs closures before copy (via `nix store sign`); public key added to `trusted-public-keys` on all cluster nodes. Then `require-sigs = true` stays and `--no-check-sigs` is removed.
+- **Target phase / feature**: Future secrets-management spec — signing key provisioning belongs alongside sops-nix/age credential infrastructure.
+- **Opened**: 2026-05-11
+- **Resolved**: (open)
+
+---
+
+## Resolved Workarounds
+
+---
+
+## W-006: NixOS firewall disabled on SD bootstrap image
+
+- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` (staged; never imported into `bootstrap.nix` or any other module)
+- **Deviates from**: NixOS default (`networking.firewall.enable = true`)
+- **Reason**: nf_conntrack TCP state machine believed corrupted by SSH session teardown in Pi5 vendor kernel 6.12.47. Setting was staged in `vendor-kernel-tcp.nix` pending canary validation but never applied.
+- **Exit condition**: Root cause identified as a Unifi security rule dropping packets. Setting was never needed; bootstrap image ran with firewall enabled throughout and provisioning works correctly.
+- **Target phase / feature**: N/A — never deployed.
+- **Opened**: 2026-05-02
+- **Resolved**: 2026-05-11 (root cause was Unifi security rule; `vendor-kernel-tcp.nix` deleted as dead code)
+
+---
+
+## W-007: `PerSourcePenalties` disabled on SD bootstrap image
+
+- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` (staged; never imported into `bootstrap.nix` or any other module)
+- **Deviates from**: OpenSSH 10.2+ default (`PerSourcePenalties yes`)
+- **Reason**: `nixos-anywhere` provision burst from gibson believed to trip OpenSSH source-IP penalty policy. Setting was staged in `vendor-kernel-tcp.nix` pending canary validation but never applied.
+- **Exit condition**: Root cause of SSH issues identified as a Unifi security rule. Bootstrap image ran with PerSourcePenalties enabled throughout and provisioning works correctly.
+- **Target phase / feature**: N/A — never deployed.
+- **Opened**: 2026-05-04
+- **Resolved**: 2026-05-11 (root cause was Unifi security rule; `vendor-kernel-tcp.nix` deleted as dead code)
+
+---
+
+## W-008: TCP timestamps disabled on SD bootstrap image
+
+- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` — `boot.kernel.sysctl."net.ipv4.tcp_timestamps" = 0` (staged; never imported)
+- **Deviates from**: NixOS / kernel default (`net.ipv4.tcp_timestamps = 1`, RFC 1323 PAWS enabled)
+- **Reason**: Single non-PTY `ssh bob@hlc-501 '<cmd>'` invocations reliably wedged outbound TCP for ~265s while ICMP continued to work. Three samples (264s, 273s, 265s) clustered tightly, attributed to kernel TCP stack exhaustion. `tcp_timestamps=0` applied as mitigation.
+- **Exit condition**: Root cause identified as a Unifi security rule dropping packets, not a kernel bug. Setting never needed.
+- **Target phase / feature**: N/A — resolved before code was ever deployed.
+- **Opened**: 2026-05-05
+- **Resolved**: 2026-05-11 (root cause was Unifi security rule; sysctls removed from `vendor-kernel-tcp.nix`)
+
+---
+
+## W-009: TCP retransmit cap reduced (`tcp_retries2 = 5`)
+
+- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` — `boot.kernel.sysctl."net.ipv4.tcp_retries2" = 5` (staged; never imported)
+- **Deviates from**: Kernel default `tcp_retries2 = 15` (RFC 1122 §4.2.3.5 R2 ≥ 100s).
+- **Reason**: Band-aid to cut the W-008 wedge recovery floor from ~265s to ~30s.
+- **Exit condition**: W-008 resolved; this mitigation had no independent justification.
+- **Target phase / feature**: N/A — resolved alongside W-008 before code was ever deployed.
+- **Opened**: 2026-05-05
+- **Resolved**: 2026-05-11 (W-008 root cause was Unifi security rule; sysctls removed from `vendor-kernel-tcp.nix`)
+
+---
+
 ## W-004: `pam_systemd` disabled for sshd in bootstrap image
 
 - **Site(s)**: `modules/sd/bootstrap.nix` — `security.pam.services.sshd.startSession = lib.mkForce false`
@@ -63,76 +158,3 @@ phase-exit gate and every `/speckit-plan` cycle.
 - **Target phase / feature**: Architecture change (2026-05-02); disko fileSystems wired in Phase 5 (T028/T029).
 - **Opened**: 2026-05-02
 - **Resolved**: 2026-05-02 (architecture change — sd-image removed from hardware modules; bootstrap images separated into flake.nix packages block)
-
----
-
-## W-007: `PerSourcePenalties` disabled on SD bootstrap image
-
-- **Site(s)**: `modules/sd/bootstrap.nix` — `services.openssh.settings.PerSourcePenalties = "no"`
-- **Deviates from**: OpenSSH 10.2+ default (`PerSourcePenalties yes` — `crash:90 authfail:5 noauth:1 grace-exceeded:10 refuseconnection:10 max:600 min:15`)
-- **Reason**: `nixos-anywhere` provisioning opens many short-lived SSH connections from gibson in rapid succession (ssh-copy-id key install, fact-gathering, kexec staging). Default penalty policy interprets the burst as abuse — `noauth:1` per non-authenticating close, stacked ≥ `min:15` — and starts dropping new SYNs from the gibson source IP for 15–600s while RSTing in-flight connections. Symptoms: `make provision` hangs at `### Gathering machine facts ###` or fails at `ssh-copy-id` with `Connection timed out`; `nc -z <node> 22` from gibson times out while ICMP succeeds and `bob` can still log in from a different source IP. The hang-watcher localhost probes generate noise but trip a separate per-source bucket (127.0.0.1) and do not affect the gibson penalty count. Confirmed via `sshd -T | grep persource` showing the OpenSSH 10.2p1 defaults active in the bootstrap image.
-- **Exit condition**: Provisioned-host configs (post-`nixos-anywhere`) keep the OpenSSH default (`PerSourcePenalties yes`) — they are not subject to provision-burst traffic. SD bootstrap image is throwaway and on the trusted `10.23.50.0/24` management LAN with key-only auth; PerSourcePenalties contributes no defensive value in that scope.
-- **Target phase / feature**: N/A — bootstrap-scoped and permanent for this module (mirrors W-004 / W-006 disposition).
-- **Opened**: 2026-05-04
-- **Resolved**: (open — bootstrap-scoped permanent)
-
----
-
-## W-008: TCP timestamps disabled on SD bootstrap image
-
-- **Site(s)**: `modules/sd/bootstrap.nix` — `boot.kernel.sysctl."net.ipv4.tcp_timestamps" = 0`
-- **Deviates from**: NixOS / kernel default (`net.ipv4.tcp_timestamps = 1`, RFC 1323 PAWS enabled)
-- **Reason**: 2026-05-05 testing confirmed the SSH-hang root cause is **not** conntrack as W-006 originally hypothesised: `nf_conntrack`, `nf_conntrack_ipv{4,6}`, and `nf_nat` are blacklisted via `boot.blacklistedKernelModules`; `lsmod` empty; `nft list ruleset` empty; W-007 `PerSourcePenalties=no` confirmed live in `sshd -T`. Yet a single non-PTY `ssh bob@hlc-501 '<cmd>'` invocation reliably wedges outbound TCP for ~265s while ICMP continues to work — three samples (264s, 273s, 265s) cluster tightly, indicating a kernel-deterministic timeout (matches `tcp_retries2=15` exhaustion path). Wedge is in the kernel TCP stack itself, not netfilter. `tcp_timestamps=0` is a known mitigation for several Pi vendor kernel TCP regressions; the bootstrap LAN is trusted v4-only and has no PAWS dependency, so cost is nil.
-- **Exit condition**: Either (a) Pi5 vendor kernel regression fixed upstream in nvmd nixos-raspberrypi and bootstrap image picks up a kernel where the wedge no longer reproduces with `tcp_timestamps=1`, or (b) full root-cause identified and a more targeted fix applied. If (a) succeeds, this entry resolves and W-006 should be re-evaluated for similar removal.
-- **Target phase / feature**: Kernel regression follow-up alongside W-006; doc sweep at Phase 8 T097/T098. If still unresolved at spec close-out, open follow-on issue tracking nvmd kernel updates.
-- **Opened**: 2026-05-05
-- **Resolved**: (open)
-
----
-
-## W-009: TCP retransmit cap reduced (`tcp_retries2 = 5`)
-
-- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` — `boot.kernel.sysctl."net.ipv4.tcp_retries2" = 5`. Module is staged but **not yet imported anywhere** as of opening; wire-up will land alongside the workable-state declaration.
-- **Deviates from**: Kernel default `tcp_retries2 = 15` (RFC 1122 §4.2.3.5 R2 ≥ 100s).
-- **Reason**: The W-008 wedge has a recovery floor at `tcp_retries2` exhaustion. Three observed samples (264s, 273s, 265s) match the default-15 backoff schedule. Cutting to 5 collapses the recovery floor to ~25–30s, making the wedge invisible to operator workflow even when the underlying root cause is still present. Trade-off: established TCP sessions will give up faster on transient packet loss; HLC is LAN-only, low-loss, so the trade-off is favourable. Operator workflow also benefits from `make smoke-test` retries succeeding within seconds rather than minutes.
-- **Exit condition**: Removed once the underlying TCP wedge is root-caused and fixed (W-006 / W-008 path) or once the vendor kernel ships with the regression patched. Until then this is a workflow-friendliness band-aid, not a correctness fix.
-- **Target phase / feature**: Vendor-kernel mitigations follow-up alongside W-006 / W-008. Doc sweep at Phase 8 T097/T098.
-- **Opened**: 2026-05-05
-- **Resolved**: (open)
-
----
-
-## W-010: Root SSH key in bootstrap + provisioned images + `--phases disko,install,reboot` in `make provision`
-
-- **Site(s)**: `modules/sd/bootstrap.nix` — `users.users.root.openssh.authorizedKeys.keys = [ operatorPubkey ]`; `modules/cluster/common.nix` — same setting on provisioned hosts (root SSH needed for re-provisioning and recovery operations); `Makefile` — `provision` target uses `--phases disko` then `--phases install,reboot` (split by W-011 firmware mount step); root SSH required for both the W-011 intermediate mount and the install phase.
-- **Deviates from**: nixos-anywhere default kexec-based provisioning flow; principle of minimal root exposure.
-- **Reason**: Two related issues. (1) Pi4/Pi5 vendor kernel 6.12.47 kexec fails unconditionally with `Can't kexec: CPUs are stuck in the kernel` — `vc4`, `brcmfmac`, and other Pi hardware drivers do not implement kexec quiesce callbacks; `kexec_file_load` returns `EBUSY`. `--phases disko,install,reboot` skips kexec entirely. (2) The nixos-anywhere install phase (copying Nix store closure + running nixos-install) requires root SSH access on the target; `bob` with passwordless sudo is insufficient for this phase. Confirmed 2026-05-05: disko phase works as `bob`, install phase requires `root@`. Bootstrap image is throwaway; management LAN is trusted (10.23.50.0/24); key-only auth.
-- **Exit condition**: Either (a) nvmd vendor kernel gains kexec support (restores default nixos-anywhere flow, removes both deviations), or (b) nixos-anywhere adds a non-root path for the no-kexec install phase (removes root key entry, keeps `--phases`). Remove when kexec provision works end-to-end on Pi.
-- **Target phase / feature**: Vendor-kernel follow-up alongside W-006/W-008/W-009. Doc sweep at Phase 8 T097/T098.
-- **Opened**: 2026-05-05
-- **Resolved**: (open)
-
----
-
-## W-011: Explicit `/boot/firmware` mount between disko and install phases in `make provision`
-
-- **Site(s)**: `Makefile` — `provision` target; `ssh root@$(HOST).$(HLC_DOMAIN) "mkdir -p /mnt/boot/firmware && mount /dev/mmcblk0p1 /mnt/boot/firmware"` between the disko and install phases.
-- **Deviates from**: Single-invocation `nixos-anywhere` provisioning flow.
-- **Reason**: nixos-anywhere does not mount pre-existing filesystems absent from the disko schema before running the nixos-install bootloader phase. The Pi firmware bootloader installer (`nixos-generations-builder.sh`) is called during the install phase and requires `/boot/firmware` to be mounted to copy firmware files. `mmcblk0p1` (the SD card vfat firmware partition) is not managed by disko — it is a pre-existing partition from the bootstrap image — so disko does not mount it. Result: the bootloader cp fails with `No such file or directory` for `/boot/firmware`. Confirmed on hlc-502 (2026-05-05): `/mnt/boot` absent from the freshly-installed ext4 root after the disko phase; mmcblk0p1 unmounted. Fix: split provision into `--phases disko` then explicit mount then `--phases install,reboot`.
-- **Exit condition**: nixos-anywhere gains support for mounting pre-existing filesystems (not managed by disko) before the bootloader phase, OR the Pi firmware bootloader installer is changed to mount its own target partition. Until then this intermediate mount step is required for any Pi host provisioned via nixos-anywhere.
-- **Target phase / feature**: nixos-anywhere upstream behavior. Doc sweep at Phase 8 T097/T098. If still unresolved at spec close-out, open a follow-on issue tracking nixos-anywhere updates.
-- **Opened**: 2026-05-05
-- **Resolved**: (open)
-
----
-
-## W-006: NixOS firewall disabled on SD bootstrap image
-
-- **Site(s)**: `modules/sd/bootstrap.nix` — `networking.firewall.enable = false`
-- **Deviates from**: NixOS default (`networking.firewall.enable = true`)
-- **Reason**: nf_conntrack TCP state machine is corrupted by SSH session teardown in the Pi5 vendor kernel 6.12.47. Symptom: after any SSH session closes, TCP fails in both directions (outbound SYN-ACK never matched by conntrack INPUT chain; inbound TCP SYNs also dropped) while ICMP continues to work. Hang lasts ~10 minutes until stale SYN_SENT conntrack entries time out. Bootstrap image is on a trusted private management LAN (10.23.50.0/24); the only inbound service is sshd on port 22 with key-only auth. Firewall provides no meaningful security benefit in this context.
-- **Exit condition**: Kernel bug fixed upstream in nvmd fork / Pi5 vendor kernel, or bootstrap image moves to a kernel version where this is not present. If the provisioned (non-bootstrap) host configs also hit this issue, a targeted nftables workaround (accept-all from management subnet, bypass conntrack) should be applied there instead of disabling the firewall globally.
-- **Target phase / feature**: Kernel regression fix in nvmd nixos-raspberrypi upstream. Tracked via Phase 8 T097/T098 doc sweep — if still unresolved at spec close-out, open a follow-on issue to monitor nvmd kernel updates and remove the flag once confirmed fixed.
-- **Opened**: 2026-05-02
-- **Resolved**: (open)
-

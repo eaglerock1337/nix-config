@@ -200,13 +200,13 @@ ifndef HOST
 endif
 	$(call check_decom)
 	@echo "==> update-node $(HOST) at $(IP)"
-	# gibson has no nixos-rebuild (W-013); build locally, copy closure, activate remotely.
+	# gibson has no nixos-rebuild; build locally, copy closure, activate remotely.
 	# Requires bob in nix.settings.trusted-users on the target (set in hlc/default.nix).
 	nix build $(NIX_FLAGS) \
 		.#nixosConfigurations.$(HOST).config.system.build.toplevel -L \
 	&& TOPLEVEL=$$(readlink -f result) \
 	&& echo "==> Copying closure to $(HOST)..." \
-	&& nix copy $(NIX_FLAGS) --to ssh-ng://bob@$(IP) $$TOPLEVEL \
+	&& nix copy $(NIX_FLAGS) --no-check-sigs --to ssh-ng://bob@$(IP) $$TOPLEVEL \  # W-012
 	&& echo "==> Activating on $(HOST)..." \
 	&& ssh bob@$(IP) "sudo nix-env -p /nix/var/nix/profiles/system --set $$TOPLEVEL" \
 	&& ssh bob@$(IP) "sudo $$TOPLEVEL/bin/switch-to-configuration switch"
