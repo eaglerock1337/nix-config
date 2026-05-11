@@ -147,22 +147,24 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 ## R-007 — `nixos-anywhere` invocation pattern from gibson
 
-**Decision**: Add `make provision HOST=<host> IP=<ip>` which shells to `nixos-anywhere --flake .#<host> --target-host root@<ip> --disko-mode disko`. The target Pi is reached as `root` over SSH using the SD bootstrap image's root authorized key (which is the operator's gibson public key, baked into the bootstrap image). After install, nixos-anywhere reboots the Pi into the new root; the `bob` user's authorized keys are present from the per-host config; gibson's smoke-test confirms reachability.
+**Decision** *(updated 2026-05-04; original decision below)*: `make provision HOST=<host> IP=<ip>` connects as `bob@<ip>` — not `root@<ip>`. The SD bootstrap image has no root SSH login; `bob` has passwordless sudo, which is sufficient for `nixos-anywhere` (confirmed 2026-05-05, FR-012). Invocation: `nixos-anywhere --flake .#<host> --target-host bob@<ip> --disko-mode disko --phases disko,install,reboot` (W-010: `--phases` skips kexec, which fails on Pi vendor kernel 6.12.x).
+
+**Original decision** *(superseded)*: Target was `root@<ip>` using the SD bootstrap image's root authorized key. Superseded because the SD bootstrap image (FR-020) intentionally has no root SSH login; `bob` with passwordless sudo is the correct privilege-escalation path for nixos-anywhere on these nodes.
 
 **Rationale**:
 
 - nixos-anywhere's `--disko-mode disko` flag delegates partitioning to the per-host disko schema (`disko/rpi4.nix` or `disko/rpi5.nix`), which is exactly the FR-010..FR-014 contract.
-- Targeting `root@<ip>` rather than `bob@<ip>` keeps the install permission story simple: nixos-anywhere needs root to repartition, and the SD bootstrap image gives root only to the gibson key for the duration of the install. Once the install reboots, the new system's `services.openssh.settings.PermitRootLogin = "no"` kicks in and the install path closes.
+- `bob` with passwordless sudo satisfies nixos-anywhere's root requirement without exposing a root SSH login surface (Constitution Principle I, FR-020).
 - Wrapping in a Makefile target (Principle VII) is required for any agent-driven invocation; ad-hoc CLI calls are permitted only during interactive triage.
 
 **Alternatives considered**:
 
-- Run `nixos-anywhere` directly on the Pi via `git clone` + local invoke: rejected as primary path — Pi RAM and disk are tight, and the gibson-driven path is faster and more cache-friendly. Local invoke remains a documented fallback (Assumption: "On-device `nixos-rebuild switch` supported fallback path").
-- Use `nixos-rebuild --target-host` instead of `nixos-anywhere`: rejected for first install — `--target-host` requires NixOS already on the disk; the SD bootstrap image is too small to host the full per-host config. Once provisioned, `--target-host` is the canonical update path (existing `make update-node`).
+- Run `nixos-anywhere` directly on the Pi via `git clone` + local invoke: rejected as primary path — Pi RAM and disk are tight, and the gibson-driven path is faster and more cache-friendly. Local invoke remains a documented fallback (FR-012).
+- Use `nixos-rebuild --target-host` instead of `nixos-anywhere`: rejected for first install — `--target-host` requires NixOS already on the disk; the SD bootstrap image is too small to host the full per-host config. Once provisioned, `--target-host` is the canonical update path (`make update-node`).
 
 **Open follow-ups**:
 
-- Confirm nixos-anywhere can drive a disko schema that targets devices identified by `/dev/disk/by-id/...`. Recent versions support this; pin a known-good version.
+- ~~Confirm nixos-anywhere can drive a disko schema that targets devices identified by `/dev/disk/by-id/...`~~ — resolved: by-path used instead (FR-010a); confirmed working on hlc-501 and hlc-504 (2026-05-04).
 
 ---
 

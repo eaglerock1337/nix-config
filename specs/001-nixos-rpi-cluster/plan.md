@@ -410,7 +410,7 @@ All technical decisions are in [research.md](./research.md):
 | R-004 | Disko schemas: two files (`rpi4.nix`, `rpi5.nix`); ext4 for RAID, xfs for NVMe; `by-path/` disk identification (USB port deterministic; `xhci-hcd.0`=left/a, `xhci-hcd.1`=right/b) |
 | R-005 | Boot order: EEPROM `BOOT_ORDER = 0xf14` (USB-first, SD-fallback) |
 | R-006 | `make build-image` rebuild: `REBUILD=1` opt-in + derivation closure correctness |
-| R-007 | `nixos-anywhere` invocation: from gibson as `root@<ip>`, `--disko-mode disko` |
+| R-007 | `nixos-anywhere` invocation: from gibson as `bob@<ip>`, `--disko-mode disko --phases disko,install,reboot` (updated 2026-05-04; `root@` superseded by `bob` + passwordless sudo per FR-012) |
 | R-008 | Module layering: `cluster/common.nix` (generic-cluster) vs `cluster/hlc/` (HLC-specific) |
 | R-009 | Home-manager split: `base.nix` + `server.nix` + `workstation.nix` |
 | R-010 | SD bootstrap package set: recovery utilities alphabetical list |

@@ -206,7 +206,7 @@ endif
 		.#nixosConfigurations.$(HOST).config.system.build.toplevel -L \
 	&& TOPLEVEL=$$(readlink -f result) \
 	&& echo "==> Copying closure to $(HOST)..." \
-	&& nix copy $(NIX_FLAGS) --no-check-sigs --to ssh-ng://bob@$(IP) $$TOPLEVEL \  # W-012
+	&& nix copy $(NIX_FLAGS) --no-check-sigs --to ssh-ng://bob@$(IP) $$TOPLEVEL \
 	&& echo "==> Activating on $(HOST)..." \
 	&& ssh bob@$(IP) "sudo nix-env -p /nix/var/nix/profiles/system --set $$TOPLEVEL" \
 	&& ssh bob@$(IP) "sudo $$TOPLEVEL/bin/switch-to-configuration switch"
