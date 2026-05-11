@@ -26,9 +26,10 @@
 
     # --- Editors & Viewers ---
     micro           # Friendly terminal editor
+    neovim          # Default editor (configured in modules/home/base.nix)
+    vim             # Classic modal editor (fallback when neovim unavailable)
     less            # Pager
     glow            # Markdown previewer
-    vim             # Classic modal editor (cluster ops fallback)
 
     # --- Process & System Tools ---
     htop            # System monitor

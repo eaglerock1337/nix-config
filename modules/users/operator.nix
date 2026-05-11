@@ -3,9 +3,8 @@
 # operator account uniformly across workstations and clusters. Each host context
 # (HLC, silicon, future Ecto-1) sets its own values.
 #
-# Key-only SSH hardening (W-003) and passwordless wheel (W-002) are applied
-# unconditionally — they describe how the operator interacts with this host,
-# not whether the operator exists.
+# This module ONLY generates the user account. Cluster-only security policy
+# (key-only SSH, passwordless wheel) lives in modules/cluster/common.nix.
 
 { config, lib, pkgs, ... }:
 
@@ -45,27 +44,13 @@ in {
     };
   };
 
-  config = lib.mkMerge [
-    # Operator account materializes only when a name is set.
-    (lib.mkIf (cfg.name != null) {
-      users.users.${cfg.name} = {
-        isNormalUser = true;
-        extraGroups = cfg.extraGroups;
-        openssh.authorizedKeys.keys = cfg.pubkeys;
-        description = cfg.description;
-        shell = pkgs.bash;
-      };
-    })
-
-    # Universal hardening — applies whether or not an operator is named.
-    {
-      # W-002: passwordless wheel during cluster transition; remove once
-      # sops-nix secrets management lands (feature 002).
-      security.sudo.wheelNeedsPassword = false;
-
-      # W-003 closed: key-only SSH enforced post-provisioning.
-      services.openssh.settings.PasswordAuthentication = false;
-      services.openssh.settings.KbdInteractiveAuthentication = false;
-    }
-  ];
+  config = lib.mkIf (cfg.name != null) {
+    users.users.${cfg.name} = {
+      isNormalUser = true;
+      extraGroups = cfg.extraGroups;
+      openssh.authorizedKeys.keys = cfg.pubkeys;
+      description = cfg.description;
+      shell = pkgs.bash;
+    };
+  };
 }

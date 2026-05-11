@@ -21,6 +21,7 @@
       ll = "eza -l --group-directories-first";          # eza for better ls
       la = "eza -la --group-directories-first";         # eza listing including dotfiles
       grep = "rg";                                      # ripgrep as default grep
+      gpnr = "cd ~/git/nix-config && git pull && nr";   # Pull config and rebuild local host
     };
   };
 

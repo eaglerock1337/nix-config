@@ -16,10 +16,4 @@
     ./dev.nix
     ./vscode.nix
   ];
-
-  # Workstation-only convenience alias: pull + nixos-rebuild switch (paired
-  # with the system-level `nr` shell function from modules/hosts/workstation.nix).
-  programs.bash.shellAliases = {
-    gpnr = "cd ~/git/nix-config && git pull && nr";
-  };
 }

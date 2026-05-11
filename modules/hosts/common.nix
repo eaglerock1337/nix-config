@@ -57,4 +57,16 @@
 
   # OpenSSH daemon — single source of truth across the fleet
   services.openssh.enable = true;
+
+  # `nr` rebuilds the local host's NixOS config; `ndr` dry-runs it. Both shell
+  # out to `nixos-rebuild` against ~/git/nix-config, keyed off `hostname -s` so
+  # the same definition works on any workstation or cluster node.
+  programs.bash.interactiveShellInit = ''
+    nr() {
+      sudo nixos-rebuild switch --flake ~/git/nix-config#"$(hostname -s)" "$@";
+    }
+    ndr() {
+      sudo nixos-rebuild dry-run --flake ~/git/nix-config#"$(hostname -s)" "$@";
+    }
+  '';
 }

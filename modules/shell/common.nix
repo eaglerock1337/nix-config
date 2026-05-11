@@ -16,5 +16,5 @@
     k = "kubectl";
   };
 
-  environment.variables.EDITOR = "vim";
+  environment.variables.EDITOR = "nvim";
 }

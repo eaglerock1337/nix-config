@@ -11,19 +11,7 @@
   # Cross-compile aarch64 via qemu when cache misses occur (cluster image builds).
   boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
-  # Workstation-only convenience functions: `nr` rebuilds the local host's
-  # NixOS config, `ndr` dry-runs it. Both shell out to `nixos-rebuild` against
-  # ~/git/nix-config, keyed off `hostname -s` so the same definition works on
-  # any future workstation.
   programs.bash = {
-    interactiveShellInit = ''
-      nr() {
-        sudo nixos-rebuild switch --flake ~/git/nix-config#"$(hostname -s)" "$@";
-      }
-      ndr() {
-        sudo nixos-rebuild dry-run --flake ~/git/nix-config#"$(hostname -s)" "$@";
-      }
-    '';
     promptInit = ''
       # Gruvbox color palette
       RESET='\[\e[0m\]'
