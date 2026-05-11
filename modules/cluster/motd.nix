@@ -32,6 +32,7 @@ in {
     # produce /etc/motd, and the pam_motd path was observed not displaying on
     # sshd pubkey login (linux-pam 1.7.1). PrintMotd reads /etc/motd directly.
     environment.etc."motd".text = ''
+
       ${cfg.banner}
 
             Cluster node: ${config.networking.fqdn}
