@@ -88,7 +88,7 @@
     nixosConfigurations = {
       silicon = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = { inherit self nixpkgs nixpkgs-unstable home-manager; };
+        specialArgs = { inherit self nixpkgs nixpkgs-unstable home-manager operatorPubkeys; };
         modules = [
           ./hosts/silicon/configuration.nix
 

@@ -1,4 +1,4 @@
-{ lib, ... }: {
+{ config, lib, operatorPubkeys, ... }: {
   imports = [
     ../common.nix
     ./hosts.nix
@@ -6,13 +6,19 @@
   ];
 
   options.hlc = {
-    motd.banner = lib.mkOption {
+    prompt.glyph = lib.mkOption {
       type = lib.types.str;
-      default = "";
-      description = "HLC ASCII banner displayed in MOTD (set in hlc/default.nix for the cluster).";
+      default = "☁️🏔️☁️";
+      description = ''
+        Full HLC PS1 glyph sequence. Default is emoji-presentation (U+FE0F
+        selectors): cloud + snow-capped mountain + cloud. Per-host fallback
+        (`hosts/hlc-<NNN>/configuration.nix`) sets `"☁⛰︎☁"` (text-presentation,
+        U+FE0E selectors) for terminals where emoji renders double-width and
+        misaligns the prompt.
+      '';
     };
 
-    # Phase 5: disko/rpi{4,5}.nix will consume these to build the disk layout.
+    # Phase 5: disko/rpi{4,5}.nix consume these to build the disk layout.
     # Declared here so Phase 4 host configs can set placeholder values and dry-run.
     disko = {
       usbDevice0 = lib.mkOption {
@@ -43,9 +49,36 @@
     networking.domain = "marks.dev";
 
     # Allow bob to receive nix store paths via `nix copy` from gibson (W-012).
-    # gibson has no nixos-rebuild; deployment uses `nix build` + `nix copy --to
-    # ssh-ng://bob@<node>` + remote `switch-to-configuration`. trusted-users
-    # grants store write access through the nix daemon.
     nix.settings.trusted-users = [ "root" "bob" ];
+
+    # HLC MOTD content (cluster.motd mechanism in modules/cluster/motd.nix)
+    cluster.motd.banner = ''
+      ##########################################
+      #             __  ____    ______         #
+      #            / / / / /   / ____/         #
+      #           / /_/ / /   / /              #
+      #          / __  / /___/ /___            #
+      #         /_/ /_/_____/\____/            #
+      #                                        #
+      #          "Happy Little Cloud"          #
+      #                                        #
+      ##########################################'';
+    cluster.motd.quote = ''
+      "Let's build just a happy little cloud."
+                                      ~ Bob Ross'';
+
+    # Wire HLC glyph into the generic cluster prompt mechanism
+    cluster.prompt.glyph = config.hlc.prompt.glyph;
+
+    # HLC cluster operator
+    system.operator = {
+      name = "bob";
+      pubkeys = operatorPubkeys;
+      description = "HLC cluster operator";
+    };
+
+    # Home-manager bindings for the operator
+    home-manager.extraSpecialArgs = { };
+    home-manager.users.bob = import ../../../home/bob.nix;
   };
 }
