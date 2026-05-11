@@ -1,7 +1,7 @@
 NIX_FLAGS   := --extra-experimental-features 'nix-command flakes'
 HLC_DOMAIN  ?= marks.dev
 
-.PHONY: build-image flash-image silicon-dry silicon-switch update \
+.PHONY: build-image flash-image local-dry local-switch update \
         dry-run build smoke-test ip \
         provision provision-stage1 provision-mount provision-stage2 \
         update-node rollback help
@@ -27,8 +27,8 @@ help:
 	@echo "Targets:"
 	@echo "  build-image HOST=<host> [REBUILD=1]      Build SD card image for a pi node"
 	@echo "  flash-image HOST=<host> DEV=<dev>         Flash built image to SD card device"
-	@echo "  silicon-dry                               Dry-run NixOS config for silicon"
-	@echo "  silicon-switch                            Apply NixOS config for silicon"
+	@echo "  local-dry                                 Dry-run NixOS config for local host"
+	@echo "  local-switch                              Apply NixOS config for local host"
 	@echo "  update                                    Update all flake inputs"
 	@echo "  dry-run HOST=<host>                       Dry-run toplevel for a cluster host"
 	@echo "  build HOST=<host>                         Build toplevel for a cluster host"
@@ -65,11 +65,11 @@ endif
 	@sleep 5
 	zstdcat result/sd-image/*.img.zst | sudo dd if=/dev/stdin of=$(DEV) bs=4M conv=fsync status=progress
 
-silicon-dry:
-	sudo nixos-rebuild dry-run --flake .#silicon
+local-dry:
+	sudo nixos-rebuild dry-run --flake .#$$(hostname)
 
-silicon-switch:
-	sudo nixos-rebuild switch --flake .#silicon
+local-switch:
+	sudo nixos-rebuild switch --flake .#$$(hostname)
 
 update:
 	nix flake update $(NIX_FLAGS)
