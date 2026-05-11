@@ -24,6 +24,10 @@ This skill is the recovery path for the **phase-bundle canary** cadence introduc
 
 The post-mortem lesson (operator must end up knowing which module broke — see W-001 in `WORKAROUNDS.md`) is preserved by this bisect flow, NOT by the canary cadence itself.
 
+## Hostname convention
+
+**Short HLC hostnames do NOT resolve over SSH from the operator workstation.** Always use the FQDN form `<host>.marks.dev` (e.g. `hlc-501.marks.dev`) for any direct `ssh` command in this skill. The Makefile already composes FQDN internally (`bob@$(HOST).$(HLC_DOMAIN)`), so `make` targets that take `HOST=hlc-501` are fine — but any raw `ssh bob@<canary>` invocation in these instructions assumes FQDN. Substitute accordingly.
+
 ## Pre-Execution Checks
 
 1. **Verify the failure**:
@@ -31,7 +35,7 @@ The post-mortem lesson (operator must end up knowing which module broke — see 
    - If it fails, capture which step failed (ping / non-PTY ssh / PTY ssh / `sudo -n true`) and any error output. This is the regression signature.
 
 2. **Verify rollback is possible**:
-   - Run `ssh bob@<canary> 'sudo nixos-rebuild list-generations'`. The canary MUST have at least one prior generation (the pre-bundle baseline). If only one generation exists, the canary substrate is corrupt — escalate to the operator; do not proceed.
+   - Run `ssh bob@<canary>.marks.dev 'sudo nixos-rebuild list-generations'` (FQDN required — see Hostname convention above). The canary MUST have at least one prior generation (the pre-bundle baseline). If only one generation exists, the canary substrate is corrupt — escalate to the operator; do not proceed.
 
 3. **Identify the bundle**:
    - Determine the bundle commit range. Default: prior phase tag (e.g. `phase4-disko-provisioning`) to `HEAD`. Confirm with operator if ambiguous.

@@ -27,8 +27,8 @@ in {
   };
 
   config = {
-    # users.motd generates a nix-store file consumed by pam_motd.
-    # pam_motd is only enabled when security.pam.services.<svc>.showMotd is true.
+    # users.motd writes /etc/motd; sshd's PrintMotd echoes it on interactive
+    # login. Avoids pam_motd activation quirks (seen-flag, PAM stack ordering).
     users.motd = ''
       ${cfg.banner}
 
@@ -37,6 +37,6 @@ in {
       ${cfg.quote}
     '';
 
-    security.pam.services.sshd.showMotd = true;
+    services.openssh.settings.PrintMotd = true;
   };
 }
