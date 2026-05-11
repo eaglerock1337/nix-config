@@ -130,59 +130,114 @@
 
 **Independent Test**: SSH as `bob@hlc-501` → HLC MOTD (banner + `Cluster node: hlc-501.marks.dev` + Bob Ross quote), remote PS1 (`┌─╸bob@hlc-501.marks.dev ☁⛰︎☁ [~]` / `└──╸$`), all toolbox commands on `$PATH`. SSH as `eaglerock@silicon` → same toolbox, no HLC MOTD, workstation PS1 unaffected.
 
-**Per-phase cadence (bundle)**: Tasks T053–T066 (all module creation and wiring) execute as one batch before a single canary deploy at T067. Smoke-test green → fleet roll (T068–T075). On smoke-test fail at T067: `make rollback HOST=hlc-501`, then `/speckit-debug` bisect (comment-out new imports in `modules/cluster/common.nix` one at a time, re-canary, smoke-test) to isolate the breaking module.
+**Module layout** (per spec Session 2026-05-11 Q16–Q19):
+
+- `modules/hosts/common.nix` — TOP-LEVEL CATCHALL (D1): truly universal only — imports shell tier + users/operator; sets nix.settings, time, locale, openssh, allowUnfree, binfmt. NO user definitions, NO PS1, NO docker. Consumed by `modules/hosts/workstation.nix` and `modules/cluster/common.nix`.
+- `modules/hosts/workstation.nix` — workstation tier (C4/C7): imports common.nix; adds silicon `programs.bash.promptInit` (Gruvbox PS1), `nr`/`ndr` helpers, `virtualisation.docker.enable`. Consumed by silicon only.
+- `modules/shell/{utilities,common}.nix` — generic baseline (packages, bash, aliases); consumed via `modules/hosts/common.nix`.
+- `modules/users/operator.nix` — option-driven; option `system.operator = { name; pubkeys; extraGroups ? ["wheel"]; description ? ""; }`; generates `users.users.${name}` + key-only SSH hardening. Consumed via `modules/hosts/common.nix`.
+- `modules/cluster/{motd,prompt}.nix` — generic cluster-tier mechanism modules. `motd.nix` options `cluster.motd.{banner,quote}`. `prompt.nix` option `cluster.prompt.glyph` only (no glyph-specific fallbacks at this tier — those belong to cluster scope).
+- `modules/cluster/common.nix` — imports `../hosts/common.nix` + `./motd.nix` + `./prompt.nix`. No duplicate openssh/operator/shell setup. `cloneOperatorRepos` activationScript parameterized via `config.system.operator.name`.
+- `modules/cluster/hlc/default.nix` — HLC scope: defines `hlc.prompt.mountainGlyph` option (HLC-specific); sets `cluster.motd.*`, `cluster.prompt.glyph = "☁${hlc.prompt.mountainGlyph}☁"`, `system.operator` (bob).
+- `hosts/silicon/configuration.nix` — silicon scope (C5): imports `modules/hosts/workstation.nix` + workstation modules; sets `system.operator` (eaglerock with description/extraGroups inline).
+- `modules/home/{base,server,workstation}.nix` — home-manager tiers; cluster-specific home bits inline in `home/bob.nix`.
+
+**Per-phase cadence (bundle)**: Tasks T053–T066 (all module creation, wiring, and build verification) execute as one batch before a single canary deploy at T067. Smoke-test green → fleet roll (T072–T079). On smoke-test fail at T067: `make rollback HOST=hlc-501`, then `/speckit-debug` bisect (comment-out new imports in `modules/cluster/common.nix` one at a time, re-canary, smoke-test) to isolate the breaking module.
 
 ### Add Phase 6 Makefile Targets
 
 - [X] T051 Add `make update-node HOST=<host> [IP=<ip>]` to `Makefile`: wraps `sudo nixos-rebuild switch --flake .#<host> --target-host bob@<IP> --use-remote-sudo`. Derives IP from HOST per HLC convention unless `IP=` is provided. Refuses decom-set hosts with error message.
 - [X] T052 Add `make rollback HOST=<host> [IP=<ip>]` to `Makefile`: wraps `sudo nixos-rebuild --rollback --flake .#<host> --target-host bob@<IP> --use-remote-sudo`. Same IP-derivation and decom-set guard.
 
-### Create US4 Modules (Bundle — all before canary)
+### Create Shell Tier (Bundle — all before canary)
 
-- [ ] T053 [P] [US4] Create `modules/shell/utilities.nix`: `environment.systemPackages = with pkgs; [` alphabetically sorted list with one-line inline comments `]`. Include: `bat` (colorized cat), `curl` (HTTP client), `dnsutils` (dig/nslookup), `fd` (fast find), `fzf` (fuzzy finder), `git` (VCS), `htop` (process monitor), `iproute2` (ip/ss commands), `jq` (JSON processor), `lsof` (open file list), `mdadm` (RAID management), `ncdu` (disk usage navigator), `netcat` (nc; TCP/UDP tool), `parted` (partition editor), `pciutils` (lspci), `ripgrep` (fast grep; provides `rg`), `rsync` (file sync), `strace` (syscall tracer), `tcpdump` (packet capture), `tmux` (terminal multiplexer), `tree` (directory listing), `usbutils` (lsusb), `vim` (editor), `wget` (HTTP downloader).
+- [ ] T053 [P] [US4] Create `modules/shell/utilities.nix`: define `environment.systemPackages = with pkgs; [ ... ]` with the FULL package list copied from existing `modules/hosts/common.nix` (Q18: unify). Includes all current workstation packages — `k9s`, `kubectl`, `kubernetes-helm`, `kind`, `minikube`, `bat`, `eza`, `fd`, `ripgrep`, `fzf`, `dust`, `duf`, `tree`, `zoxide`, `jq`, `yq`, `sd`, `git`, `busybox`, `killall`, `micro`, `less`, `glow`, `htop`, `btop`, `lsof`, `strace`, `iotop`, `dool`, `ncdu`, `efibootmgr`, `caffeine-ng`, `curl`, `wget`, `httpie`, `fping`, `dnsutils`, `iperf3`, `mtr`, `nmap`, `socat`, `rsync`, `openssh`, `gnupg`, `gnutls`, `age`, `pinentry-curses`, `pinentry-gnome3`, `pass`, `tmux`, `entr`, `delta`, `unzip`, `zip`, `file`, `man-db`, `tldr`, `neofetch`, `nh` — plus cluster-only ops tools `mdadm`, `parted`, `pciutils`, `usbutils`, `iproute2`, `tcpdump`, `vim`. Preserve thematic section dividers (`# --- Editors & Viewers ---`, etc.). FR-015 requirement: EVERY package MUST have an inline `# comment` describing its purpose; add comments for entries that lack them today (`curl`, `wget`, `dnsutils`, `iperf3`, `mtr`, `nmap`, `socat`, `rsync`, `openssh`, `gnupg`, `gnutls`, `age`, `pinentry-*`, `pass`, `tmux`, `entr`, `delta`, `unzip`, `zip`, `file`, `man-db`, `tldr`, `neofetch`, `nh`, `kubectl`, `k9s`, `kubernetes-helm`, `minikube`, `kind`, etc.). Keep within `with pkgs;` scope.
 - [ ] T054 [P] [US4] Create `modules/shell/common.nix`: set `programs.bash.enable = true`; `users.defaultUserShell = pkgs.bash`; define `programs.bash.shellAliases = { ll = "ls -la"; la = "ls -A"; ".." = "cd .."; "..." = "cd ../.."; k = "kubectl"; }`; set `environment.variables.EDITOR = "vim"`.
-- [ ] T055 [P] [US4] Create `modules/shell/prompt.nix`: generate `/etc/profile.d/hlc-prompt.sh` via `environment.etc."profile.d/hlc-prompt.sh".text`. The script sets `PS1` based on `$SSH_CONNECTION`:
-  - **Remote form** (SSH; `$SSH_CONNECTION` non-empty): `PS1='\e[1m┌─╸\e[0m\u@\H ☁⛰︎☁ [\w]\n\e[1m└──╸\e[0m\$ '`. No `\033[...m` color codes. Bold (`\e[1m`) on box-drawing glyphs only. `\H` expands to FQDN **only if** the kernel hostname is fully-qualified — verify this at T067 by checking `hostname -f` on the node; if `\H` returns only the short name (meaning the kernel hostname is unqualified despite `networking.domain` being set), substitute `$(hostname -f)` via a shell subshell in the PS1 string instead.
-  - **Local form** (`$SSH_CONNECTION` empty): same color escapes as silicon's existing prompt but with `☁⛰︎☁` substituting `////` at the end: `PS1='\[<gruvbox-path-color>\]\w\[\033[0m\] ☁⛰︎☁ \$ '` (read actual color codes from `modules/home/colors.nix` or silicon's existing bashrc; use the same escape sequence). Expose `hlc.prompt.mountainGlyph` NixOS option (string, default = `"⛰︎"`; set to `"▲"` for terminals that render the glyph as double-width emoji despite the variation selector).
-- [ ] T056 [P] [US4] Create `modules/motd/default.nix`: define options `hlc.motd.banner` (string) and `hlc.motd.quote` (string, default = `"Let's build just a happy little cloud.  ~ Bob Ross"`). Generate `environment.etc."motd".text = "${config.hlc.motd.banner}\nCluster node: ${config.networking.fqdn}\n${config.hlc.motd.quote}\n"`. Set `services.openssh.settings.PrintMotd = true` (or the NixOS-appropriate option). Look up the exact HLC ASCII banner text from `specs/001-nixos-rpi-cluster/post-mortem-26-04-29.md` and set as the default for `hlc.motd.banner` in `modules/cluster/hlc/default.nix` (not here — keep this module generic).
-- [ ] T057 [P] [US4] Create `modules/users/operator.nix`: define `users.users.bob = { isNormalUser = true; extraGroups = [ "wheel" ]; openssh.authorizedKeys.keys = [ operatorPubkey ]; description = "HLC cluster operator"; shell = pkgs.bash; }`. Set `security.sudo.wheelNeedsPassword = false` with comment `# W-002: passwordless wheel during cluster transition; remove once sops-nix secrets management lands (feature 002)`. Define SSH hardening: `services.openssh.settings.PasswordAuthentication = false; services.openssh.settings.KbdInteractiveAuthentication = false;` with comment `# W-003 closed: key-only SSH enforced post-provisioning`.
-- [ ] T058 [P] [US4] Create `modules/home/base.nix`: home-manager module with cross-cutting defaults — `programs.neovim = { enable = true; defaultEditor = true; viAlias = true; vimAlias = true; }`, `programs.git = { enable = true; }`, any other defaults shared between `bob` and `eaglerock` that currently live scattered in per-user files.
-- [ ] T059 [P] [US4] Create `modules/home/server.nix`: `imports = [ ./base.nix ]`; add server-only config — `programs.tmux = { enable = true; shortcut = "a"; historyLimit = 50000; clock24 = true; }`, `home.sessionVariables.KUBECONFIG = "$HOME/.kube/config"`.
-- [ ] T060 [P] [US4] Create `modules/home/workstation.nix`: `imports = [ ./base.nix ./i3.nix ./polybar.nix ./dunst.nix ./ui.nix ./vscode.nix ]` (adjust list to match modules that actually exist in `modules/home/`). These workstation-only modules MUST NOT be imported anywhere outside `workstation.nix`.
-- [ ] T061 [P] [US4] Create `home/bob.nix`: `{ pkgs, ... }: { imports = [ ../modules/home/server.nix ]; home.username = "bob"; home.homeDirectory = "/home/bob"; home.stateVersion = "25.11"; }`.
-- [ ] T062 [US4] Update `home/eaglerock.nix`: replace any direct inline imports of modules now handled by `modules/home/workstation.nix` with a single `imports = [ ../modules/home/workstation.nix ]`. Preserve any eaglerock-specific overrides. Run `make silicon-dry` — must succeed with no evaluation errors.
 
-### Wire Modules into Cluster Scope
+### Create Cluster-Tier Mechanism Modules
 
-- [ ] T063 [US4] Update `modules/cluster/common.nix`: (1) replace stub TODO comments with real imports — `imports = [ ../shell/utilities.nix ../shell/common.nix ../shell/prompt.nix ../motd/default.nix ../users/operator.nix ]`; (2) **remove** the inline `users.users.bob` block and the `security.sudo.wheelNeedsPassword = false` line — these definitions move to `modules/users/operator.nix` (T057); (3) add a stub comment `# TODO Phase 7: import ../k8s/prereqs.nix` as placeholder for T084. Removing the inline bob user closes the W-001 inline-host pattern for `modules/cluster/common.nix`.
-- [ ] T064 [US4] Update `modules/cluster/hlc/default.nix`: set `hlc.motd.banner` to the exact HLC ASCII banner text from `specs/001-nixos-rpi-cluster/post-mortem-26-04-29.md` (copy verbatim — verify character-for-character). Wire home-manager for `bob`: integrate `home-manager.users.bob = import ../../home/bob.nix;` (match the integration pattern used for `eaglerock` in `hosts/silicon/` or the top-level flake — check existing home-manager wiring to get the exact attribute path right).
-- [ ] T065 [US4] Run `make dry-run HOST=hlc-501` then `make build HOST=hlc-501` after T063–T064. Fix any evaluation errors before the canary deploy.
+- [ ] T055 [P] [US4] Create `modules/cluster/prompt.nix`: generic cluster-tier PS1 mechanism (no cluster-specific glyph fallback options at this tier — those belong in the cluster's own scope, e.g. HLC sets `hlc.prompt.mountainGlyph`). Define option:
+  - `cluster.prompt.glyph` (string, no default — REQUIRED per cluster) — central decoration between user@host and cwd in the remote prompt. Each cluster supplies its own value in its `modules/cluster/<name>/default.nix`.
+  Generate `/etc/profile.d/cluster-prompt.sh` via `environment.etc."profile.d/cluster-prompt.sh".text`. The script sets `PS1` based on `$SSH_CONNECTION`:
+  - **Remote form** (SSH; `$SSH_CONNECTION` non-empty): `PS1='\e[1m┌─╸\e[0m\u@\H ${cfg.glyph} [\w]\n\e[1m└──╸\e[0m\$ '`. No `\033[...m` color codes. Bold (`\e[1m`) on box-drawing glyphs only. `\H` expands to FQDN **only if** the kernel hostname is fully-qualified — verify at T068 via `hostname -f`; if `\H` returns only the short name (kernel hostname unqualified despite `networking.domain` set), substitute `$(hostname -f)` via shell subshell in the PS1 string.
+  - **Local form** (`$SSH_CONNECTION` empty): same color escapes as silicon's existing prompt but with `${cfg.glyph}` substituting `////` at the end: `PS1='\[<gruvbox-path-color>\]\w\[\033[0m\] ${cfg.glyph} \$ '`. Read actual color codes from silicon's existing `programs.bash.promptInit` (in `modules/hosts/common.nix` today, moved to `modules/hosts/workstation.nix` per T063).
+- [ ] T056 [P] [US4] Create `modules/cluster/motd.nix`: cluster-tier MOTD mechanism. Define options under `cluster.motd`:
+  - `cluster.motd.banner` (string, no default) — ASCII banner shown at SSH login; per-cluster value.
+  - `cluster.motd.quote` (string, no default) — short quote/tagline shown after the hostname line.
+  Generate `environment.etc."motd".text = "${config.cluster.motd.banner}\nCluster node: ${config.networking.fqdn}\n${config.cluster.motd.quote}\n"`. Set `services.openssh.settings.PrintMotd = true` (or NixOS-appropriate option). This module is generic — HLC values are set in `modules/cluster/hlc/default.nix` (T064).
+
+### Create Option-Driven Operator Module
+
+- [ ] T057 [P] [US4] Create `modules/users/operator.nix`: option-driven operator user. Define options under `system.operator`:
+  - `system.operator.name` (string, no default) — login name (e.g. `"bob"`, `"eaglerock"`, `"slimer"`).
+  - `system.operator.pubkeys` (listOf str, no default) — SSH authorized keys.
+  - `system.operator.extraGroups` (listOf str, default = `["wheel"]`) — supplementary groups (HLC bob keeps default; silicon eaglerock sets `["wheel" "networkmanager" "docker"]`).
+  - `system.operator.description` (string, default = `""`) — user description (e.g. `"Peter Marks"` for eaglerock, `"HLC cluster operator"` for bob).
+  Generate `users.users.${cfg.name} = { isNormalUser = true; extraGroups = cfg.extraGroups; openssh.authorizedKeys.keys = cfg.pubkeys; description = cfg.description; shell = pkgs.bash; }`. Set `security.sudo.wheelNeedsPassword = false` with comment `# W-002: passwordless wheel during cluster transition; remove once sops-nix secrets management lands (feature 002)`. Define key-only SSH hardening: `services.openssh.settings.PasswordAuthentication = false; services.openssh.settings.KbdInteractiveAuthentication = false;` with comment `# W-003 closed: key-only SSH enforced post-provisioning`. Module is imported globally (cluster + workstation); the operator user materializes only when a host sets `system.operator.name`.
+
+### Create Home-Manager Tiers
+
+- [ ] T058 [US4] Update existing `modules/home/base.nix` (already consumed by silicon): keep current shared content (vim/neovim/git/bash defaults, fontconfig). Fix `programs.bash.shellAliases.ll`/`la` — currently reference `exa` (retired upstream); update to `eza` to match `T053` package set. Drop eaglerock-only `gpnr` alias from base (move to `home/eaglerock.nix` or `modules/home/workstation.nix`). Add any cross-cutting defaults missing today that should apply to both bob and eaglerock. Verify no workstation-specific content leaks in here.
+- [ ] T059 [P] [US4] Create `modules/home/server.nix`: `imports = [ ./base.nix ]`; add server-only config — `programs.tmux = { enable = true; shortcut = "a"; historyLimit = 50000; clock24 = true; }`, `home.sessionVariables.KUBECONFIG = "$HOME/.kube/config"`. This tier is consumed by all cluster operator home files (`home/bob.nix` today; future `home/<ecto-operator>.nix`).
+- [ ] T060 [P] [US4] Create `modules/home/workstation.nix`: `imports = [ ./base.nix ./ui.nix ./i3.nix ./polybar.nix ./dunst.nix ./dev.nix ./vscode.nix ]` (matches current `home/eaglerock.nix` import list exactly). These workstation-only modules MUST NOT be imported anywhere outside `workstation.nix`.
+- [ ] T061 [P] [US4] Create `home/bob.nix`: `{ pkgs, ... }: { imports = [ ../modules/home/server.nix ]; home.username = "bob"; home.homeDirectory = "/home/bob"; home.stateVersion = "25.11"; programs.home-manager.enable = true; }`. HLC-specific home bits (e.g. cluster-themed shell greeting, kubeconfig paths specific to HLC) inline HERE — no `modules/home/hlc.nix` overlay file (Q17).
+- [ ] T062 [US4] Refactor `home/eaglerock.nix`: replace the current inline import list with `imports = [ ../modules/home/workstation.nix ]`. Preserve any eaglerock-specific overrides outside the imports block. Verify with `make local-dry` — must succeed with no evaluation errors.
+
+### Wire Modules into Cluster + Workstation Scopes
+
+- [ ] T063 [US4] Refactor `modules/hosts/common.nix` as TOP-LEVEL CATCHALL (per D1; consumed by both workstations and cluster nodes) AND extract workstation-only bits into a new `modules/hosts/workstation.nix` (per C4/C5/C7).
+  - **modules/hosts/common.nix** keeps ONLY truly universal content:
+    1. `imports = [ ../shell/utilities.nix ../shell/common.nix ../users/operator.nix ];`
+    2. nix.settings, time.timeZone, i18n.*, allowUnfree
+    3. `services.openssh.enable = true` (single source of truth — cluster inherits)
+    4. `boot.binfmt.emulatedSystems = [ "aarch64-linux" ]`
+    5. DROP the inline `environment.systemPackages` block (moved to `modules/shell/utilities.nix` per T053)
+    6. DROP `programs.bash.promptInit` (silicon-specific PS1 — moves to workstation.nix)
+    7. DROP `programs.bash.interactiveShellInit` (`nr`/`ndr` workstation helpers — moves to workstation.nix)
+    8. DROP `users.users.eaglerock = { ... }` inline block (per C5 — eaglerock specifics move to `hosts/silicon/configuration.nix`)
+    9. DROP `virtualisation.docker.enable = true` (per C7 — moves to workstation.nix)
+  - **CREATE `modules/hosts/workstation.nix`** (new — workstation-tier system module):
+    1. `imports = [ ./common.nix ];`
+    2. `programs.bash.promptInit = '' ... '';` (silicon's Gruvbox PS1 — moved verbatim from common.nix)
+    3. `programs.bash.interactiveShellInit = '' nr() {...} ndr() {...} '';`
+    4. `virtualisation.docker.enable = true;`
+    5. NOTE: this module does NOT set `system.operator.*` — eaglerock specifics live in the silicon host file.
+  - **Update `hosts/silicon/configuration.nix`**:
+    1. `imports = [ ../../modules/hosts/workstation.nix ../../modules/hosts/grub.nix ../../modules/hosts/desktop-ui.nix ../../modules/hosts/gaming.nix ../../modules/hardware/x1-carbon.nix ./hardware-configuration.nix ];` (swap `common.nix` for `workstation.nix`).
+    2. `system.operator.name = "eaglerock";`
+    3. `system.operator.pubkeys = operatorPubkeys;`
+    4. `system.operator.description = "Peter Marks";`
+    5. `system.operator.extraGroups = [ "wheel" "networkmanager" "docker" ];` (preserve existing eaglerock groups).
+  - **Update `flake.nix` `nixosConfigurations.silicon.specialArgs`**: add `inherit operatorPubkeys;` (currently passed to cluster only).
+  - Run `make local-dry` — must succeed; verify `users.users.eaglerock` materializes correctly via `system.operator`.
+- [ ] T064 [US4] Update `modules/cluster/common.nix`: (1) replace stub TODO comments with real imports — `imports = [ ../hosts/common.nix ./prompt.nix ./motd.nix ]` (cluster inherits shell tier + operator module + openssh + nix.settings + time/locale via `../hosts/common.nix`; no separate import needed); (2) **remove** the inline `users.users.bob` block and the `security.sudo.wheelNeedsPassword = false` line — produced by `modules/users/operator.nix` (T057) once `system.operator.name` is set in the HLC scope (T065); (3) **remove** duplicate `services.openssh.enable = true` line (now set by catchall hosts/common.nix only); (4) parameterize `system.activationScripts.cloneOperatorRepos` (per C6): replace literal `bobHome = "/home/bob"` with `operatorHome = "/home/${config.system.operator.name}"` and `chown bob:users` with `chown ${config.system.operator.name}:users`; (5) keep stub comment `# TODO Phase 7: import ../k8s/prereqs.nix` as placeholder for T084. Removing the inline bob user closes the W-001 inline-host pattern for `modules/cluster/common.nix`.
+- [ ] T065 [US4] Update `modules/cluster/hlc/default.nix`: (1) extend `options.hlc` with `prompt.mountainGlyph` (string, default = `"⛰︎"`) — emoji-fallback override for terminals that render the variation-selected mountain as double-width; set to `"▲"` to fix; (2) set `cluster.motd.banner` to the exact HLC ASCII banner heredoc from `specs/001-nixos-rpi-cluster/post-mortem-26-04-29.md` (copy verbatim — character-for-character); (3) set `cluster.motd.quote = "Let's build just a happy little cloud.  ~ Bob Ross"`; (4) set `cluster.prompt.glyph = "☁${config.hlc.prompt.mountainGlyph}☁"` (HLC-specific composition; uses the HLC mountainGlyph option); (5) set `system.operator.name = "bob"`, `system.operator.pubkeys = operatorPubkeys`, `system.operator.description = "HLC cluster operator"`; (6) wire home-manager for bob: `home-manager.users.bob = import ../../../home/bob.nix;` (match the integration pattern used for `eaglerock` in `flake.nix`).
+- [ ] T066 [US4] Run `make dry-run HOST=hlc-501` then `make build HOST=hlc-501` and `make local-dry` after T063–T065. Fix any evaluation errors before the canary deploy.
 
 ### Canary Deploy + Validation
 
-- [ ] T066 [US4] **[BUNDLE-CANARY]** Deploy operator-UX bundle to `hlc-501`: `make update-node HOST=hlc-501`. Then `make smoke-test HOST=hlc-501`. **On smoke-test fail**: `make rollback HOST=hlc-501`, then run `/speckit-debug` skill — comment-out imports in `modules/cluster/common.nix` one at a time, `make update-node HOST=hlc-501`, `make smoke-test HOST=hlc-501`, repeat to isolate the breaking module. Fix, then resume.
-- [ ] T067 [US4] Validate PS1 on `hlc-501`: (a) `ssh bob@hlc-501` from `TERM=xterm-256color` terminal — observe two-line box-drawing remote PS1 with `☁⛰︎☁`; (b) `ssh -o "SendEnv TERM" bob@hlc-501` with `TERM=xterm` — remote PS1 renders without color artifacts. Confirm `⛰︎` renders as text (not double-width emoji). If emoji rendering observed, set `hlc.prompt.mountainGlyph = "▲"` in `hosts/hlc-501/configuration.nix`, rebuild, redeploy.
-- [ ] T068 [US4] Validate MOTD on `hlc-501`: `ssh bob@hlc-501` — observe HLC ASCII banner, then `Cluster node: hlc-501.marks.dev`, then Bob Ross quote. Verify hostname is dynamic (not hardcoded).
-- [ ] T069 [US4] Validate toolbox on `hlc-501`: `ssh bob@hlc-501 "which bat curl dig fd fzf git htop ip jq lsof mdadm ncdu nc parted lspci rg rsync strace tcpdump tmux tree lsusb vim wget"` — all MUST resolve.
-- [ ] T070 [US4] Validate SSH hardening on `hlc-501`: `ssh -o PreferredAuthentications=password bob@hlc-501` MUST be rejected. Key-based login MUST still work.
+- [ ] T067 [US4] **[BUNDLE-CANARY]** Deploy operator-UX bundle to `hlc-501`: `make update-node HOST=hlc-501`. Then `make smoke-test HOST=hlc-501`. **On smoke-test fail**: `make rollback HOST=hlc-501`, then run `/speckit-debug` skill — comment-out imports in `modules/cluster/common.nix` one at a time, `make update-node HOST=hlc-501`, `make smoke-test HOST=hlc-501`, repeat to isolate the breaking module. Fix, then resume.
+- [ ] T068 [US4] Validate PS1 on `hlc-501`: (a) `ssh bob@hlc-501` from `TERM=xterm-256color` terminal — observe two-line box-drawing remote PS1 with `☁⛰︎☁`; (b) `ssh -o "SendEnv TERM" bob@hlc-501` with `TERM=xterm` — remote PS1 renders without color artifacts. Confirm `⛰︎` renders as text (not double-width emoji). If emoji rendering observed, set `hlc.prompt.mountainGlyph = "▲"` in `hosts/hlc-501/configuration.nix`, rebuild, redeploy.
+- [ ] T069 [US4] Validate MOTD on `hlc-501`: `ssh bob@hlc-501` — observe HLC ASCII banner, then `Cluster node: hlc-501.marks.dev`, then Bob Ross quote. Verify hostname is dynamic (not hardcoded).
+- [ ] T070 [US4] Validate toolbox on `hlc-501`: `ssh bob@hlc-501 "which bat curl dig fd fzf git htop ip jq k9s kubectl helm lsof mdadm ncdu nc parted lspci rg rsync strace tcpdump tmux tree lsusb vim wget"` — all MUST resolve.
+- [ ] T071 [US4] Validate SSH hardening on `hlc-501`: `ssh -o PreferredAuthentications=password bob@hlc-501` MUST be rejected. Key-based login MUST still work.
 
-#### Fleet Roll (serial; smoke-test gate per host)
+#### Fleet Roll (serial; smoke-test gate per host; decom-set auto-skipped by Makefile)
 
-- [ ] T071 [US4] Roll bundle to `hlc-502`: `make update-node HOST=hlc-502` + `make smoke-test HOST=hlc-502`. On fail: `make rollback`; investigate node-local issue; fix before continuing.
-- [ ] T072 [US4] Roll bundle to `hlc-503` + smoke-test.
-- [ ] T073 [US4] Roll bundle to `hlc-504` + smoke-test.
-- [ ] T074 [US4] Roll bundle to `hlc-505` + smoke-test.
-- [ ] T075 [US4] Roll bundle to `hlc-506` + smoke-test.
-- [ ] T076 [US4] Roll bundle to `hlc-507` + smoke-test.
-- [ ] T077 [US4] Roll bundle to `hlc-508` + smoke-test.
-- [ ] T078 [US4] Roll bundle to `hlc-401`: `make update-node HOST=hlc-401` + `make smoke-test HOST=hlc-401`. Verify MOTD/PS1/toolbox behavior on Pi 4.
+- [ ] T072 [US4] Roll bundle to `hlc-502`: `make update-node HOST=hlc-502` + `make smoke-test HOST=hlc-502`. On fail: `make rollback`; investigate node-local issue; fix before continuing.
+- [ ] T073 [US4] Roll bundle to `hlc-503` (DECOM — Makefile refuses; skip and note).
+- [ ] T074 [US4] Roll bundle to `hlc-504` + smoke-test.
+- [ ] T075 [US4] Roll bundle to `hlc-505` + smoke-test.
+- [ ] T076 [US4] Roll bundle to `hlc-506` + smoke-test.
+- [ ] T077 [US4] Roll bundle to `hlc-507` (DECOM — Makefile refuses; skip and note).
+- [ ] T078 [US4] Roll bundle to `hlc-508` + smoke-test.
+- [ ] T079 [US4] Roll bundle to `hlc-401`: `make update-node HOST=hlc-401` + `make smoke-test HOST=hlc-401`. Verify MOTD/PS1/toolbox behavior on Pi 4.
 
 ### Silicon Wiring + Close Workarounds
 
-- [ ] T079 [US4] Apply home-manager changes to `silicon`: `make silicon-switch`. Verify: toolbox commands available as `eaglerock@silicon`, no HLC MOTD in local terminal, workstation modules (i3, polybar) still functional.
-- [ ] T080 [US4] Close W-001 in `specs/WORKAROUNDS.md`: fill `Resolved: 2026-<date>`. All six US4 modules reintroduced with canary + smoke-test gates per exit condition.
-- [ ] T081 [US4] Close W-003 in `specs/WORKAROUNDS.md`: fill `Resolved: 2026-<date>`. `PasswordAuthentication = false` applied in T057, validated in T070.
-- [ ] T082 [US4] Commit. Tag `phase6-operator-ux`.
+- [ ] T080 [US4] Apply changes to `silicon`: `make local-switch` (or `sudo nixos-rebuild switch --flake .#silicon`). Verify: toolbox commands available as `eaglerock@silicon`, no HLC MOTD in local terminal (workstation has no `cluster.motd.*` setting), workstation modules (i3, polybar) still functional, local PS1 unchanged (silicon does not import `modules/cluster/prompt.nix`).
+- [ ] T081 [US4] Close W-001 in `specs/WORKAROUNDS.md`: fill `Resolved: 2026-<date>`. Cluster modules reintroduced with canary + smoke-test gates per exit condition. Inline `users.users.bob` removed from `modules/cluster/common.nix`, and inline `users.users.eaglerock` removed from `modules/hosts/common.nix` (both now option-driven via `system.operator`); silicon-side eaglerock specifics relocated to `hosts/silicon/configuration.nix`.
+- [ ] T082 [US4] Close W-003 in `specs/WORKAROUNDS.md`: fill `Resolved: 2026-<date>`. `PasswordAuthentication = false` applied in `modules/users/operator.nix` (T057), validated in T071. Commit. Tag `phase6-operator-ux`.
 
 **Checkpoint**: US4 complete. SC-006 verified. W-001 and W-003 closed.
 

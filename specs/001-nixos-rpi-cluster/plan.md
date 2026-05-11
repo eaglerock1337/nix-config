@@ -114,10 +114,18 @@ hosts/
 └── hlc-508/configuration.nix
 
 modules/
+├── hosts/
+│   ├── common.nix            # Top-level catchall (all hosts): imports shell/* + users/operator; nix.settings, time, locale, openssh, allowUnfree, binfmt
+│   ├── workstation.nix       # Workstation tier: imports common.nix; silicon bash promptInit, nr/ndr helpers, docker
+│   ├── desktop-ui.nix        # Workstation-only: GUI packages
+│   ├── gaming.nix            # Workstation-only
+│   └── grub.nix              # Workstation-only
 ├── cluster/
-│   ├── common.nix            # Generic-cluster scope: toolbox, k3s prereqs, sshd, bash, MOTD wiring
+│   ├── common.nix            # Cluster-tier scope: imports ../hosts/common.nix + ./motd.nix + ./prompt.nix
+│   ├── motd.nix              # Cluster-tier MOTD mechanism (options cluster.motd.{banner,quote}; FR-018)
+│   ├── prompt.nix            # Cluster-tier PS1 mechanism (options cluster.prompt.{glyph,mountainGlyph}; R-002)
 │   └── hlc/
-│       ├── default.nix       # HLC cluster scope: operator user, HLC FQDN convention, HLC banner
+│       ├── default.nix       # HLC values: cluster.motd.*, cluster.prompt.glyph, system.operator (bob), HLC FQDN convention
 │       └── hosts.nix         # HLC host-to-IP/MAC map
 ├── hardware/
 │   ├── rpi4.nix              # RPi 4 hardware module (config.txt, thermal, EEPROM)
@@ -126,23 +134,20 @@ modules/
 │   └── x1-carbon.nix         # Workstation hardware (unchanged)
 ├── home/
 │   ├── base.nix              # Cross-cutting: neovim, git, bash dotfiles, shared aliases
-│   ├── server.nix            # Server-only: tmux config, kubectl/k9s aliases
+│   ├── server.nix            # Server-only: tmux config, kubectl/k9s env
 │   ├── workstation.nix       # Workstation-only: imports i3, polybar, dunst, vscode, ui modules
 │   ├── colors.nix            # Gruvbox color values (unchanged)
 │   ├── i3.nix                # (unchanged; imported by workstation.nix)
 │   ├── polybar.nix           # (unchanged; imported by workstation.nix)
 │   └── ...                   # Other existing home modules
-├── motd/
-│   └── default.nix           # Parameterized MOTD module (FR-018)
 ├── sd/
 │   ├── bootstrap.nix         # SD bootstrap config: bob + key + DHCP + minimal recovery
 │   └── recovery-utils.nix    # Recovery utility package set (FR-002)
 ├── shell/
-│   ├── common.nix            # Bash canonical shell, baseline aliases
-│   ├── prompt.nix            # Two-form PS1 (local Gruvbox + remote xterm-safe; R-002)
-│   └── utilities.nix         # Sysadmin toolbox (FR-015): alphabetical packages + comments
-├── hosts/                    # Silicon host modules (unchanged)
-│   └── ...
+│   ├── common.nix            # Bash canonical shell, baseline aliases (consumed by hosts/common.nix)
+│   └── utilities.nix         # Sysadmin toolbox (FR-015): thematic sections, every pkg commented
+├── users/
+│   └── operator.nix          # Option-driven `system.operator = { name; pubkeys; ... }`; key-only SSH hardening (W-003)
 └── k8s/
     └── prereqs.nix           # k3s enabled-but-stopped, container deps, kernel/sysctl, k9s
 
@@ -318,7 +323,7 @@ If any step fails, the reset is incomplete. Diagnose and re-run until green. Do 
 
 ## Phase 6 — Operator UX (US4)
 
-**Spec**: US4 | **FR**: FR-015..FR-020 | **Research**: R-002, R-009
+**Spec**: US4 | **FR**: FR-015..FR-020 | **Research**: R-002, R-009 | **Module layout refined**: spec.md Session 2026-05-11 Q16–Q19 (cluster-tier MOTD/PS1, home-manager tiers base/server/workstation with cluster-specific values inlined, unified shell package list, option-driven `system.operator`).
 
 **Goal**: HLC MOTD, two-form PS1 (local Gruvbox + remote xterm-safe), sysadmin toolbox, modular home-manager, SSH hardening — all in place. W-001 + W-003 closed.
 
@@ -331,12 +336,12 @@ At the start of this phase, add Makefile targets:
 
 Module reintroduction order (W-001 exit):
 
-1. **Toolbox** (`modules/shell/utilities.nix`) — alphabetical packages with inline rationale. Land first; every later module imports it.
-2. **Bash baseline** (`modules/shell/common.nix`) — canonical shell, baseline aliases.
-3. **PS1** (`modules/shell/prompt.nix`) — local form: silicon-style, Gruvbox colors, `////` → `☁⛰☁`. Remote form: two-line box-drawing (`┌─╸user@fqdn ☁⛰☁ [cwd]` / `└──╸$`), no color codes, FQDN. Mountain glyph: `⛰︎` (U+26F0 + U+FE0E text-presentation selector); `hlc.prompt.mountainGlyph` option for ASCII fallback (R-002). Validate rendering on kitty + `xterm-256color` SSH + `TERM=xterm` SSH.
-4. **MOTD** (`modules/motd/default.nix`) — parameterized banner module (FR-018). HLC banner matches post-mortem reference exactly; `hostnameFormat = "Cluster node: <fqdn>"` interpolated from `config.networking.fqdn`; Bob Ross quote static.
-5. **Operator user** (`modules/users/operator.nix`) — `bob` with hardcoded authorized key (W-002 site annotated), passwordless wheel (W-002), key-only sshd planned but deferred to sub-step 7 (W-003).
-6. **Home-manager modular split** — `modules/home/{base,server,workstation}.nix` per R-009. `home/bob.nix` composes base + server; `home/eaglerock.nix` composes base + workstation. Apply to silicon via `make silicon-switch`; apply to cluster per canary pattern.
+1. **Toolbox** (`modules/shell/utilities.nix`) — thematic-sectioned packages, every entry carries an inline comment (FR-015). Land first; consumed by `modules/hosts/common.nix` (top-level catchall — workstation + cluster both inherit).
+2. **Bash baseline** (`modules/shell/common.nix`) — canonical shell, baseline aliases. Consumed via `modules/hosts/common.nix`.
+3. **PS1** (`modules/cluster/prompt.nix`) — generic cluster-tier mechanism. Option: `cluster.prompt.glyph` (required per cluster; no default). PS1 generation only — no cluster-specific glyph fallback at this tier. HLC layers its own option `hlc.prompt.mountainGlyph` (text/emoji fallback, R-002) in `modules/cluster/hlc/default.nix` and computes `cluster.prompt.glyph = "☁${config.hlc.prompt.mountainGlyph}☁"`. Local form: silicon-style, Gruvbox colors, `////` → `☁⛰☁`. Remote form: two-line box-drawing (`┌─╸user@fqdn ☁⛰☁ [cwd]` / `└──╸$`), no color codes, FQDN. Validate rendering on kitty + `xterm-256color` SSH + `TERM=xterm` SSH. Workstation does NOT import this module — silicon PS1 unchanged.
+4. **MOTD** (`modules/cluster/motd.nix`) — cluster-tier parameterized banner mechanism (FR-018). Options `cluster.motd.banner` and `cluster.motd.quote`. HLC values set in `modules/cluster/hlc/default.nix` from post-mortem reference exactly; `Cluster node: <fqdn>` interpolated from `config.networking.fqdn`.
+5. **Operator user** (`modules/users/operator.nix`) — option-driven `system.operator = { name; pubkeys; extraGroups ? ["wheel"]; }` generating `users.users.${name}` (W-002 wheel site annotated, key-only sshd at sub-step 7). Imported via `modules/hosts/common.nix`; HLC sets `system.operator.name = "bob"`, silicon sets `"eaglerock"`, future Ecto-1 sets `"slimer"`.
+6. **Home-manager modular split** — `modules/home/{base,server,workstation}.nix` per R-009. `home/bob.nix` composes base+server with HLC-specific bits inlined; `home/eaglerock.nix` composes base+workstation. Apply to silicon via `make local-switch`; apply to cluster per canary pattern.
 7. **SSH hardening** — `services.openssh.settings.PasswordAuthentication = false` + `KbdInteractiveAuthentication = false`. Closes W-003. Verify key-only login still works after each switch.
 8. **[BUNDLE-CANARY]**: `make update-node HOST=hlc-501` → `make smoke-test HOST=hlc-501`. On fail: rollback + bisect. On green: proceed.
 9. **Fleet roll** (serial): `make update-node HOST=<host>` + `make smoke-test HOST=<host>` for `hlc-502..508`, then `hlc-401`.
@@ -405,7 +410,7 @@ All technical decisions are in [research.md](./research.md):
 | ID | Decision |
 | -- | -------- |
 | R-001 | Upstream Pi NixOS source: `nvmd/nixos-raspberrypi` main branch ✅ confirmed working |
-| R-002 | Mountain-glyph `⛰` presentation: `U+FE0E` text selector + `hlc.prompt.mountainGlyph` ASCII fallback |
+| R-002 | Mountain-glyph `⛰` presentation: `U+FE0E` text selector + `hlc.prompt.mountainGlyph` ASCII fallback (HLC-scoped, since the glyph itself is HLC-specific) |
 | R-003 | k3s enabled-but-stopped: `services.k3s.enable = true` + `wantedBy = mkForce []` |
 | R-004 | Disko schemas: two files (`rpi4.nix`, `rpi5.nix`); ext4 for RAID, xfs for NVMe; `by-path/` disk identification (USB port deterministic; `xhci-hcd.0`=left/a, `xhci-hcd.1`=right/b) |
 | R-005 | Boot order: EEPROM `BOOT_ORDER = 0xf14` (USB-first, SD-fallback) |

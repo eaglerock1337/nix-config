@@ -39,7 +39,7 @@
 
     # T009: thin mkHlcNode wrapper — provisioned nixosConfiguration for a cluster node.
     # SD bootstrap images are separate derivations built by mkHlcBootstrap below.
-    # NOT included: home-manager.users.bob wiring — deferred to T064 (Phase 6/US4).
+    # NOT included: home-manager.users.bob wiring — deferred to Phase 6/US4 (set in modules/cluster/hlc/default.nix).
     mkHlcNode = { hostPath, extraModules ? [] }:
       # Using nixos-raspberrypi.lib.nixosSystem so nvmd's overlays (vendor kernel,
       # firmware, raspberrypi-utils) and specialArgs injection apply automatically.
