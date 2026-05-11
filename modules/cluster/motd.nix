@@ -27,7 +27,9 @@ in {
   };
 
   config = {
-    environment.etc."motd".text = ''
+    # users.motd generates a nix-store file consumed by pam_motd.
+    # pam_motd is only enabled when security.pam.services.<svc>.showMotd is true.
+    users.motd = ''
       ${cfg.banner}
 
             Cluster node: ${config.networking.fqdn}
@@ -35,8 +37,6 @@ in {
       ${cfg.quote}
     '';
 
-    # Echo /etc/motd on interactive SSH login. NixOS default is false; flip to
-    # true so the banner shows even without pam_motd configured.
-    services.openssh.settings.PrintMotd = true;
+    security.pam.services.sshd.showMotd = true;
   };
 }

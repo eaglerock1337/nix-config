@@ -51,21 +51,11 @@
     # Allow bob to receive nix store paths via `nix copy` from gibson (W-012).
     nix.settings.trusted-users = [ "root" "bob" ];
 
-    # HLC MOTD content (cluster.motd mechanism in modules/cluster/motd.nix)
-    cluster.motd.banner = ''
-      ##########################################
-      #             __  ____    ______         #
-      #            / / / / /   / ____/         #
-      #           / /_/ / /   / /              #
-      #          / __  / /___/ /___            #
-      #         /_/ /_/_____/\____/            #
-      #                                        #
-      #          "Happy Little Cloud"          #
-      #                                        #
-      ##########################################'';
-    cluster.motd.quote = ''
-      "Let's build just a happy little cloud."
-                                      ~ Bob Ross'';
+    # HLC MOTD content (cluster.motd mechanism in modules/cluster/motd.nix).
+    # Banner + quote sourced verbatim from sibling .txt files so the displayed
+    # indent is preserved (Nix `''` indent-stripping would otherwise flatten it).
+    cluster.motd.banner = builtins.readFile ./motd-banner.txt;
+    cluster.motd.quote = builtins.readFile ./motd-quote.txt;
 
     # Wire HLC glyph into the generic cluster prompt mechanism
     cluster.prompt.glyph = config.hlc.prompt.glyph;
