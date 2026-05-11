@@ -11,9 +11,7 @@ listed below under a separate header, also in numerical order.
 
 ## Outstanding Workarounds
 
----
-
-## W-001: Inline minimal host configs (defers Principle III)
+### W-001: Inline minimal host configs (defers Principle III)
 
 - **Site(s)**: After Phase 0 baseline reset, only `hosts/hlc-501/configuration.nix` and `hosts/silicon/*` exist (matching `main`). As Phase 3 re-adds the work-set hosts (`hlc-401`, `hlc-502..508`) and the decom-set host configs (`hlc-402..404`, dry-run-only per Constitution §"Cluster Topology"), each new `hosts/hlc-NNN/configuration.nix` is brought up as a thin per-host file plus inline minimal config until Phase 5 reintroduces the shared modules.
 - **Deviates from**: Constitution Principle III (Modular Design)
@@ -25,7 +23,7 @@ listed below under a separate header, also in numerical order.
 
 ---
 
-## W-002: Passwordless `wheel` sudo (`security.sudo.wheelNeedsPassword = false`)
+### W-002: Passwordless `wheel` sudo (`security.sudo.wheelNeedsPassword = false`)
 
 - **Site(s)**: Current sites: `modules/sd/bootstrap.nix` (bootstrap image; permanent for that module, mirrors W-004 disposition) and `modules/cluster/common.nix` (provisioned hosts; added 2026-05-05 so `bob` can satisfy `--use-remote-sudo` on provisioned nodes before secrets management lands). As Phase 6 introduces `modules/users/operator.nix`, the setting moves from the inline `modules/cluster/common.nix` entry into that module; the inline entry in `modules/cluster/common.nix` is removed in T063.
 - **Deviates from**: Eventual passwordless-via-key+sops hardened state
@@ -37,7 +35,7 @@ listed below under a separate header, also in numerical order.
 
 ---
 
-## W-003: Default `PasswordAuthentication = true` (NixOS 25.11 sshd default)
+### W-003: Default `PasswordAuthentication = true` (NixOS 25.11 sshd default)
 
 - **Site(s)**: After Phase 0, no per-host SSH hardening exists; `services.openssh.settings.PasswordAuthentication` retains its NixOS default. Reintroduced explicitly in Phase 5 SSH-hardening sub-step on all 9 work-set hosts (decom-set hosts not flashed; not in scope).
 - **Deviates from**: Spec FR-020 (`password authentication MUST be off post-provisioning`)
@@ -49,7 +47,7 @@ listed below under a separate header, also in numerical order.
 
 ---
 
-## W-010: Root SSH key in bootstrap + provisioned images + `--phases disko,install,reboot` in `make provision`
+### W-010: Root SSH key in bootstrap + provisioned images + `--phases disko,install,reboot` in `make provision`
 
 - **Site(s)**: `modules/sd/bootstrap.nix` — `users.users.root.openssh.authorizedKeys.keys = [ operatorPubkey ]`; `modules/cluster/common.nix` — same setting on provisioned hosts (root SSH needed for re-provisioning and recovery operations); `Makefile` — `provision` target uses `--phases disko` then `--phases install,reboot` (split by W-011 firmware mount step); root SSH required for both the W-011 intermediate mount and the install phase.
 - **Deviates from**: nixos-anywhere default kexec-based provisioning flow; principle of minimal root exposure.
@@ -61,7 +59,7 @@ listed below under a separate header, also in numerical order.
 
 ---
 
-## W-011: Explicit `/boot/firmware` mount between disko and install phases in `make provision`
+### W-011: Explicit `/boot/firmware` mount between disko and install phases in `make provision`
 
 - **Site(s)**: `Makefile` — `provision` target; `ssh root@$(HOST).$(HLC_DOMAIN) "mkdir -p /mnt/boot/firmware && mount /dev/mmcblk0p1 /mnt/boot/firmware"` between the disko and install phases.
 - **Deviates from**: Single-invocation `nixos-anywhere` provisioning flow.
@@ -73,7 +71,7 @@ listed below under a separate header, also in numerical order.
 
 ---
 
-## W-012: `--no-check-sigs` on `nix copy` in `make update-node`
+### W-012: `--no-check-sigs` on `nix copy` in `make update-node`
 
 - **Site(s)**: `Makefile` — `update-node` target, `nix copy` invocation
 - **Deviates from**: Nix store path integrity verification (Constitution Principle II — reproducibility)
@@ -87,57 +85,7 @@ listed below under a separate header, also in numerical order.
 
 ## Resolved Workarounds
 
----
-
-## W-006: NixOS firewall disabled on SD bootstrap image
-
-- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` (staged; never imported into `bootstrap.nix` or any other module)
-- **Deviates from**: NixOS default (`networking.firewall.enable = true`)
-- **Reason**: nf_conntrack TCP state machine believed corrupted by SSH session teardown in Pi5 vendor kernel 6.12.47. Setting was staged in `vendor-kernel-tcp.nix` pending canary validation but never applied.
-- **Exit condition**: Root cause identified as a Unifi security rule dropping packets. Setting was never needed; bootstrap image ran with firewall enabled throughout and provisioning works correctly.
-- **Target phase / feature**: N/A — never deployed.
-- **Opened**: 2026-05-02
-- **Resolved**: 2026-05-11 (root cause was Unifi security rule; `vendor-kernel-tcp.nix` deleted as dead code)
-
----
-
-## W-007: `PerSourcePenalties` disabled on SD bootstrap image
-
-- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` (staged; never imported into `bootstrap.nix` or any other module)
-- **Deviates from**: OpenSSH 10.2+ default (`PerSourcePenalties yes`)
-- **Reason**: `nixos-anywhere` provision burst from gibson believed to trip OpenSSH source-IP penalty policy. Setting was staged in `vendor-kernel-tcp.nix` pending canary validation but never applied.
-- **Exit condition**: Root cause of SSH issues identified as a Unifi security rule. Bootstrap image ran with PerSourcePenalties enabled throughout and provisioning works correctly.
-- **Target phase / feature**: N/A — never deployed.
-- **Opened**: 2026-05-04
-- **Resolved**: 2026-05-11 (root cause was Unifi security rule; `vendor-kernel-tcp.nix` deleted as dead code)
-
----
-
-## W-008: TCP timestamps disabled on SD bootstrap image
-
-- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` — `boot.kernel.sysctl."net.ipv4.tcp_timestamps" = 0` (staged; never imported)
-- **Deviates from**: NixOS / kernel default (`net.ipv4.tcp_timestamps = 1`, RFC 1323 PAWS enabled)
-- **Reason**: Single non-PTY `ssh bob@hlc-501 '<cmd>'` invocations reliably wedged outbound TCP for ~265s while ICMP continued to work. Three samples (264s, 273s, 265s) clustered tightly, attributed to kernel TCP stack exhaustion. `tcp_timestamps=0` applied as mitigation.
-- **Exit condition**: Root cause identified as a Unifi security rule dropping packets, not a kernel bug. Setting never needed.
-- **Target phase / feature**: N/A — resolved before code was ever deployed.
-- **Opened**: 2026-05-05
-- **Resolved**: 2026-05-11 (root cause was Unifi security rule; sysctls removed from `vendor-kernel-tcp.nix`)
-
----
-
-## W-009: TCP retransmit cap reduced (`tcp_retries2 = 5`)
-
-- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` — `boot.kernel.sysctl."net.ipv4.tcp_retries2" = 5` (staged; never imported)
-- **Deviates from**: Kernel default `tcp_retries2 = 15` (RFC 1122 §4.2.3.5 R2 ≥ 100s).
-- **Reason**: Band-aid to cut the W-008 wedge recovery floor from ~265s to ~30s.
-- **Exit condition**: W-008 resolved; this mitigation had no independent justification.
-- **Target phase / feature**: N/A — resolved alongside W-008 before code was ever deployed.
-- **Opened**: 2026-05-05
-- **Resolved**: 2026-05-11 (W-008 root cause was Unifi security rule; sysctls removed from `vendor-kernel-tcp.nix`)
-
----
-
-## W-004: `pam_systemd` disabled for sshd in bootstrap image
+### W-004: `pam_systemd` disabled for sshd in bootstrap image
 
 - **Site(s)**: `modules/sd/bootstrap.nix` — `security.pam.services.sshd.startSession = lib.mkForce false`
 - **Deviates from**: NixOS default sshd PAM config (which sets `startSession = true`)
@@ -149,7 +97,7 @@ listed below under a separate header, also in numerical order.
 
 ---
 
-## W-005: `fileSystems."/"` stub commented out in rpi4/rpi5 hardware modules
+### W-005: `fileSystems."/"` stub commented out in rpi4/rpi5 hardware modules
 
 - **Site(s)**: `modules/hardware/rpi5.nix`, `modules/hardware/rpi4.nix`
 - **Deviates from**: Phase 5 design intent (disko provides real layout at provisioning time)
@@ -158,3 +106,51 @@ listed below under a separate header, also in numerical order.
 - **Target phase / feature**: Architecture change (2026-05-02); disko fileSystems wired in Phase 5 (T028/T029).
 - **Opened**: 2026-05-02
 - **Resolved**: 2026-05-02 (architecture change — sd-image removed from hardware modules; bootstrap images separated into flake.nix packages block)
+
+---
+
+### W-006: NixOS firewall disabled on SD bootstrap image
+
+- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` (staged; never imported into `bootstrap.nix` or any other module)
+- **Deviates from**: NixOS default (`networking.firewall.enable = true`)
+- **Reason**: nf_conntrack TCP state machine believed corrupted by SSH session teardown in Pi5 vendor kernel 6.12.47. Setting was staged in `vendor-kernel-tcp.nix` pending canary validation but never applied.
+- **Exit condition**: Root cause identified as a Unifi security rule dropping packets. Setting was never needed; bootstrap image ran with firewall enabled throughout and provisioning works correctly.
+- **Target phase / feature**: N/A — never deployed.
+- **Opened**: 2026-05-02
+- **Resolved**: 2026-05-11 (root cause was Unifi security rule; `vendor-kernel-tcp.nix` deleted as dead code)
+
+---
+
+### W-007: `PerSourcePenalties` disabled on SD bootstrap image
+
+- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` (staged; never imported into `bootstrap.nix` or any other module)
+- **Deviates from**: OpenSSH 10.2+ default (`PerSourcePenalties yes`)
+- **Reason**: `nixos-anywhere` provision burst from gibson believed to trip OpenSSH source-IP penalty policy. Setting was staged in `vendor-kernel-tcp.nix` pending canary validation but never applied.
+- **Exit condition**: Root cause of SSH issues identified as a Unifi security rule. Bootstrap image ran with PerSourcePenalties enabled throughout and provisioning works correctly.
+- **Target phase / feature**: N/A — never deployed.
+- **Opened**: 2026-05-04
+- **Resolved**: 2026-05-11 (root cause was Unifi security rule; `vendor-kernel-tcp.nix` deleted as dead code)
+
+---
+
+### W-008: TCP timestamps disabled on SD bootstrap image
+
+- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` — `boot.kernel.sysctl."net.ipv4.tcp_timestamps" = 0` (staged; never imported)
+- **Deviates from**: NixOS / kernel default (`net.ipv4.tcp_timestamps = 1`, RFC 1323 PAWS enabled)
+- **Reason**: Single non-PTY `ssh bob@hlc-501 '<cmd>'` invocations reliably wedged outbound TCP for ~265s while ICMP continued to work. Three samples (264s, 273s, 265s) clustered tightly, attributed to kernel TCP stack exhaustion. `tcp_timestamps=0` applied as mitigation.
+- **Exit condition**: Root cause identified as a Unifi security rule dropping packets, not a kernel bug. Setting never needed.
+- **Target phase / feature**: N/A — resolved before code was ever deployed.
+- **Opened**: 2026-05-05
+- **Resolved**: 2026-05-11 (root cause was Unifi security rule; sysctls removed from `vendor-kernel-tcp.nix`)
+
+---
+
+### W-009: TCP retransmit cap reduced (`tcp_retries2 = 5`)
+
+- **Site(s)**: `modules/cluster/hlc/vendor-kernel-tcp.nix` — `boot.kernel.sysctl."net.ipv4.tcp_retries2" = 5` (staged; never imported)
+- **Deviates from**: Kernel default `tcp_retries2 = 15` (RFC 1122 §4.2.3.5 R2 ≥ 100s).
+- **Reason**: Band-aid to cut the W-008 wedge recovery floor from ~265s to ~30s.
+- **Exit condition**: W-008 resolved; this mitigation had no independent justification.
+- **Target phase / feature**: N/A — resolved alongside W-008 before code was ever deployed.
+- **Opened**: 2026-05-05
+- **Resolved**: 2026-05-11 (W-008 root cause was Unifi security rule; sysctls removed from `vendor-kernel-tcp.nix`)
