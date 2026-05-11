@@ -40,7 +40,7 @@
     # T009: thin mkHlcNode wrapper — provisioned nixosConfiguration for a cluster node.
     # SD bootstrap images are separate derivations built by mkHlcBootstrap below.
     # NOT included: home-manager.users.bob wiring — deferred to T064 (Phase 6/US4).
-    mkHlcNode = { hostPath }:
+    mkHlcNode = { hostPath, extraModules ? [] }:
       # Using nixos-raspberrypi.lib.nixosSystem so nvmd's overlays (vendor kernel,
       # firmware, raspberrypi-utils) and specialArgs injection apply automatically.
       nixos-raspberrypi.lib.nixosSystem {
@@ -56,7 +56,7 @@
           # so hardware modules (rpi4.nix, rpi5.nix) can set disk layouts.
           disko.nixosModules.disko
           hostPath
-        ];
+        ] ++ extraModules;
       };
 
     # mkHlcBootstrap — builds a minimal SD bootstrap image for a single node.
@@ -126,7 +126,15 @@
       hlc-403 = mkHlcNode { hostPath = ./hosts/hlc-403/configuration.nix; };
       hlc-404 = mkHlcNode { hostPath = ./hosts/hlc-404/configuration.nix; };
 
-    };
+    } // builtins.listToAttrs (map (h: {
+      # -bare variants: skipNvmeFormat=true — used by 'make reprovision' disko phase only.
+      # NVMe excluded from disko formatting; install phase uses full config so fstab is correct.
+      name = "${h}-bare";
+      value = mkHlcNode {
+        hostPath = ./hosts/${h}/configuration.nix;
+        extraModules = [{ hlc.disko.skipNvmeFormat = true; }];
+      };
+    }) pi5Hosts);
 
     # SD bootstrap images — all 12 nodes (Pi 4: hlc-401..404, Pi 5: hlc-501..508).
     # Hostname is the only per-node differentiator; all else is shared via bootstrap.nix.

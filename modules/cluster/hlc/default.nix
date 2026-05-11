@@ -30,6 +30,11 @@
         default = null;
         description = "NVMe device path (by-path); null on Pi 4 nodes (no NVMe).";
       };
+      skipNvmeFormat = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Exclude NVMe from disko schema (formatting only). Used by 'make reprovision' to preserve /srv cluster data. Install phase always uses full config.";
+      };
     };
   };
 

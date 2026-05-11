@@ -104,7 +104,28 @@ Run `nixos-anywhere` against a freshly flashed and reachable node to install the
 
 **Failure mode**: nixos-anywhere logs surfaced; SD baseline remains intact for retry.
 
-**Idempotency** (FR-013): Re-running on a `provisioned` node is either a no-op (disko detects existing layout) or refuses with a clear message. Destructive re-provision requires explicit override (e.g. `MODE=destroy`).
+**Idempotency** (FR-013): `make provision` includes a pre-flight RAID check (`check_raid_clear`) before running any disko or nixos-anywhere step. It SSHes to the target as `bob` and checks whether (a) the root filesystem device contains `md` (RAID-backed root = live provisioned node) or (b) any md array is assembled in `/proc/mdstat`. If either condition is true, the target exits non-zero with a clear message: `ERROR: <host> has active RAID or md root filesystem — live provisioned node detected.` The SD baseline remains intact for retry. This behavior was validated in T039 (2026-05-11): re-running `make provision` on a live provisioned node is now refused rather than destructively re-provisioned.
+
+**Note on SSH safety gate**: The check uses output comparison rather than exit-code inspection so that an unreachable host (SSH error) also fails the pre-flight (empty output ≠ `CLEAR` → exit 1). Fail-closed by design.
+
+#### `make reprovision HOST=<host> [IP=<ip>]`
+
+Reprovision USB RAID only, preserving existing NVMe data at `/srv`. Use when USB drives need to be reformatted (e.g. array corruption) but the NVMe holds cluster data that must not be wiped.
+
+**Behavior**: Same RAID pre-flight check as `make provision`. Runs disko using `.#<host>-bare` flake output (NVMe excluded from disko schema via `hlc.disko.skipNvmeFormat = true`), then mounts `/boot/firmware`, then runs the install phase using the full `.#<host>` config (NVMe back in the disko schema so the installed fstab includes `/srv`). The existing NVMe filesystem is mounted but never reformatted.
+
+**Pre-conditions**:
+- Node is on SD baseline (no RAID assembled — same gate as `make provision`).
+- NVMe previously partitioned and formatted by a prior `make provision` run (i.e. this is a re-provision, not first-time).
+- Host is in the Pi 5 work-set; Pi 4 nodes have no NVMe and should use `make provision`.
+
+**Post-conditions**: USB RAID reformatted; NVMe data preserved; node rebooted into new root with `/srv` intact.
+
+**Failure mode**: Same as `make provision`.
+
+#### `make reprovision-stage1 HOST=<host> [IP=<ip>]`
+
+Disko phase of `make reprovision` — formats USB RAID only (NVMe excluded). Not normally invoked directly; called by `make reprovision`.
 
 ### Added Phase 6 (US4)
 
