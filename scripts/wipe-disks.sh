@@ -157,8 +157,12 @@ if [[ -n "$NVME" ]]; then
 fi
 
 # --- Step 5: trigger udev to clear stale symlinks ---
-echo "--- Settling udev..."
+echo "--- Reloading udev rules and settling..."
 partprobe 2>/dev/null || true
+# Reload rules first — without this, udev retains stale mdadm device state
+# from the stopped array, causing the next mdadm --create to fail with
+# "timeout waiting for /dev/md/<name>" (symlink never created).
+udevadm control --reload-rules
 udevadm trigger --subsystem-match=block
 udevadm settle --timeout 30
 

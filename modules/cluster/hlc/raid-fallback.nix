@@ -1,4 +1,4 @@
-{ config, lib, operatorPubkeys, ... }:
+{ config, lib, pkgs, operatorPubkeys, ... }:
 
 # Initrd RAID-fallback rescue shell (dropbear SSH in initrd).
 #
@@ -29,6 +29,27 @@ in {
     # mdadm tools in initrd for RAID assembly + manual recovery
     boot.swraid.enable = true;
     boot.swraid.mdadmConf = "MAILADDR root";
+
+    # DR-001: filesystem + partition tools in initrd so the rescue shell can
+    # actually format, fsck, and partition drives when disko fails mid-provision.
+    # Without these, a failed provision leaves the operator unable to recover
+    # without reflashing the SD card.
+    boot.initrd.extraUtilsCommands = ''
+      # ext4 (RAID root filesystem)
+      copy_bin_and_libs ${pkgs.e2fsprogs}/bin/mkfs.ext4
+      copy_bin_and_libs ${pkgs.e2fsprogs}/bin/fsck.ext4
+      copy_bin_and_libs ${pkgs.e2fsprogs}/bin/mke2fs
+      copy_bin_and_libs ${pkgs.e2fsprogs}/bin/e2fsck
+      # xfs (NVMe /srv on Pi 5)
+      copy_bin_and_libs ${pkgs.xfsprogs}/bin/mkfs.xfs
+      copy_bin_and_libs ${pkgs.xfsprogs}/bin/xfs_repair
+      # partition + block device tools
+      copy_bin_and_libs ${pkgs.gptfdisk}/bin/sgdisk
+      copy_bin_and_libs ${pkgs.util-linux}/bin/blkid
+      copy_bin_and_libs ${pkgs.util-linux}/bin/wipefs
+      # nixos-anywhere requires setsid --wait for remote provisioning
+      copy_bin_and_libs ${pkgs.util-linux}/bin/setsid
+    '';
 
     # Drivers needed before stage 2
     boot.initrd.availableKernelModules = [
@@ -83,7 +104,12 @@ in {
         echo "  Useful commands:"
         echo "    mdadm --detail /dev/md/usb-raid"
         echo "    mdadm --assemble --scan"
-        echo "    lsblk"
+        echo "    lsblk ; blkid"
+        echo "    mkfs.ext4 -L nixos /dev/md127p1"
+        echo "    fsck.ext4 /dev/md127p1"
+        echo "    mkfs.xfs -f /dev/nvme0n1p1"
+        echo "    wipefs -a /dev/sdX"
+        echo "    sgdisk --zap-all /dev/sdX"
         echo "=========================================="
         echo ""
       fi

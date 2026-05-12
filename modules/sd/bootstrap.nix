@@ -37,7 +37,9 @@
   fileSystems."/tmp" = {
     device = "tmpfs";
     fsType = "tmpfs";
-    options = [ "size=512M" "mode=1777" "nosuid" "nodev" ];
+    # 2GB: nixos-install stages large NARs (kernel, firmware) through /tmp;
+    # 512MB caused download exhaustion and provision timeouts.
+    options = [ "size=2G" "mode=1777" "nosuid" "nodev" ];
   };
 
   fileSystems."/var/tmp" = {
