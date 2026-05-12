@@ -36,8 +36,9 @@ in {
     # without reflashing the SD card.
     boot.initrd.extraUtilsCommands = ''
       # ext4 (RAID root filesystem)
-      copy_bin_and_libs ${pkgs.e2fsprogs}/bin/mkfs.ext4
-      copy_bin_and_libs ${pkgs.e2fsprogs}/bin/fsck.ext4
+      # mke2fs is the real binary behind mkfs.ext4; e2fsck behind fsck.ext4.
+      # NixOS initrd symlinks the fsck.*/mkfs.* names automatically — copying
+      # both the real binary AND the symlink alias causes "File exists" at link time.
       copy_bin_and_libs ${pkgs.e2fsprogs}/bin/mke2fs
       copy_bin_and_libs ${pkgs.e2fsprogs}/bin/e2fsck
       # xfs (NVMe /srv on Pi 5)
