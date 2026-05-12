@@ -31,8 +31,8 @@
         operatorName = config.system.operator.name;
         operatorHome = "/home/${operatorName}";
         repos = [
-          { name = "nix-config"; url = "https://github.com/eaglerock/nix-config.git"; }
-          # { name = "happy-little-cloud"; url = "https://github.com/eaglerock/happy-little-cloud.git"; }
+          { name = "nix-config"; url = "https://github.com/eaglerock1337/nix-config.git"; }
+          # { name = "happy-little-cloud"; url = "https://github.com/eaglerock1337/happy-little-cloud.git"; }
         ];
         cloneCommands = lib.concatMapStringsSep "\n" (repo: ''
           if [ ! -d "${operatorHome}/git/${repo.name}" ]; then
