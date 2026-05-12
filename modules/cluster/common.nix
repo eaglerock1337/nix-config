@@ -36,8 +36,10 @@
         ];
         cloneCommands = lib.concatMapStringsSep "\n" (repo: ''
           if [ ! -d "${operatorHome}/git/${repo.name}" ]; then
-            ${pkgs.git}/bin/git clone ${repo.url} ${operatorHome}/git/${repo.name}
-            chown -R ${operatorName}:users ${operatorHome}/git/${repo.name}
+            GIT_TERMINAL_PROMPT=0 ${pkgs.git}/bin/git clone ${repo.url} ${operatorHome}/git/${repo.name} || true
+            if [ -d "${operatorHome}/git/${repo.name}" ]; then
+              chown -R ${operatorName}:users ${operatorHome}/git/${repo.name}
+            fi
           fi
         '') repos;
       in ''
