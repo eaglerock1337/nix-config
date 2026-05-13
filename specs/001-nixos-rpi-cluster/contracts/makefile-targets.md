@@ -85,9 +85,9 @@ Print the IP for a host derived from its hostname. Pure derivation per the conve
 
 #### `make provision HOST=<host> [IP=<ip>]`
 
-Run `nixos-anywhere` against a freshly flashed and reachable node to install the full per-host configuration onto USB-RAID + (Pi 5) NVMe.
+Two-phase provisioning: install a provision-minimal NixOS config via `nixos-anywhere`, then push the full per-host config via `update-node`. Composite target running: `provision-stage1` → `provision-mount` → `provision-stage2` → `smoke-test` → `provision-stage3` → `smoke-test`.
 
-**Behavior**: Resolves `IP` via the convention unless overridden. Runs `nixos-anywhere --flake .#<host> --target-host root@<IP> --disko-mode disko`. The target's SD bootstrap image carries the operator's gibson SSH key as `root`'s authorized key for the duration of the install.
+**Behavior**: Resolves `IP` via the convention unless overridden. Stage 1 runs disko (partition + format). Stage 2 runs `nixos-anywhere --flake .#<host>-provision` (provision-minimal config — SSH + bob + nix + RAID boot; no home-manager, toolbox, MOTD, or PS1). Mid-flow smoke-test clears stale SSH host keys and verifies SSH reachability after reboot. Stage 3 runs `update-node` to push the full `.#<host>` config as a differential `nix copy`.
 
 **Pre-conditions**:
 
@@ -99,20 +99,28 @@ Run `nixos-anywhere` against a freshly flashed and reachable node to install the
 **Post-conditions**:
 
 - USB array formatted as RAID1; NVMe formatted (Pi 5).
-- Per-host NixOS config installed; node rebooted into new root.
+- Full per-host NixOS config installed; node rebooted into new root.
 - Subsequent SSH lands as `bob`, not `root`.
 
-**Failure mode**: nixos-anywhere logs surfaced; SD baseline remains intact for retry.
+**Failure mode**: nixos-anywhere logs surfaced; SD baseline remains intact for retry. If stage 3 fails (full config push), node remains SSH-reachable on provision-minimal config; operator retries `make provision-stage3 HOST=<host>` or `make update-node HOST=<host>` without re-provisioning.
 
 **Idempotency** (FR-013): `make provision` includes a pre-flight RAID check (`check_raid_clear`) before running any disko or nixos-anywhere step. It SSHes to the target as `bob` and checks whether (a) the root filesystem device contains `md` (RAID-backed root = live provisioned node) or (b) any md array is assembled in `/proc/mdstat`. If either condition is true, the target exits non-zero with a clear message: `ERROR: <host> has active RAID or md root filesystem — live provisioned node detected.` The SD baseline remains intact for retry. This behavior was validated in T039 (2026-05-11): re-running `make provision` on a live provisioned node is now refused rather than destructively re-provisioned.
 
 **Note on SSH safety gate**: The check uses output comparison rather than exit-code inspection so that an unreachable host (SSH error) also fails the pre-flight (empty output ≠ `CLEAR` → exit 1). Fail-closed by design.
 
+#### `make provision-stage3 HOST=<host> [IP=<ip>]`
+
+Wait for node to come back online after stage 2 reboot, then push full config via `update-node`. Retriable independently — if this fails, the node is on provision-minimal config (SSH-reachable) and the operator re-runs this target.
+
+**Pre-conditions**: Stage 2 completed; node rebooting from provision-minimal config on USB RAID.
+**Post-conditions**: Full per-host config active on node.
+**Failure mode**: Non-zero exit. Node remains on provision-minimal config (SSH-reachable); operator retries.
+
 #### `make reprovision HOST=<host> [IP=<ip>]`
 
 Reprovision USB RAID only, preserving existing NVMe data at `/srv`. Use when USB drives need to be reformatted (e.g. array corruption) but the NVMe holds cluster data that must not be wiped.
 
-**Behavior**: Same RAID pre-flight check as `make provision`. Runs disko using `.#<host>-bare` flake output (NVMe excluded from disko schema via `hlc.disko.skipNvmeFormat = true`), then mounts `/boot/firmware`, then runs the install phase using the full `.#<host>` config (NVMe back in the disko schema so the installed fstab includes `/srv`). The existing NVMe filesystem is mounted but never reformatted.
+**Behavior**: Same RAID pre-flight check as `make provision`. Runs disko using `.#<host>-bare` flake output (NVMe excluded from disko schema via `hlc.disko.skipNvmeFormat = true`), then mounts `/boot/firmware`, then runs the install phase using `.#<host>-provision` (provision-minimal config; NVMe back in disko schema via default `skipNvmeFormat = false` so the installed fstab includes `/srv`). After reboot, `provision-stage3` pushes the full config. The existing NVMe filesystem is mounted but never reformatted.
 
 **Pre-conditions**:
 - Node is on SD baseline (no RAID assembled — same gate as `make provision`).
@@ -127,13 +135,29 @@ Reprovision USB RAID only, preserving existing NVMe data at `/srv`. Use when USB
 
 Disko phase of `make reprovision` — formats USB RAID only (NVMe excluded). Not normally invoked directly; called by `make reprovision`.
 
-### Added Phase 6 (US4)
+#### `make provision-reinstall HOST=<host> [IP=<ip>]`
 
-These two targets land at the start of Phase 6 — first phase that does live-node config rollouts post-provisioning.
+RAID-retry path for failed stage2 where disko succeeded but the nixos-anywhere install phase failed or timed out. The RAID array exists but has no NixOS installed; the node rebooted to the SD baseline.
+
+**Behavior**: Resolves `IP` via the convention unless overridden. Pre-flight: SSH to node, verify RAID array exists in `/proc/mdstat` but root is NOT md-backed (booted from SD — distinguishes "disko ran, install failed" from "fully provisioned node"). If root IS md-backed, exits non-zero: `ERROR: <host> has md-backed root — use make update-node instead.` If no RAID exists, exits non-zero: `ERROR: <host> has no RAID array — use make provision instead.` Skips `provision-stage1` (disko already done). Runs `provision-mount` → `provision-stage2` → `smoke-test` → `provision-stage3` → `smoke-test`.
+
+**Pre-conditions**:
+
+- Node booted from SD baseline (not RAID root).
+- RAID array exists in `/proc/mdstat` (disko ran previously).
+- Host is in the work-set. Decom-set hosts MUST be refused.
+
+**Post-conditions**: Same as `make provision` — full per-host NixOS config installed; node rebooted into new root.
+
+**Failure mode**: Same as `make provision`. SD baseline remains intact for retry.
+
+### Added Phase 5 (US3) — live-node operations
+
+These targets land in Phase 5 because `provision-stage3` depends on `update-node`. Also used in Phase 6+ for config updates and canary validation.
 
 #### `make update-node HOST=<host> [IP=<ip>]`
 
-Single-node `nixos-rebuild switch --target-host`. Wraps `sudo nixos-rebuild switch --flake .#<host> --target-host bob@<IP> --use-remote-sudo`. IP derives from HOST per the convention unless overridden.
+Single-node local build + `nix copy` + remote activate. Builds `.#nixosConfigurations.<host>.config.system.build.toplevel` locally, copies the closure to the remote node via `nix copy --to ssh-ng://bob@<IP>`, then activates via `switch-to-configuration switch`. IP derives from HOST per the convention unless overridden.
 
 **Pre-conditions**:
 

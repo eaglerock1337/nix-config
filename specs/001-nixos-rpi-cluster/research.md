@@ -362,6 +362,27 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 ---
 
+## R-016 — Two-phase provisioning (FR-012 amendment)
+
+**Decision**: Split `make provision` into two phases: (1) `nixos-anywhere` installs a **provision-minimal** config (`<host>-provision` flake output) with a small closure; (2) `update-node` pushes the full config as a differential `nix copy`. Host configs accept a `clusterModule` specialArg (with default) so the builder can swap between `provision.nix` (minimal) and `default.nix` (full).
+
+**Rationale**:
+
+- As the cluster config grew (60+ packages in utilities.nix, home-manager with neovim plugins, kubectl/k9s/helm/minikube/kind, etc.), the full NixOS closure became too large to copy reliably to a Pi booted from the SD bootstrap image. The copy phase of `nixos-anywhere --phases install` timed out, leaving nodes unusable.
+- `make update-node` works fine post-provision because the node is on RAID disk and `nix copy` only transfers missing store paths.
+- The provision-minimal config includes only: hardware module, `raid-fallback.nix`, `operator.nix`, SSH, sudo, nix settings. Excludes: home-manager, utilities.nix (60+ pkgs), shell/common.nix, motd.nix, prompt.nix, hosts.nix, git-clone activation.
+- Shared HLC option declarations extracted to `modules/cluster/hlc/options.nix` to avoid duplicate-option errors.
+- Mid-provision smoke-test between stages clears stale SSH host keys and confirms minimal config boots.
+
+**Alternatives considered**:
+
+- Increase nixos-anywhere timeout: rejected — no configurable timeout for the copy phase; root cause is closure size.
+- `--build-on-remote false`: rejected — already builds locally by default; bottleneck is copy, not build.
+- Separate provision host configs (12 new files): rejected — massive duplication.
+- Inline per-host data in flake builder: rejected — two sources of truth.
+
+---
+
 ## Cross-cutting notes
 
 - **No NEEDS CLARIFICATION markers in the spec.** All clarification questions from `/speckit-clarify` (sessions 2026-04-29 — Q1..Q7) are resolved and reflected in FR-009, FR-017, SC-002, and User Story 5 acceptance scenario 2.

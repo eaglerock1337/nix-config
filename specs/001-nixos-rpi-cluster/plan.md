@@ -7,7 +7,7 @@
 
 Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS using the `nvmd/nixos-raspberrypi` fork, with a three-scope layered module structure, full-disk provisioning via `nixos-anywhere`/`disko`, operator shell UX (MOTD, PS1, toolbox, home-manager), and k3s OS-level prerequisites installed. Cluster bootstrap is out of scope. The implementation is sequenced as 8 phases (Phase 1–8, matching tasks.md numbering), each gated by `make smoke-test` on a canary node before any fleet roll.
 
-**Status**: Phases 1–5 complete. Phases 6–8 pending.
+**Status**: Phases 1–5 complete (Phase 5 being reworked for two-phase provision per FR-012 amendment 2026-05-13). Phases 6–8 pending.
 
 ---
 
@@ -62,9 +62,10 @@ Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS usi
 - `make dry-run HOST=<host>` — closure evaluation; gibson uses `nix build … --dry-run`, silicon uses `nixos-rebuild dry-run` (added Phase 1)
 - `make build HOST=<host>` — full toplevel build (added Phase 1)
 - `nixos-rebuild build-vm --flake .#<host>` — VM build for boot/kernel changes when feasible; Pi-targeted aarch64 builds may not VM-test; gate skipped for hardware modules with a documented note (no Makefile target)
-- `make update-node HOST=<host>` — single-node `nixos-rebuild switch --target-host` (added Phase 6); operator manually canaries by running on one node, then `make smoke-test` to verify, then proceeding
+- `make update-node HOST=<host>` — local build + `nix copy` + remote activate (added Phase 5 for `provision-stage3`; also used in Phase 6+ for config updates); operator manually canaries by running on one node, then `make smoke-test` to verify, then proceeding
 - `make smoke-test HOST=<host>` — remove SSH host key from `~/.ssh/known_hosts` for both node IP and hostname, ping IP for reachability (`ping -c 1 -W 3`), then verify non-PTY SSH login succeeds on hostname (`uname -a`; no `-t` flag; PTY mode caused Pi login hangs during testing) (added Phase 1)
-- `make rollback HOST=<host>` — single-node `nixos-rebuild --rollback --target-host` (added Phase 6)
+- `make rollback HOST=<host>` — roll back to prior NixOS generation on remote node (added Phase 5)
+- `make provision HOST=<host>` — two-phase: stage1 (disko) → mount → stage2 (minimal install) → smoke-test → stage3 (full config via update-node) → smoke-test (added Phase 5)
 - Automated canary (a single command that switches + smoke-tests + auto-rollbacks) is **out of scope for this spec**; the manual operator procedure above satisfies Constitution IV's canary requirement
 - Acceptance via the operator runbook in `quickstart.md`
 
@@ -92,8 +93,9 @@ specs/001-nixos-rpi-cluster/
 ### Source Code
 
 ```text
-flake.nix                     # Entry point: inputs, nixosConfigurations, mkHlcNode, mkHlcBootstrap,
-                              #   packages.aarch64-linux (SD bootstrap images), operatorPubkey
+flake.nix                     # Entry point: inputs, nixosConfigurations, mkHlcNode, mkHlcProvision,
+                              #   mkHlcBootstrap, packages.aarch64-linux (SD bootstrap images), operatorPubkeys
+                              #   Outputs: <host>, <host>-bare, <host>-provision for all 12 nodes
 flake.lock                    # Locked inputs (includes nvmd/nixos-raspberrypi)
 Makefile                      # Operator interface (Constitution VII)
 specs/WORKAROUNDS.md          # W-001/W-002/W-003 ledger (Constitution V)
@@ -126,7 +128,10 @@ modules/
 │   ├── prompt.nix            # Cluster-tier PS1 mechanism (options cluster.prompt.{glyph,mountainGlyph}; R-002)
 │   └── hlc/
 │       ├── default.nix       # HLC values: cluster.motd.*, cluster.prompt.glyph, system.operator (bob), HLC FQDN convention
-│       └── hosts.nix         # HLC host-to-IP/MAC map
+│       ├── options.nix       # Shared HLC option declarations (hlc.disko.*, hlc.prompt.glyph) — imported by both default.nix and provision.nix
+│       ├── provision.nix     # Provision-minimal cluster module: SSH + bob + nix + RAID boot; no home-manager/toolbox/MOTD/PS1 (FR-012 two-phase)
+│       ├── hosts.nix         # HLC host-to-IP/MAC map
+│       └── raid-fallback.nix # Initrd RAID rescue shell (dropbear SSH; already exists)
 ├── hardware/
 │   ├── rpi4.nix              # RPi 4 hardware module (config.txt, thermal, EEPROM)
 │   ├── rpi5.nix              # RPi 5 hardware module (config.txt, NVMe, thermal, EEPROM)
@@ -147,7 +152,7 @@ modules/
 │   ├── common.nix            # Bash canonical shell, baseline aliases (consumed by hosts/common.nix)
 │   └── utilities.nix         # Sysadmin toolbox (FR-015): thematic sections, every pkg commented
 ├── users/
-│   └── operator.nix          # Option-driven `system.operator = { name; pubkeys; ... }`; key-only SSH hardening (W-003)
+│   └── operator.nix          # Option-driven `system.operator = { name; pubkeys; ... }` — account generation only; SSH hardening in cluster/common.nix
 └── k8s/
     └── prereqs.nix           # k3s enabled-but-stopped, container deps, kernel/sysctl, k9s
 
@@ -183,7 +188,7 @@ The implementation is sequenced to satisfy the W-001 "re-introduce modules with 
 | 2 Foundational | (subsumed by Phase 1) | — | — |
 | 3 US1 | US1 SD bootstrap | FR-002..004 | Bootstrap SD boots, cache invariant verified |
 | 4 US2 | US2 | FR-005..009 | All 12 hosts dry-run from clean checkout |
-| 5 US3 | US3 | FR-010..014 | 9 nodes provisioned, recovery scenario verified |
+| 5 US3 | US3 | FR-010..014 | 9 nodes provisioned via two-phase flow, recovery scenario verified, closure sizes compared |
 | 6 US4 | US4 | FR-015..020 | SC-006 verified; W-001 + W-003 closed |
 | 7 US5 | US5 | FR-021..023 | SC-007 verified; no cluster state on disk |
 | 8 Polish | — | all | All SCs validated; spec closed out |
@@ -301,23 +306,46 @@ If any step fails, the reset is incomplete. Diagnose and re-run until green. Do 
 
 ## Phase 5 — Disko + nixos-anywhere Provisioning (US3)
 
-**Spec**: US3 | **FR**: FR-010..FR-014 | **Research**: R-004, R-005, R-007
+**Spec**: US3 | **FR**: FR-010..FR-014 | **Research**: R-004, R-005, R-007, R-016
 
-**Goal**: Provisioning workflow installs full per-host NixOS onto USB-RAID + NVMe. Boot order locked to USB-first, SD-fallback.
+**Goal**: Two-phase provisioning installs per-host NixOS onto USB-RAID + NVMe. Stage 2 installs a provision-minimal config (small closure, fast copy); stage 3 pushes full config via `update-node` (differential `nix copy`). Boot order locked to USB-first, SD-fallback. RAID-retry path (`provision-reinstall`) available for failed stage2 where disko already succeeded.
+
+**Two-phase provision architecture** (FR-012 amendment, R-016):
+
+The full NixOS closure has grown too large to copy reliably to a Pi booted from the SD bootstrap image (constrained RAM/resources). Provisioning is split:
+
+- **Stage 2** (`nixos-anywhere --phases install,reboot`): installs `<host>-provision` — a minimal config with SSH, bob user, nix settings, RAID boot support. No home-manager, no toolbox (60+ pkgs), no MOTD/PS1, no `/etc/hosts` entries, no git-clone activation. Small closure = reliable copy.
+- **Stage 3** (`update-node`): pushes the full `<host>` config. Node is on RAID disk now; `nix copy` transfers only missing store paths (differential). Retriable on failure.
+
+Implementation requires:
+- `modules/cluster/hlc/options.nix` — extract shared option declarations (`hlc.disko.*`, `hlc.prompt.glyph`) from `default.nix`
+- `modules/cluster/hlc/provision.nix` — minimal cluster module importing `options.nix`, `raid-fallback.nix`, `../../users/operator.nix`; inlines essential config from `cluster/common.nix` + `hosts/common.nix` (SSH, sudo, nix settings, domain)
+- `default.nix` updated to import `options.nix` instead of inline option declarations
+- All 12 host configs updated: `{ clusterModule ? ../../modules/cluster/hlc/default.nix, ... }:` — one-line change each; existing builders work unchanged via default
+- `flake.nix`: `mkHlcProvision` builder (no home-manager, passes `clusterModule = ./modules/cluster/hlc/provision.nix` via specialArgs); generates `<host>-provision` outputs for all 12 hosts
+- Makefile: `provision-stage2` uses `--flake .#$(HOST)-provision`; new `provision-stage3` target (wait for reboot + `update-node`); composite `provision` = stage1 → mount → stage2 → smoke-test → stage3 → smoke-test
+
+**Steps**:
 
 1. Create `disko/rpi4.nix` and `disko/rpi5.nix` per R-004:
-   - Both: `/boot` on SD vfat, `/` on 2-disk mdadm RAID1 (ext4, full array; drives are ~30 GB / ~28.6 GiB usable — single partition, no `/srv/usb`).
+   - Both: `/boot` on SD vfat, `/` on 2-disk mdadm RAID1 (ext4, full array; drives are ~30 GB / ~28.6 GiB usable — single partition).
    - Pi 5 only: `/srv` on NVMe (xfs).
-   - Use `/dev/disk/by-path/` paths (not `by-id/`) per FR-010a. Convention: a-drive = left port = `platform-xhci-hcd.0-usb-0:1:1.0-scsi-0:0:0:0`, b-drive = right port = `platform-xhci-hcd.1-usb-0:1:1.0-scsi-0:0:0:0`. This pattern is consistent across all Pi 5 nodes. Pre-provision check: both drives MUST show a `usbv3` alias in `/dev/disk/by-path/`; re-seat any that show `usbv2`. Paths exposed via `config.hlc.disko.{usbDevice0,usbDevice1,nvmeDevice}` NixOS options.
-2. Expand `modules/hardware/rpi{4,5}.nix` with `config.txt` headless profile (FR-025, R-011) and per-family thermal settings (FR-027, R-012). Note: `boot.loader.raspberry-pi.bootloader = "kernel"` already set (R-015); add `configurationLimit` (3–5 generations) alongside config.txt settings.
-3. Create `modules/hardware/rpi-eeprom.nix` — idempotent one-shot systemd service to apply EEPROM config (FR-026, R-013): `BOOT_ORDER=0xf14`, `BOOT_UART=1`, Pi 5 extras (`WAKE_ON_GPIO=0`, `POWER_OFF_ON_HALT=1`). Gated by a marker file to prevent re-run.
-4. Add `make provision HOST=<host>` target (per contracts/makefile-targets.md §"Added Phase 5 US3").
-5. Provision `hlc-501`: `make provision HOST=hlc-501`. Confirm reboots into USB array root, `/srv` on NVMe. `make smoke-test HOST=hlc-501` green.
-6. Recovery test (FR-011, SC-005): power down `hlc-501`, detach USB drives, power on. SD recovery boots; `make smoke-test HOST=hlc-501` green; SSH in, run `mdadm --examine`. Re-attach USB drives, normal boot resumes.
-7. Provision remaining work-set serially: `make provision HOST=hlc-502` … `hlc-508`, then `hlc-401`. `make smoke-test HOST=<host>` after each. (No automation wrapper — operator manual loop.)
-8. `hlc-401` provisioning validates Pi 4 path: `/srv` absent without error.
+   - Use `/dev/disk/by-path/` paths per FR-010a. Paths exposed via `config.hlc.disko.{usbDevice0,usbDevice1,nvmeDevice}` NixOS options.
+2. Expand `modules/hardware/rpi{4,5}.nix` with `config.txt` headless profile (FR-025, R-011) and per-family thermal settings (FR-027, R-012). `configurationLimit` (3–5 generations).
+3. Create `modules/hardware/rpi-eeprom.nix` — idempotent one-shot EEPROM config service (FR-026, R-013).
+4. Create `modules/cluster/hlc/options.nix` — extract `hlc.disko.*` and `hlc.prompt.glyph` option declarations from `default.nix`.
+5. Create `modules/cluster/hlc/provision.nix` — minimal cluster module for provisioning (R-016).
+6. Update `modules/cluster/hlc/default.nix` — import `options.nix`, remove inline option declarations.
+7. Update all 12 host configs — accept `clusterModule` parameter with default.
+8. Update `flake.nix` — add `mkHlcProvision` builder and `<host>-provision` outputs.
+9. Add Makefile targets: `provision` (two-phase composite), `provision-stage{1,2,3}`, `provision-mount`, `provision-reinstall` (RAID-retry for failed stage2), `update-node`, `rollback`, `reprovision` (per contracts/makefile-targets.md).
+10. Verify closure sizes: `nix path-info -Sh` on both `hlc-501` and `hlc-501-provision` — provision should be significantly smaller.
+11. Provision `hlc-501`: `make provision HOST=hlc-501`. Verify: stage2 completes without timeout, mid-provision smoke-test green (clears stale SSH keys), stage3 pushes full config, final smoke-test green.
+12. Recovery test (FR-011, SC-005): power down `hlc-501`, detach USB drives, power on. SD recovery boots; SSH in, run `mdadm --examine`. Re-attach USB drives, normal boot resumes.
+13. Provision remaining work-set serially: `make provision HOST=<host>` for `hlc-502..508`, then `hlc-401`. Smoke-test after each.
+14. `hlc-401` provisioning validates Pi 4 path: `/srv` absent without error.
 
-**Phase exit gate**: All 9 work-set nodes provisioned. SC-005 verified for at least one Pi 5 and `hlc-401`. Tag `phase5-provisioned`.
+**Phase exit gate**: All 9 work-set nodes provisioned via two-phase flow. SC-005 verified for at least one Pi 5 and `hlc-401`. Closure size comparison documented. Tag `phase5-provisioned`.
 
 ---
 
@@ -329,10 +357,7 @@ If any step fails, the reset is incomplete. Diagnose and re-run until green. Do 
 
 **Phase-bundle cadence**: `/speckit-implement` runs all module-creation tasks (steps 1–7 below) as one batch, then a single canary on `hlc-501` (step 8). On smoke-test green → serial fleet roll (step 9). On smoke-test fail → rollback → `/speckit-debug` bisect.
 
-At the start of this phase, add Makefile targets:
-
-- `make update-node HOST=<host> [IP=<ip>]` — wraps `sudo nixos-rebuild switch --flake .#<host> --target-host bob@<IP> --use-remote-sudo`.
-- `make rollback HOST=<host> [IP=<ip>]` — wraps `sudo nixos-rebuild --rollback --flake .#<host> --target-host bob@<IP> --use-remote-sudo`.
+Note: `make update-node` and `make rollback` already exist from Phase 5 (required by `provision-stage3`).
 
 Module reintroduction order (W-001 exit):
 
@@ -424,3 +449,4 @@ All technical decisions are in [research.md](./research.md):
 | R-013 | EEPROM config: `BOOT_ORDER`, `BOOT_UART`, `POWER_OFF_ON_HALT` (Pi 5), `WAKE_ON_GPIO` (Pi 5) |
 | R-014 | Binary cache: `nixos-raspberrypi.cachix.org` substituter + binfmt emulation on build hosts |
 | R-015 | Bootloader migration: `kernelboot` → `kernel` (nvmd PR#61); set in rpi4/rpi5 hardware modules |
+| R-016 | Two-phase provision: install provision-minimal config (small closure) via nixos-anywhere, then push full config via `update-node` (differential `nix copy`). Avoids closure-copy timeout on bootstrap image. `clusterModule` specialArgs injection in host configs enables builder to swap cluster module. |
