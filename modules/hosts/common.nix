@@ -18,6 +18,8 @@
     experimental-features = "nix-command flakes";
     # Automatically deduplicate files in the store
     auto-optimise-store = true;
+    # 256 MiB download buffer avoids "download buffer is full" warnings
+    download-buffer-size = 256 * 1024 * 1024;
     # Disk-pressure based garbage collection fallback
     # Triggers GC during builds when free space drops below 1GB
     min-free = "${toString (1 * 1024 * 1024 * 1024)}";

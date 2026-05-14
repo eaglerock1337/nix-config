@@ -1,6 +1,6 @@
-{ ... }: {
+{ clusterModule, ... }: {
   imports = [
-    ../../modules/cluster/hlc/default.nix
+    clusterModule
     ../../modules/hardware/rpi4.nix
   ];
 

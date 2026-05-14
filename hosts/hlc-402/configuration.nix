@@ -1,7 +1,7 @@
-{ ... }: {
+{ clusterModule, ... }: {
   # DEFERRED: config-only per Constitution cluster-topology; do NOT flash or run nixos-rebuild switch
   imports = [
-    ../../modules/cluster/hlc/default.nix
+    clusterModule
     ../../modules/hardware/rpi4.nix
   ];
 

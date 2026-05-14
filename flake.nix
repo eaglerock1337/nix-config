@@ -39,12 +39,14 @@
 
     # T009: thin mkHlcNode wrapper — provisioned nixosConfiguration for a cluster node.
     # SD bootstrap images are separate derivations built by mkHlcBootstrap below.
-    # NOT included: home-manager.users.bob wiring — deferred to Phase 6/US4 (set in modules/cluster/hlc/default.nix).
     mkHlcNode = { hostPath, extraModules ? [] }:
       # Using nixos-raspberrypi.lib.nixosSystem so nvmd's overlays (vendor kernel,
       # firmware, raspberrypi-utils) and specialArgs injection apply automatically.
       nixos-raspberrypi.lib.nixosSystem {
-        specialArgs = { inherit inputs operatorPubkeys; };
+        specialArgs = {
+          inherit inputs operatorPubkeys;
+          clusterModule = ./modules/cluster/hlc/default.nix;
+        };
         modules = [
           home-manager.nixosModules.home-manager
           {
@@ -54,6 +56,21 @@
           }
           # T028/T029: disko NixOS module provides disko.devices option; imported here
           # so hardware modules (rpi4.nix, rpi5.nix) can set disk layouts.
+          disko.nixosModules.disko
+          hostPath
+        ] ++ extraModules;
+      };
+
+    # T037: provision-minimal builder — small closure for nixos-anywhere stage2.
+    # No home-manager; passes clusterModule = provision.nix via specialArgs so the
+    # host config imports the minimal cluster module instead of the full one.
+    mkHlcProvision = { hostPath, extraModules ? [] }:
+      nixos-raspberrypi.lib.nixosSystem {
+        specialArgs = {
+          inherit inputs operatorPubkeys;
+          clusterModule = ./modules/cluster/hlc/provision.nix;
+        };
+        modules = [
           disko.nixosModules.disko
           hostPath
         ] ++ extraModules;
@@ -134,7 +151,15 @@
         hostPath = ./hosts/${h}/configuration.nix;
         extraModules = [{ hlc.disko.skipNvmeFormat = true; }];
       };
-    }) pi5Hosts);
+    }) pi5Hosts)
+
+    # T037: -provision variants for two-phase provisioning (R-016).
+    # Small closure (no home-manager, toolbox, MOTD, PS1, /etc/hosts, git-clone).
+    # Used by nixos-anywhere stage2; full config pushed later via update-node.
+    // builtins.listToAttrs (map (h: {
+      name = "${h}-provision";
+      value = mkHlcProvision { hostPath = ./hosts/${h}/configuration.nix; };
+    }) (pi4Hosts ++ pi5Hosts));
 
     # SD bootstrap images — all 12 nodes (Pi 4: hlc-401..404, Pi 5: hlc-501..508).
     # Hostname is the only per-node differentiator; all else is shared via bootstrap.nix.

@@ -4,6 +4,7 @@ HLC_DOMAIN  ?= marks.dev
 .PHONY: build-image flash-image local-dry local-switch update \
         dry-run build smoke-test ip \
         provision provision-stage1 provision-mount provision-stage2 \
+        provision-stage3 provision-reinstall \
         reprovision reprovision-stage1 \
         update-node rollback help
 
@@ -50,10 +51,12 @@ help:
 	@echo "  build HOST=<host>                         Build toplevel for a cluster host"
 	@echo "  smoke-test HOST=<host>                    SSH reachability check via FQDN"
 	@echo "  ip HOST=<host>                            Print derived IP for a host"
-	@echo "  provision HOST=<host>                    Full provision (stage1 + mount + stage2)"
+	@echo "  provision HOST=<host>                    Two-phase provision (stage1-3 + smoke-tests)"
 	@echo "  provision-stage1 HOST=<host>             disko: partition + format + mount disks"
 	@echo "  provision-mount HOST=<host>              Mount /boot/firmware (W-011)"
-	@echo "  provision-stage2 HOST=<host>             Install NixOS + bootloader + reboot"
+	@echo "  provision-stage2 HOST=<host>             Install provision-minimal config + reboot"
+	@echo "  provision-stage3 HOST=<host>             Wait for reboot + push full config"
+	@echo "  provision-reinstall HOST=<host>          RAID-retry: skip disko, reinstall + full config"
 	@echo "  reprovision HOST=<host>                  Reprovision USB RAID; preserve NVMe /srv data"
 	@echo "  reprovision-stage1 HOST=<host>           disko USB RAID only (NVMe skipped)"
 	@echo "  update-node HOST=<host> [IP=<ip>]        Deploy config update to a provisioned node"
@@ -134,7 +137,15 @@ endif
 
 # Phase 5–6 (US3–US4) targets ————————————————————————————————————————————————
 
+# Two-phase provision (R-016): stage2 installs provision-minimal config (small
+# closure); stage3 pushes the full config via update-node (differential nix copy).
 provision: provision-stage1 provision-mount provision-stage2
+	@echo "==> mid-provision smoke-test $(HOST)"
+	$(MAKE) smoke-test HOST=$(HOST)
+	@echo "==> provision-stage3 $(HOST): pushing full config"
+	$(MAKE) provision-stage3 HOST=$(HOST)
+	@echo "==> final smoke-test $(HOST)"
+	$(MAKE) smoke-test HOST=$(HOST)
 
 provision-stage1:
 ifndef HOST
@@ -169,14 +180,44 @@ ifndef HOST
 	$(error HOST is not set. Usage: make provision HOST=hlc-501)
 endif
 	$(call check_decom)
-	@echo "==> provision-stage2 $(HOST): install NixOS + bootloader + reboot"
+	@echo "==> provision-stage2 $(HOST): install provision-minimal config + bootloader + reboot"
+	# R-016: use -provision flake output (small closure) for reliable copy to SD-booted Pi
 	nix run $(NIX_FLAGS) github:nix-community/nixos-anywhere -- \
-		--flake .#$(HOST) \
+		--flake .#$(HOST)-provision \
 		--target-host bob@$(HOST).$(HLC_DOMAIN) \
 		--disko-mode disko \
 		--phases install,reboot
 
+provision-stage3:
+ifndef HOST
+	$(error HOST is not set. Usage: make provision-stage3 HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> provision-stage3 $(HOST): waiting for reboot then pushing full config"
+	@echo "--- waiting for $(HOST) to come back online..."
+	@waited=0; while [ $$waited -lt 120 ]; do \
+		if ping -c 1 -W 2 $(IP) >/dev/null 2>&1 && \
+		   ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 bob@$(IP) true 2>/dev/null; then \
+			echo "--- $(HOST) is online after $${waited}s"; \
+			break; \
+		fi; \
+		sleep 5; \
+		waited=$$((waited + 5)); \
+	done; \
+	if [ $$waited -ge 120 ]; then \
+		echo "ERROR: $(HOST) did not come back online within 120s"; \
+		exit 1; \
+	fi
+	@echo "--- pushing full config via update-node"
+	$(MAKE) update-node HOST=$(HOST)
+
 reprovision: reprovision-stage1 provision-mount provision-stage2
+	@echo "==> mid-reprovision smoke-test $(HOST)"
+	$(MAKE) smoke-test HOST=$(HOST)
+	@echo "==> reprovision-stage3 $(HOST): pushing full config"
+	$(MAKE) provision-stage3 HOST=$(HOST)
+	@echo "==> final reprovision smoke-test $(HOST)"
+	$(MAKE) smoke-test HOST=$(HOST)
 
 reprovision-stage1:
 ifndef HOST
@@ -210,6 +251,42 @@ endif
 	&& echo "==> Activating on $(HOST)..." \
 	&& ssh bob@$(IP) "sudo nix-env -p /nix/var/nix/profiles/system --set $$TOPLEVEL" \
 	&& ssh bob@$(IP) "sudo $$TOPLEVEL/bin/switch-to-configuration switch"
+
+provision-reinstall:
+ifndef HOST
+	$(error HOST is not set. Usage: make provision-reinstall HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> provision-reinstall $(HOST): RAID-retry (disko already done, install failed)"
+	@# Pre-flight: verify RAID exists but root is NOT md-backed (SD-booted after failed install)
+	@raid_status=$$(ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+		bob@$(HOST).$(HLC_DOMAIN) \
+		'root_md=0; raid_exists=0; \
+		 df / | grep -q /dev/md && root_md=1; \
+		 grep -q "^md[0-9]" /proc/mdstat 2>/dev/null && raid_exists=1; \
+		 if [ "$$root_md" = "1" ]; then echo MD_ROOT; \
+		 elif [ "$$raid_exists" = "1" ]; then echo RAID_EXISTS; \
+		 else echo NO_RAID; fi' \
+		2>/dev/null); \
+	if [ "$$raid_status" = "MD_ROOT" ]; then \
+		echo "ERROR: $(HOST) has md-backed root — use make update-node instead."; \
+		exit 1; \
+	elif [ "$$raid_status" = "NO_RAID" ]; then \
+		echo "ERROR: $(HOST) has no RAID array — use make provision instead."; \
+		exit 1; \
+	elif [ "$$raid_status" != "RAID_EXISTS" ]; then \
+		echo "ERROR: could not determine RAID status for $(HOST) (SSH failure?)."; \
+		exit 1; \
+	fi
+	@echo "--- RAID exists, root is SD — proceeding with reinstall"
+	$(MAKE) provision-mount HOST=$(HOST)
+	$(MAKE) provision-stage2 HOST=$(HOST)
+	@echo "==> mid-reinstall smoke-test $(HOST)"
+	$(MAKE) smoke-test HOST=$(HOST)
+	@echo "==> reinstall stage3: pushing full config"
+	$(MAKE) provision-stage3 HOST=$(HOST)
+	@echo "==> final reinstall smoke-test $(HOST)"
+	$(MAKE) smoke-test HOST=$(HOST)
 
 rollback:
 ifndef HOST
