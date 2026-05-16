@@ -3,10 +3,11 @@ HLC_DOMAIN  ?= marks.dev
 
 .PHONY: build-image flash-image local-dry local-switch update \
         dry-run build smoke-test ip \
-        provision provision-stage1 provision-mount provision-stage2 \
-        provision-stage3 provision-reinstall \
+        provision provision-stage1 provision-mount provision-backup-boot \
+        provision-stage2 provision-stage3 provision-reinstall \
         reprovision reprovision-stage1 \
-        update-node rollback help
+        update-node rollback \
+        recover recover-status recover-wipe recover-sd-boot help
 
 # Derive IP from HOST via hlc-VNN → 10.23.50.(V*10+N) convention.
 # count ≤ 9:  octet = V*10+N  (e.g. hlc-501 → 51)
@@ -54,6 +55,7 @@ help:
 	@echo "  provision HOST=<host>                    Two-phase provision (stage1-3 + smoke-tests)"
 	@echo "  provision-stage1 HOST=<host>             disko: partition + format + mount disks"
 	@echo "  provision-mount HOST=<host>              Mount /boot/firmware (W-011)"
+	@echo "  provision-backup-boot HOST=<host>        Backup SD bootstrap boot files before install"
 	@echo "  provision-stage2 HOST=<host>             Install provision-minimal config + reboot"
 	@echo "  provision-stage3 HOST=<host>             Wait for reboot + push full config"
 	@echo "  provision-reinstall HOST=<host>          RAID-retry: skip disko, reinstall + full config"
@@ -61,6 +63,10 @@ help:
 	@echo "  reprovision-stage1 HOST=<host>           disko USB RAID only (NVMe skipped)"
 	@echo "  update-node HOST=<host> [IP=<ip>]        Deploy config update to a provisioned node"
 	@echo "  rollback HOST=<host> [IP=<ip>]           Roll back to prior NixOS generation"
+	@echo "  recover HOST=<host>                      Full recovery: wipe + sd-boot + reboot + provision"
+	@echo "  recover-status HOST=<host>               Show initrd rescue node status (root SSH)"
+	@echo "  recover-wipe HOST=<host>                 Wipe RAID on rescue node (root SSH)"
+	@echo "  recover-sd-boot HOST=<host>              Restore SD bootstrap boot on rescue node"
 
 ifdef REBUILD
 _REBUILD_FLAG := --rebuild
@@ -139,7 +145,9 @@ endif
 
 # Two-phase provision (R-016): stage2 installs provision-minimal config (small
 # closure); stage3 pushes the full config via update-node (differential nix copy).
-provision: provision-stage1 provision-mount provision-stage2
+# DR-002: backup-boot saves SD bootstrap files before stage2 overwrites them,
+# enabling hlc-recover sd-boot in initrd rescue without reflashing.
+provision: provision-stage1 provision-mount provision-backup-boot provision-stage2
 	@echo "==> mid-provision smoke-test $(HOST)"
 	$(MAKE) smoke-test HOST=$(HOST)
 	@echo "==> provision-stage3 $(HOST): pushing full config"
@@ -174,6 +182,21 @@ endif
 	# can copy firmware files. Mount mmcblk0p1 here so the install phase finds it.
 	ssh root@$(HOST).$(HLC_DOMAIN) \
 		"mkdir -p /mnt/boot/firmware && mount /dev/mmcblk0p1 /mnt/boot/firmware"
+
+provision-backup-boot:
+ifndef HOST
+	$(error HOST is not set. Usage: make provision-backup-boot HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> provision-backup-boot $(HOST): saving SD bootstrap boot files"
+	# DR-002: tar the firmware partition contents before nixos-anywhere stage2
+	# overwrites them with the provisioned kernel/initrd. The backup lives on
+	# the firmware partition itself as .bootstrap-backup.tar.gz and is restored
+	# by hlc-recover sd-boot in the initrd rescue shell.
+	ssh root@$(HOST).$(HLC_DOMAIN) \
+		"cd /mnt/boot/firmware && tar czf /mnt/boot/firmware/.bootstrap-backup.tar.gz \
+			--exclude='.bootstrap-backup.tar.gz' ."
+	@echo "--- bootstrap boot backup saved to /boot/firmware/.bootstrap-backup.tar.gz"
 
 provision-stage2:
 ifndef HOST
@@ -211,7 +234,7 @@ endif
 	@echo "--- pushing full config via update-node"
 	$(MAKE) update-node HOST=$(HOST)
 
-reprovision: reprovision-stage1 provision-mount provision-stage2
+reprovision: reprovision-stage1 provision-mount provision-backup-boot provision-stage2
 	@echo "==> mid-reprovision smoke-test $(HOST)"
 	$(MAKE) smoke-test HOST=$(HOST)
 	@echo "==> reprovision-stage3 $(HOST): pushing full config"
@@ -280,6 +303,7 @@ endif
 	fi
 	@echo "--- RAID exists, root is SD — proceeding with reinstall"
 	$(MAKE) provision-mount HOST=$(HOST)
+	$(MAKE) provision-backup-boot HOST=$(HOST)
 	$(MAKE) provision-stage2 HOST=$(HOST)
 	@echo "==> mid-reinstall smoke-test $(HOST)"
 	$(MAKE) smoke-test HOST=$(HOST)
@@ -297,4 +321,72 @@ endif
 	# Roll back to the previous NixOS generation on the remote node.
 	ssh bob@$(IP) "sudo nix-env --rollback -p /nix/var/nix/profiles/system"
 	ssh bob@$(IP) "sudo /nix/var/nix/profiles/system/bin/switch-to-configuration switch"
+
+# Recovery targets — for nodes stuck in initrd rescue mode (root SSH only) ——
+
+recover-status:
+ifndef HOST
+	$(error HOST is not set. Usage: make recover-status HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> recover-status $(HOST): querying initrd rescue state"
+	ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+		root@$(HOST).$(HLC_DOMAIN) hlc-recover status
+
+recover-wipe:
+ifndef HOST
+	$(error HOST is not set. Usage: make recover-wipe HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> recover-wipe $(HOST): wiping RAID on rescue node"
+	@echo "WARNING: This will destroy all data on $(HOST) RAID array."
+	@echo "Press Enter to continue or Ctrl+C to abort..."
+	@read _
+	ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+		root@$(HOST).$(HLC_DOMAIN) 'hlc-recover wipe -y'
+
+recover-sd-boot:
+ifndef HOST
+	$(error HOST is not set. Usage: make recover-sd-boot HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> recover-sd-boot $(HOST): restoring SD bootstrap boot"
+	ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+		root@$(HOST).$(HLC_DOMAIN) hlc-recover sd-boot
+
+recover:
+ifndef HOST
+	$(error HOST is not set. Usage: make recover HOST=hlc-501)
+endif
+	$(call check_decom)
+	@echo "==> recover $(HOST): full recovery cycle (wipe + sd-boot + reboot + provision)"
+	@echo ""
+	@echo "WARNING: This will destroy all data on $(HOST) RAID array and reprovision."
+	@echo "Press Enter to continue or Ctrl+C to abort..."
+	@read _
+	@echo "--- Step 1/4: wiping RAID..."
+	ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+		root@$(HOST).$(HLC_DOMAIN) 'hlc-recover wipe -y'
+	@echo "--- Step 2/4: restoring SD bootstrap boot..."
+	ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+		root@$(HOST).$(HLC_DOMAIN) hlc-recover sd-boot
+	@echo "--- Step 3/4: rebooting into SD bootstrap..."
+	ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+		root@$(HOST).$(HLC_DOMAIN) 'reboot -f' || true
+	@echo "--- waiting for $(HOST) to boot into SD bootstrap..."
+	@waited=0; while [ $$waited -lt 180 ]; do \
+		if ping -c 1 -W 2 $(IP) >/dev/null 2>&1 && \
+		   ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 bob@$(IP) true 2>/dev/null; then \
+			echo "--- $(HOST) SD bootstrap online after $${waited}s"; \
+			break; \
+		fi; \
+		sleep 5; \
+		waited=$$((waited + 5)); \
+	done; \
+	if [ $$waited -ge 180 ]; then \
+		echo "ERROR: $(HOST) did not come back on SD bootstrap within 180s"; \
+		exit 1; \
+	fi
+	@echo "--- Step 4/4: provisioning..."
+	$(MAKE) provision HOST=$(HOST)
 
