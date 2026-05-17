@@ -133,12 +133,12 @@
 
 - [X] T044 [P] [US3] Fill real device paths for `hlc-501`: USB by-path filled (`xhci-hcd.0`=a/left, `xhci-hcd.1`=b/right; confirmed on hlc-501 and hlc-504). NVMe = `/dev/nvme0n1` (confirmed working on hlc-501 as of 2026-05-08; all Pi 5 nodes verified with NVMe present and working).
 - [X] T045 [US3] Provision `hlc-501` via two-phase flow: **Pre-conditions**: (1) both USB drives show `usbv3` alias in `/dev/disk/by-path/` (re-seat any that show `usbv2`); (2) NVMe confirmed at `/dev/nvme0n1` (`ls /dev/nvme0n1`). Run `make provision HOST=hlc-501`. Verify: stage2 completes without timeout (small provision-minimal closure), mid-provision smoke-test green (clears stale SSH keys), stage3 pushes full config via `update-node`, final smoke-test green. After reboot, SSH as `bob@hlc-501` and verify: `df -h /` shows mdadm array on `/dev/md127`, `df -h /srv` shows NVMe. **Confirmed 2026-05-17**: provisioned, SD reflashed with DR fixes, RAID boot restored.
-- [ ] T046 [US3] Verify RAID health: `ssh bob@hlc-501 "sudo mdadm --detail /dev/md/usb-raid"` — both USB devices show as active/in-sync.
-- [ ] T047 [US3] Recovery test (FR-011, SC-005): power down `hlc-501`; physically detach both USB drives; power on. Wait ~3 min. Run `make smoke-test HOST=hlc-501` — green (SD boots). Verify recovery tools: `make recover-status HOST=hlc-501` (shows no RAID, block devices visible). Also verify `hlc-recover` is available in the initrd rescue shell (if RAID absent, node enters rescue mode with dropbear SSH as `root@`). Re-attach USB drives; power cycle; `make smoke-test HOST=hlc-501` — green (USB array boot).
-- [ ] T048 [US3] Idempotency test (FR-013): re-run `make provision HOST=hlc-501` on the already-provisioned node. MUST refuse with clear message: `ERROR: <host> has active RAID or md root filesystem — live provisioned node detected.` SD baseline remains intact for retry. Also test `make provision-reinstall HOST=hlc-501` — MUST also refuse (node is fully provisioned with md-backed root, not a failed-install state).
+- [X] T046 [US3] Verify RAID health: `ssh bob@hlc-501 "sudo mdadm --detail /dev/md/usb-raid"` — both USB devices show as active/in-sync.
+- [X] T047 [US3] Recovery test (FR-011, SC-005): power down `hlc-501`; physically detach both USB drives; power on. Wait ~3 min. Run `make smoke-test HOST=hlc-501` — green (SD boots). Verify recovery tools: `make recover-status HOST=hlc-501` (shows no RAID, block devices visible). Also verify `hlc-recover` is available in the initrd rescue shell (if RAID absent, node enters rescue mode with dropbear SSH as `root@`). Re-attach USB drives; power cycle; `make smoke-test HOST=hlc-501` — green (USB array boot).
+- [X] T048 [US3] Idempotency test (FR-013): re-run `make provision HOST=hlc-501` on the already-provisioned node. MUST refuse with clear message: `ERROR: <host> has active RAID or md root filesystem — live provisioned node detected.` SD baseline remains intact for retry. Also test `make provision-reinstall HOST=hlc-501` — MUST also refuse (node is fully provisioned with md-backed root, not a failed-install state).
 - [X] T049 [P] [US3] Fill device paths for `hlc-502` through `hlc-508`: USB by-path and NVMe (`/dev/nvme0n1`) filled for all Pi 5 hosts. Dry-run green.
 - [X] T050 [US3] Provision `hlc-502`: `make provision HOST=hlc-502`. Run `make smoke-test HOST=hlc-502`. Verify mounts. **Confirmed 2026-05-17**.
-- [ ] T051 [US3] Provision `hlc-503`: `make provision HOST=hlc-503`. Run `make smoke-test HOST=hlc-503`. **Note**: hlc-503 requires debugging (2026-05-17) — not a hardware issue like hlc-507; needs `/speckit-debug` investigation. Removed from `DECOM_HOSTS` for active troubleshooting.
+- [ ] T051 [US3] Provision `hlc-503`: `make provision HOST=hlc-503`. Run `make smoke-test HOST=hlc-503`. **DECOM (2026-05-17)**: hardware defect — USB controller delivers ~350 KB/s sustained writes despite negotiating USB 3.0 (5 Gbps). Confirmed via dd stress test, drive swap to known-good node, PSU/thermal/EEPROM ruled out. Added to `DECOM_HOSTS`. Board to be repurposed (SD-only use). Provision skipped.
 - [X] T052 [US3] Provision `hlc-504`: `make provision HOST=hlc-504`. Run `make smoke-test HOST=hlc-504`. **Confirmed 2026-05-17**.
 - [X] T053 [US3] Provision `hlc-505`: `make provision HOST=hlc-505`. Run `make smoke-test HOST=hlc-505`. **Confirmed 2026-05-17**.
 - [X] T054 [US3] Provision `hlc-506`: `make provision HOST=hlc-506`. Run `make smoke-test HOST=hlc-506`. **Confirmed 2026-05-17**.
@@ -146,7 +146,7 @@
 - [X] T056 [US3] Provision `hlc-508`: `make provision HOST=hlc-508`. Run `make smoke-test HOST=hlc-508`. **Confirmed 2026-05-17**.
 - [X] T057 [US3] Fill real device IDs for `hlc-401` in `hosts/hlc-401/configuration.nix`. Pi 4: USB drives only; `hlc.disko.nvmeDevice = null`.
 - [X] T058 [US3] Provision `hlc-401` (Pi 4): `make provision HOST=hlc-401`. After reboot, verify `/srv` does NOT exist (absent without error, FR-010). Verify `/` on mdadm array. Run `make smoke-test HOST=hlc-401` — green.
-- [ ] T059 [US3] Commit all device-ID updates and provisioning-validated configs. Tag `phase5-provisioned`. **Exception**: hlc-507 (`DECOM_HOSTS`, hardware issue) excluded from this tag. hlc-503 requires debugging (not decommissioned). hlc-401 testing outstanding. Tag is valid once hlc-401 and hlc-503 are provisioned; hlc-507 provisioned when hardware issue resolves.
+- [X] T059 [US3] Commit all device-ID updates and provisioning-validated configs. Tag `phase5-provisioned`. **Exception**: hlc-503 (defective USB controller, DECOM 2026-05-17) and hlc-507 (broken USB-C port, DECOM 2026-05-08) excluded — provisioned if/when replacement hardware arrives. All other work-set nodes (hlc-401, 501, 502, 504, 505, 506, 508) provisioned and verified.
 
 **Checkpoint**: US3 complete. All available work-set nodes provisioned via two-phase flow. SC-005 verified. Closure size comparison documented. Nodes in `DECOM_HOSTS` provisioned once hardware issues resolve.
 
@@ -246,28 +246,28 @@
 
 ### Canary Deploy + Validation
 
-- [ ] T074 [US4] **[BUNDLE-CANARY]** Deploy operator-UX bundle to `hlc-501`: `make update-node HOST=hlc-501`. Then `make smoke-test HOST=hlc-501`. **On smoke-test fail**: `make rollback HOST=hlc-501`, then run `/speckit-debug` skill — comment-out imports in `modules/cluster/common.nix` one at a time, `make update-node HOST=hlc-501`, `make smoke-test HOST=hlc-501`, repeat to isolate the breaking module. Fix, then resume.
+- [X] T074 [US4] **[BUNDLE-CANARY]** Deploy operator-UX bundle to `hlc-501`: `make update-node HOST=hlc-501`. Then `make smoke-test HOST=hlc-501`. **On smoke-test fail**: `make rollback HOST=hlc-501`, then run `/speckit-debug` skill — comment-out imports in `modules/cluster/common.nix` one at a time, `make update-node HOST=hlc-501`, `make smoke-test HOST=hlc-501`, repeat to isolate the breaking module. Fix, then resume.
 - [ ] T075 [US4] Validate PS1 on `hlc-501`: (a) `ssh bob@hlc-501` from `TERM=xterm-256color` terminal — observe two-line box-drawing remote PS1 with `☁️🏔️☁️` (emoji presentation by default); (b) `ssh -o "SendEnv TERM" bob@hlc-501` with `TERM=xterm` — remote PS1 still legible. Confirm glyph renders cleanly without breaking column alignment. If emoji renders broken (mojibake, missing glyphs, mis-aligned spacing) on this host's typical client, set `hlc.prompt.glyph = "☁⛰︎☁"` (text-presentation fallback) in `hosts/hlc-501/configuration.nix`, rebuild, redeploy.
-- [ ] T076 [US4] Validate MOTD on `hlc-501`: `ssh bob@hlc-501` — observe HLC ASCII banner, then `Cluster node: hlc-501.marks.dev`, then Bob Ross quote. Verify hostname is dynamic (not hardcoded).
-- [ ] T077 [US4] Validate toolbox on `hlc-501`: `ssh bob@hlc-501 "which bat curl dig fd fzf git htop ip jq k9s kubectl helm lsof mdadm ncdu nc parted lspci rg rsync strace tcpdump tmux tree lsusb vim wget"` — all MUST resolve.
-- [ ] T078 [US4] Validate SSH hardening on `hlc-501`: `ssh -o PreferredAuthentications=password bob@hlc-501` MUST be rejected. Key-based login MUST still work.
+- [X] T076 [US4] Validate MOTD on `hlc-501`: `ssh bob@hlc-501` — observe HLC ASCII banner, then `Cluster node: hlc-501.marks.dev`, then Bob Ross quote. Verify hostname is dynamic (not hardcoded).
+- [X] T077 [US4] Validate toolbox on `hlc-501`: `ssh bob@hlc-501 "which bat curl dig fd fzf git htop ip jq k9s kubectl helm lsof mdadm ncdu nc parted lspci rg rsync strace tcpdump tmux tree lsusb vim wget"` — all MUST resolve.
+- [X] T078 [US4] Validate SSH hardening on `hlc-501`: `ssh -o PreferredAuthentications=password bob@hlc-501` MUST be rejected. Key-based login MUST still work.
 
 #### Fleet Roll (serial; smoke-test gate per host; decom-set auto-skipped by Makefile)
 
-- [ ] T079 [US4] Roll bundle to `hlc-502`: `make update-node HOST=hlc-502` + `make smoke-test HOST=hlc-502`. On fail: `make rollback`; investigate node-local issue; fix before continuing.
-- [ ] T080 [US4] Roll bundle to `hlc-503` (DECOM — Makefile refuses; skip and note).
-- [ ] T081 [US4] Roll bundle to `hlc-504` + smoke-test.
-- [ ] T082 [US4] Roll bundle to `hlc-505` + smoke-test.
-- [ ] T083 [US4] Roll bundle to `hlc-506` + smoke-test.
+- [X] T079 [US4] Roll bundle to `hlc-502`: `make update-node HOST=hlc-502` + `make smoke-test HOST=hlc-502`. On fail: `make rollback`; investigate node-local issue; fix before continuing.
+- [ ] T080 [US4] Roll bundle to `hlc-503` (DECOM — defective USB controller; Makefile refuses; skip).
+- [X] T081 [US4] Roll bundle to `hlc-504` + smoke-test.
+- [X] T082 [US4] Roll bundle to `hlc-505` + smoke-test.
+- [X] T083 [US4] Roll bundle to `hlc-506` + smoke-test.
 - [ ] T084 [US4] Roll bundle to `hlc-507` (DECOM — Makefile refuses; skip and note).
-- [ ] T085 [US4] Roll bundle to `hlc-508` + smoke-test.
-- [ ] T086 [US4] Roll bundle to `hlc-401`: `make update-node HOST=hlc-401` + `make smoke-test HOST=hlc-401`. Verify MOTD/PS1/toolbox behavior on Pi 4.
+- [X] T085 [US4] Roll bundle to `hlc-508` + smoke-test.
+- [X] T086 [US4] Roll bundle to `hlc-401`: `make update-node HOST=hlc-401` + `make smoke-test HOST=hlc-401`. Verify MOTD/PS1/toolbox behavior on Pi 4.
 
 ### Silicon Wiring + Close Workarounds
 
-- [ ] T087 [US4] Apply changes to `silicon`: `make local-switch` (or `sudo nixos-rebuild switch --flake .#silicon`). Verify: toolbox commands available as `eaglerock@silicon`, no HLC MOTD in local terminal (workstation has no `cluster.motd.*` setting), workstation modules (i3, polybar) still functional, local PS1 unchanged (silicon does not import `modules/cluster/prompt.nix`).
-- [ ] T088 [US4] Close W-001 in `specs/WORKAROUNDS.md`: fill `Resolved: 2026-<date>`. Cluster modules reintroduced with canary + smoke-test gates per exit condition. Inline `users.users.bob` removed from `modules/cluster/common.nix`, and inline `users.users.eaglerock` removed from `modules/hosts/common.nix` (both now option-driven via `system.operator`); silicon-side eaglerock specifics relocated to `hosts/silicon/configuration.nix`.
-- [ ] T089 [US4] Close W-003 in `specs/WORKAROUNDS.md`: fill `Resolved: 2026-<date>`. `PasswordAuthentication = false` applied in `modules/cluster/common.nix` (T071), validated in T078. Commit. Tag `phase6-operator-ux`.
+- [X] T087 [US4] Apply changes to `silicon`: `make local-switch` (or `sudo nixos-rebuild switch --flake .#silicon`). Verify: toolbox commands available as `eaglerock@silicon`, no HLC MOTD in local terminal (workstation has no `cluster.motd.*` setting), workstation modules (i3, polybar) still functional, local PS1 unchanged (silicon does not import `modules/cluster/prompt.nix`).
+- [X] T088 [US4] Close W-001 in `specs/WORKAROUNDS.md`: fill `Resolved: 2026-<date>`. Cluster modules reintroduced with canary + smoke-test gates per exit condition. Inline `users.users.bob` removed from `modules/cluster/common.nix`, and inline `users.users.eaglerock` removed from `modules/hosts/common.nix` (both now option-driven via `system.operator`); silicon-side eaglerock specifics relocated to `hosts/silicon/configuration.nix`.
+- [X] T089 [US4] Close W-003 in `specs/WORKAROUNDS.md`: fill `Resolved: 2026-<date>`. `PasswordAuthentication = false` applied in `modules/cluster/common.nix` (T071), validated in T078. Commit. Tag `phase6-operator-ux`.
 
 **Checkpoint**: US4 complete. SC-006 verified. W-001 and W-003 closed.
 

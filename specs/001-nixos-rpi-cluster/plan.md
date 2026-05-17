@@ -7,7 +7,7 @@
 
 Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS using the `nvmd/nixos-raspberrypi` fork, with a three-scope layered module structure, full-disk provisioning via `nixos-anywhere`/`disko`, operator shell UX (MOTD, PS1, toolbox, home-manager), and k3s OS-level prerequisites installed. Cluster bootstrap is out of scope. The implementation is sequenced as 8 phases (Phase 1–8, matching tasks.md numbering), each gated by `make smoke-test` on a canary node before any fleet roll.
 
-**Status**: Phases 1–4 complete. Phase 5 in progress: 6/9 work-set nodes provisioned (hlc-501, 502, 504, 505, 506, 508); hlc-401 testing outstanding; hlc-503 debugging needed; hlc-507 hardware issue (DECOM). DR infrastructure (hlc-recover, backup-boot, recovery targets) complete. Closure sizes verified (provision 2.5 GB, full 3.5 GB). Phases 6–8 pending.
+**Status**: Phases 1–4 complete. Phase 5 in progress: 6/7 active work-set nodes provisioned (hlc-501, 502, 504, 505, 506, 508); hlc-401 provisioned, verification tests outstanding (T046-T048); hlc-503 hardware defect (defective USB controller, DECOM 2026-05-17); hlc-507 hardware issue (DECOM). DR infrastructure (hlc-recover, backup-boot, recovery targets) complete. Closure sizes verified (provision 2.5 GB, full 3.5 GB). Phase 6 code complete (T060-T073), canary deploy pending (T074). Phases 7–8 pending.
 
 ---
 

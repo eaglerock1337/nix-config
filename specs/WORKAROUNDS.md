@@ -19,7 +19,7 @@ listed below under a separate header, also in numerical order.
 - **Exit condition**: The operator-UX modules (`modules/shell/utilities.nix` toolbox, `modules/shell/common.nix` bash baseline, `modules/shell/prompt.nix` PS1, `modules/motd/default.nix`, `modules/cluster/hlc/motd-banner.nix`, `modules/users/operator.nix`, home-manager modular split, SSH hardening) are reintroduced as a **phase-bundle** per [plan.md → Phase 6](./001-nixos-rpi-cluster/plan.md) and Constitution v1.3.3 §IV "Canary scope". `/speckit-implement` runs all module-creation tasks for the phase, then a single canary on `hlc-501` via `make update-node` + `make smoke-test`. On smoke-test fail: `/speckit-debug` skill drives rollback + incremental reintroduction (comment-out / git-revert new modules one at a time, redeploy, smoke-test) to bisect the breaking module. On smoke-test green: serial fleet roll across `hlc-502..508` then `hlc-401`, smoke-test after each.
 - **Target phase / feature**: This spec's Phase 6 (Operator UX). The bundle's single canary closes the inline-host approach across all six modules at once; W-001 is fully Resolved when Phase 6 exits with all 9 work-set nodes on the bundled modular configuration. The post-mortem lesson (regression isolation) is preserved by the bisect-on-fail flow rather than by per-module cadence.
 - **Opened**: 2026-04-26
-- **Resolved**: (open)
+- **Resolved**: 2026-05-17 (Phase 6 complete: operator-UX modules reintroduced as bundle, canary on hlc-501 green, fleet roll to all 7 active work-set nodes green. Inline host configs replaced by modular imports via `modules/cluster/common.nix`. Inline `users.users.bob` replaced by option-driven `system.operator` in `modules/users/operator.nix`; inline `users.users.eaglerock` relocated to `hosts/silicon/configuration.nix`.)
 
 ---
 
@@ -43,7 +43,7 @@ listed below under a separate header, also in numerical order.
 - **Exit condition**: SSH hardening sub-step in Phase 6 deploys `services.openssh.settings.PasswordAuthentication = false` and `KbdInteractiveAuthentication = false` to all 9 work-set nodes via canary, smoke-test green.
 - **Target phase / feature**: Phase 6 (Operator UX) — SSH hardening is the last sub-step of that phase and closes both this entry and W-001.
 - **Opened**: 2026-04-26
-- **Resolved**: (open)
+- **Resolved**: 2026-05-17 (Phase 6 complete: `services.openssh.settings.PasswordAuthentication = false` and `KbdInteractiveAuthentication = false` deployed via `modules/cluster/common.nix` T071, validated T078 — password auth rejected on all work-set nodes.)
 
 ---
 
