@@ -44,14 +44,14 @@ endef
 help:
 	@echo "Targets:"
 	@echo "  build-image HOST=<host> [REBUILD=1]      Build SD card image for a pi node"
-	@echo "  flash-image HOST=<host> DEV=<dev>         Flash built image to SD card device"
-	@echo "  local-dry                                 Dry-run NixOS config for local host"
-	@echo "  local-switch                              Apply NixOS config for local host"
-	@echo "  update                                    Update all flake inputs"
-	@echo "  dry-run HOST=<host>                       Dry-run toplevel for a cluster host"
-	@echo "  build HOST=<host>                         Build toplevel for a cluster host"
-	@echo "  smoke-test HOST=<host>                    SSH reachability check via FQDN"
-	@echo "  ip HOST=<host>                            Print derived IP for a host"
+	@echo "  flash-image HOST=<host> DEV=<dev>        Flash built image to SD card device"
+	@echo "  local-dry                                Dry-run NixOS config for local host"
+	@echo "  local-switch                             Apply NixOS config for local host"
+	@echo "  update                                   Update all flake inputs"
+	@echo "  dry-run HOST=<host>                      Dry-run toplevel for a cluster host"
+	@echo "  build HOST=<host>                        Build toplevel for a cluster host"
+	@echo "  smoke-test HOST=<host>                   SSH reachability check via FQDN"
+	@echo "  ip HOST=<host>                           Print derived IP for a host"
 	@echo "  provision HOST=<host>                    Two-phase provision (stage1-3 + smoke-tests)"
 	@echo "  provision-stage1 HOST=<host>             disko: partition + format + mount disks"
 	@echo "  provision-mount HOST=<host>              Mount /boot/firmware (W-011)"
@@ -147,9 +147,13 @@ endif
 # closure); stage3 pushes the full config via update-node (differential nix copy).
 # DR-002: backup-boot saves SD bootstrap files before stage2 overwrites them,
 # enabling hlc-recover sd-boot in initrd rescue without reflashing.
-provision: provision-stage1 provision-mount provision-backup-boot provision-stage2
-	@echo "==> mid-provision smoke-test $(HOST)"
-	$(MAKE) smoke-test HOST=$(HOST)
+provision:
+	# W-013: stage1 (disko) may fail when RAID is already assembled; subsequent
+	# steps (mount, backup-boot, stage2) handle the mounted state gracefully.
+	-$(MAKE) provision-stage1 HOST=$(HOST)
+	$(MAKE) provision-mount HOST=$(HOST)
+	$(MAKE) provision-backup-boot HOST=$(HOST)
+	$(MAKE) provision-stage2 HOST=$(HOST)
 	@echo "==> provision-stage3 $(HOST): pushing full config"
 	$(MAKE) provision-stage3 HOST=$(HOST)
 	@echo "==> final smoke-test $(HOST)"
@@ -231,12 +235,12 @@ endif
 		echo "ERROR: $(HOST) did not come back online within 120s"; \
 		exit 1; \
 	fi
+	@echo "--- cycling SSH host key via smoke-test"
+	$(MAKE) smoke-test HOST=$(HOST)
 	@echo "--- pushing full config via update-node"
 	$(MAKE) update-node HOST=$(HOST)
 
 reprovision: reprovision-stage1 provision-mount provision-backup-boot provision-stage2
-	@echo "==> mid-reprovision smoke-test $(HOST)"
-	$(MAKE) smoke-test HOST=$(HOST)
 	@echo "==> reprovision-stage3 $(HOST): pushing full config"
 	$(MAKE) provision-stage3 HOST=$(HOST)
 	@echo "==> final reprovision smoke-test $(HOST)"

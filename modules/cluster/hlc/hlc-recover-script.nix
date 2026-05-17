@@ -16,12 +16,13 @@
   RAID_MNT=/tmp/hlc-raid
 
   usage() {
-    echo "hlc-recover — initrd recovery tool for $HOSTNAME"
+    echo "hlc-recover — recovery tool for $HOSTNAME"
     echo ""
     echo "Commands:"
     echo "  status      Show RAID, disk, and mount state"
     echo "  mount       Assemble RAID and mount root for inspection"
     echo "  umount      Unmount RAID root"
+    echo "  raid-boot   Restore boot from existing RAID install (requires bootstrap userspace)"
     echo "  wipe [-y]   Stop RAID, wipe USB superblocks (prepares for reprovision)"
     echo "  sd-boot     Restore SD card bootstrap boot files"
     echo ""
@@ -31,6 +32,10 @@
     echo "  hlc-recover sd-boot         # restore SD bootstrap boot"
     echo "  reboot -f                   # reboot into SD bootstrap"
     echo "  # then from workstation:  make provision HOST=$HOSTNAME"
+    echo ""
+    echo "Restore RAID boot after SD reflash:"
+    echo "  hlc-recover raid-boot       # reinstall bootloader from RAID system"
+    echo "  reboot                      # boot into provisioned system"
   }
 
   cmd_status() {
@@ -96,13 +101,18 @@
       return 1
     fi
 
+    # Always run e2fsck before mount — the RAID is never cleanly unmounted
+    # when the node is power-cycled to flash a new SD card, so the journal
+    # will need recovery every time.
+    echo "--- Running e2fsck on $RAID_PART..."
+    e2fsck -y "$RAID_PART" 2>&1 || true
+
     mkdir -p "$RAID_MNT"
     if mount "$RAID_PART" "$RAID_MNT" 2>/dev/null; then
       echo "RAID root mounted at $RAID_MNT"
       echo "To unmount: hlc-recover umount"
     else
       echo "ERROR: Failed to mount $RAID_PART"
-      echo "Try: e2fsck $RAID_PART"
       return 1
     fi
   }
@@ -171,6 +181,72 @@
     echo "  3. Reprovision:      make provision HOST=$HOSTNAME"
   }
 
+  cmd_raidboot() {
+    echo "==> Restoring boot from RAID on $HOSTNAME..."
+
+    # This command requires chroot (full bootstrap userspace, not initrd)
+    if ! command -v chroot >/dev/null 2>&1; then
+      echo "ERROR: chroot not available — this command requires the SD bootstrap userspace."
+      echo "       It cannot run from the initrd rescue shell."
+      return 1
+    fi
+
+    # Mount RAID if not already mounted
+    if ! mountpoint -q "$RAID_MNT" 2>/dev/null; then
+      cmd_mount || return 1
+    fi
+
+    # Verify system profile exists on the RAID
+    # Use -L (symlink exists) not -e (target exists): the profile is a symlink
+    # to an absolute /nix/... path that only resolves inside a chroot, not from
+    # the host SD root.
+    SYSTEM="$RAID_MNT/nix/var/nix/profiles/system"
+    if ! [ -L "$SYSTEM" ]; then
+      echo "ERROR: No NixOS system profile found at $SYSTEM"
+      echo "The RAID does not have a complete NixOS installation."
+      return 1
+    fi
+
+    echo "--- System: $(ls -l "$SYSTEM")"
+
+    # Mount firmware partition inside RAID mount for the bootloader installer
+    mkdir -p "$RAID_MNT/boot/firmware"
+    if ! mount "$FIRMWARE_DEV" "$RAID_MNT/boot/firmware"; then
+      echo "ERROR: Cannot mount $FIRMWARE_DEV at $RAID_MNT/boot/firmware"
+      return 1
+    fi
+
+    # Bind-mount virtual filesystems for chroot
+    # --make-rslave prevents mount propagation from chroot back to host,
+    # which otherwise breaks /dev/pts and makes sudo unusable.
+    mount -t proc proc "$RAID_MNT/proc"
+    mount --rbind /sys "$RAID_MNT/sys"
+    mount --make-rslave "$RAID_MNT/sys"
+    mount --rbind /dev "$RAID_MNT/dev"
+    mount --make-rslave "$RAID_MNT/dev"
+
+    echo "--- Running bootloader installer via chroot..."
+    chroot "$RAID_MNT" /nix/var/nix/profiles/system/bin/switch-to-configuration boot
+    rc=$?
+
+    # Cleanup
+    umount "$RAID_MNT/boot/firmware" 2>/dev/null
+    umount -l "$RAID_MNT/proc" 2>/dev/null
+    umount -l "$RAID_MNT/sys" 2>/dev/null
+    umount -l "$RAID_MNT/dev" 2>/dev/null
+
+    if [ $rc -eq 0 ]; then
+      echo ""
+      echo "Boot restored from RAID successfully."
+      echo "Next: reboot"
+    else
+      echo ""
+      echo "ERROR: Bootloader installation failed (exit $rc)"
+      echo "Check the output above for details."
+      return 1
+    fi
+  }
+
   cmd_sdboot() {
     echo "==> Restoring SD card bootstrap boot files on $HOSTNAME..."
 
@@ -214,11 +290,12 @@
   }
 
   case "$1" in
-    status)  cmd_status ;;
-    mount)   cmd_mount ;;
-    umount)  cmd_umount ;;
-    wipe)    shift; cmd_wipe "$@" ;;
-    sd-boot) cmd_sdboot ;;
-    *)       usage ;;
+    status)    cmd_status ;;
+    mount)     cmd_mount ;;
+    umount)    cmd_umount ;;
+    raid-boot) cmd_raidboot ;;
+    wipe)      shift; cmd_wipe "$@" ;;
+    sd-boot)   cmd_sdboot ;;
+    *)         usage ;;
   esac
 ''

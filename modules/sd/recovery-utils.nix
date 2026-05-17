@@ -1,6 +1,11 @@
-{ pkgs, lib, ... }:
+{ config, pkgs, lib, ... }:
 
 let
+  hlc-recover = pkgs.writeShellScriptBin "hlc-recover"
+    (import ../cluster/hlc/hlc-recover-script.nix {
+      hostname = config.networking.hostName;
+    });
+
   # Full diagnostic capture script for triage during network hangs or other
   # incidents. Run manually from a live SSH session, or automatically via
   # the hlc-hang-watcher timer in bootstrap.nix.
@@ -112,6 +117,7 @@ in
     usbutils    # USB device info; provides lsusb
     vim         # editor
     xfsprogs    # XFS filesystem tools
-    hlc-triage  # one-shot diagnostic capture (see let block above)
+    hlc-recover  # guided RAID/SD recovery (see let block above)
+    hlc-triage   # one-shot diagnostic capture (see let block above)
   ];
 }

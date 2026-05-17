@@ -1,11 +1,11 @@
 ---
 name: "speckit-debug"
-description: "Bisect a failed bundle canary to isolate the breaking module. Drives rollback, incremental module reintroduction, smoke-test gating, and root-cause reporting. Trigger when /speckit-implement bundles a phase, the canary deploy on hlc-501 (or other designated canary node) hits a red `make smoke-test`, and the operator needs to identify which module in the bundle caused the regression. Implements Constitution v1.3.2 §IV bisect-on-fail flow that backs the phase-bundle canary path. Also use when the user says \"debug the canary\", \"bisect the bundle\", \"which module broke\", or invokes /speckit-debug."
-argument-hint: "Optional: HOST override (default: hlc-501) and/or starting bundle commit range (default: range from prior phase tag to HEAD)"
-compatibility: "Requires spec-kit project structure with .specify/ directory, a tasks.md describing a bundle canary, and a working `make update-node` / `make smoke-test` / `make rollback` Makefile target set"
+description: "General-purpose debugging skill for any failure encountered during speckit-driven work. Trigger when a Makefile target fails, a deploy breaks, a build errors out, provisioning goes wrong, or any other issue blocks progress on the current spec. Covers provisioning failures, bootloader issues, evaluation errors, runtime failures, smoke-test regressions, and more. Also use when the user says 'debug this', 'what went wrong', 'fix this error', or invokes /speckit-debug."
+argument-hint: "Describe the failure: paste the error output, which make target failed, what HOST was involved, and any relevant context about what you were doing when it broke."
+compatibility: "Requires spec-kit project structure. Works with any Makefile target, NixOS build, or deploy step in the project."
 metadata:
   author: "peter.marks@betterment.com"
-  source: "specs/001-nixos-rpi-cluster — phase-bundle cadence + Constitution v1.3.2"
+  source: "specs/001-nixos-rpi-cluster"
 user-invocable: true
 disable-model-invocation: false
 ---
@@ -16,144 +16,114 @@ disable-model-invocation: false
 $ARGUMENTS
 ```
 
-You **MUST** consider the user input before proceeding. If empty, default the canary HOST to `hlc-501` and bisect range to `<prior phase tag>..HEAD`.
+You **MUST** read and analyze the user's error output before proceeding. The user's description of what they were doing and what failed is your starting point.
 
 ## Context
 
-This skill is the recovery path for the **phase-bundle canary** cadence introduced in Constitution v1.3.2 §IV. The bundle replaces the prior per-module canary cadence: `/speckit-implement` runs all module-creation + wiring tasks for a phase, then a single `make update-node HOST=<canary>` deploys the bundle, gated by `make smoke-test HOST=<canary>`. When that smoke-test fails, this skill drives the regression isolation that the per-module cadence used to provide implicitly.
+This skill is the general debugging path for any failure that occurs during speckit-driven implementation work. Failures can happen at any stage: Nix evaluation, building closures, provisioning nodes, deploying updates, installing bootloaders, activating configurations, running smoke-tests, etc.
 
-The post-mortem lesson (operator must end up knowing which module broke — see W-001 in `WORKAROUNDS.md`) is preserved by this bisect flow, NOT by the canary cadence itself.
+Your job is to **diagnose the root cause** and **propose a fix**. You are an SRE working alongside the operator — investigate methodically, surface findings clearly, and don't guess.
 
 ## Hostname convention
 
-**Short HLC hostnames do NOT resolve over SSH from the operator workstation.** Always use the FQDN form `<host>.marks.dev` (e.g. `hlc-501.marks.dev`) for any direct `ssh` command in this skill. The Makefile already composes FQDN internally (`bob@$(HOST).$(HLC_DOMAIN)`), so `make` targets that take `HOST=hlc-501` are fine — but any raw `ssh bob@<canary>` invocation in these instructions assumes FQDN. Substitute accordingly.
+**Short HLC hostnames do NOT resolve over SSH from the operator workstation.** Always use the FQDN form `<host>.marks.dev` (e.g. `hlc-501.marks.dev`) for any direct `ssh` command. The Makefile already composes FQDN internally (`bob@$(HOST).$(HLC_DOMAIN)`), so `make` targets that take `HOST=hlc-501` are fine — but any raw `ssh` invocation must use FQDN.
 
-## Pre-Execution Checks
+## Debugging Process
 
-1. **Verify the failure**:
-   - Run `make smoke-test HOST=<canary>`. If it succeeds, abort — there is nothing to debug. Tell the operator to re-check the assumption that the canary is red.
-   - If it fails, capture which step failed (ping / non-PTY ssh / PTY ssh / `sudo -n true`) and any error output. This is the regression signature.
+### 1. Understand the failure
 
-2. **Verify rollback is possible**:
-   - Run `ssh bob@<canary>.marks.dev 'sudo nixos-rebuild list-generations'` (FQDN required — see Hostname convention above). The canary MUST have at least one prior generation (the pre-bundle baseline). If only one generation exists, the canary substrate is corrupt — escalate to the operator; do not proceed.
+- Read the error output carefully. Identify:
+  - Which Makefile target or command failed
+  - Which host was involved
+  - The specific error message (not just "it failed")
+  - What stage of the process it was in (eval, build, copy, install, activate, reboot)
 
-3. **Identify the bundle**:
-   - Determine the bundle commit range. Default: prior phase tag (e.g. `phase4-disko-provisioning`) to `HEAD`. Confirm with operator if ambiguous.
-   - List the new module-creation commits in that range: `git log --oneline <prior-tag>..HEAD`.
-   - List the module imports added to `modules/cluster/common.nix` and `modules/cluster/hlc/default.nix` in the bundle: `git diff <prior-tag>..HEAD -- modules/cluster/common.nix modules/cluster/hlc/default.nix`. These are the bisect candidates.
+### 2. Gather context
 
-## Execution Steps
+- Read the relevant Makefile target to understand what commands are being run
+- Read the relevant NixOS/disko/hardware configuration files
+- Check the plan (`specs/001-nixos-rpi-cluster/plan.md`) for expected behavior
+- Check `specs/WORKAROUNDS.md` for known issues that may be related
+- If the host is reachable, gather state from it (mounts, services, logs) via SSH
 
-### 1. Roll back the canary
+### 3. Form a hypothesis
 
-```bash
-make rollback HOST=<canary>
-make smoke-test HOST=<canary>
-```
+Based on the error and context, identify the most likely root cause. Common failure categories:
 
-The post-rollback smoke-test MUST be green. If it is not, the failure pre-existed the bundle — escalate to the operator. Do not proceed with bisect.
+**Provisioning failures:**
+- Filesystem not mounted (disko didn't run, or mount point missing)
+- Bootloader install fails (boot partition not mounted, wrong path, firmware files missing)
+- nixos-anywhere phase ordering issues (install before disko, etc.)
+- Closure too large for SD-booted Pi (RAM/disk constraints)
 
-### 2. Identify the bisect candidates
+**Build/evaluation errors:**
+- Module option type mismatch
+- Missing imports or circular dependencies
+- Unfree package not in allowlist
+- Flake input not available or outdated
 
-Read `modules/cluster/common.nix` and `modules/cluster/hlc/default.nix`. Parse the `imports` list in each. Compare against the prior-tag baseline (`git show <prior-tag>:modules/cluster/common.nix`) to identify module imports ADDED in the bundle. These are the candidates.
+**Deploy/update failures:**
+- SSH connectivity (key issues, host not reachable, wrong user)
+- Activation script failures (file collisions, permission issues)
+- Service startup failures post-switch
+- Boot generation issues
 
-Build a candidate list, ordered by suspicion (heuristic — present this list to the operator, they may reorder):
+**Smoke-test regressions:**
+- SSH login broken (auth config, keys, user config)
+- sudo not working (wheel group, sudoers config)
+- Network not configured properly after switch
 
-1. `modules/users/operator.nix` (high — touches authentication, can lock out `bob`)
-2. `modules/shell/prompt.nix` (medium — affects login shell behavior; mountain-glyph rendering edge cases)
-3. SSH hardening setting in `modules/cluster/common.nix` (medium — `PasswordAuthentication = false` + `KbdInteractiveAuthentication = false` can mask bad authorized_keys)
-4. `modules/motd/default.nix` (low — login banner)
-5. `modules/cluster/hlc/motd-banner.nix` (low — banner content)
-6. `modules/shell/utilities.nix` (very low — package additions only)
-7. `modules/shell/common.nix` (very low — bash baseline aliases)
-8. Home-manager modules (low-medium — config writes can fail at activation time)
+### 4. Investigate and verify
 
-### 3. Bisect
+- Read the specific files implicated by the error
+- If needed, check the host state via SSH
+- Run `make dry-run HOST=<host>` to check for eval issues
+- Cross-reference with git history to see what changed recently
 
-Default strategy: **binary bisect** if candidate count > 4; **linear (most-suspicious-first)** if ≤ 4.
+### 5. Report findings
 
-For each iteration:
+Present to the operator:
+- **Root cause**: What specifically is wrong
+- **Evidence**: The file(s) and line(s) involved
+- **Proposed fix**: What to change and why
+- **Risk assessment**: Could the fix break something else?
 
-1. Comment out the module imports under test in `modules/cluster/common.nix` and/or `modules/cluster/hlc/default.nix` (use `# DEBUG-BISECT:` comment marker so they are easy to find and restore).
-2. Stage the change locally — DO NOT commit during bisect (commits during bisect pollute the bundle's commit history; the bisect operates on the working tree).
-3. Run `make dry-run HOST=<canary>` first to catch evaluation errors before touching the node.
-4. Run `make update-node HOST=<canary>`.
-5. Run `make smoke-test HOST=<canary>`.
-6. Interpret:
-   - Smoke-test green → the commented-out modules contain the breaking change. Narrow to that subset.
-   - Smoke-test red → the breaking change is in the still-active modules. Narrow to that subset.
-7. Restore the comment markers and repeat until exactly one module is identified.
+### 6. Apply fix (with operator approval)
 
-### 4. Diagnose the breaking module
-
-Once isolated, read the module's source. Common failure modes to check:
-
-- **operator.nix**: `bob`'s authorized key string (typo, encoding, missing newline); `wheel` membership not granted; `sudo -n` failing because `security.sudo.wheelNeedsPassword` was not set false.
-- **prompt.nix**: PS1 syntax error (unescaped `\`, mismatched `\[ \]`); mountain glyph not rendering and breaking line wrap; remote form pulling color escapes.
-- **SSH hardening**: `bob`'s authorized_keys not actually deployed (key-only enforcement bricks login); a stray service depending on password auth.
-- **MOTD**: option type mismatch (`cluster.motd.banner` declared as `lines` but set as `str`, etc.).
-- **home-manager**: file collision with existing dotfile; `home.activation` script failure; module evaluating differently for `bob` vs `eaglerock`.
-
-Report findings to the operator with:
-- Identified module
-- Specific line(s) suspected
-- Proposed fix
-- Whether the fix is in the module itself or in the wiring (option set in wrong scope, etc.)
-
-### 5. Fix and resume
-
-After the operator approves the fix:
-
-1. Edit the module to apply the fix.
-2. Restore all `# DEBUG-BISECT:` comment markers so the full bundle is back in play.
-3. Run `make dry-run HOST=<canary>` → green.
-4. Run `make update-node HOST=<canary>` → success.
-5. Run `make smoke-test HOST=<canary>` → green.
-6. Hand control back to `/speckit-implement` (or operator) to resume the fleet roll.
-7. Commit the fix as a follow-up commit on top of the bundle (do NOT amend bundle commits — preserve the bundle history for `git bisect` archaeology).
+After the operator approves:
+1. Make the minimal edit to fix the issue
+2. Run `make dry-run HOST=<host>` to verify eval passes
+3. If appropriate, re-run the failed make target
+4. Verify success
+5. Commit the fix as a new commit (do NOT amend existing commits)
 
 ## Escalation
 
 Escalate to the operator (do NOT proceed silently) when:
 
-- Rollback smoke-test is also red (substrate-level issue, not a bundle issue).
-- More than one module appears to be implicated (cross-module interaction; bisect logic above does not cover this).
-- Bisect requires more than 6 iterations (suggests the failure mode isn't isolatable to a single module).
-- The breaking change is in a wired option set (cluster scope) rather than a module file (refactoring may be needed before re-canary).
-
-Constitution VIII applies: surface uncertainty, do not silently rewrite the operator's working theory.
+- The failure doesn't match any pattern you can identify from the code
+- Multiple interacting causes seem involved
+- The fix would require architectural changes beyond a simple edit
+- You need information not available in the repo (e.g., physical hardware state, network config outside this repo)
+- Constitution VIII applies: surface uncertainty, do not silently rewrite the operator's working theory
 
 ## Report Format
-
-After bisect completes, return a structured report:
 
 ```markdown
 ## /speckit-debug Report
 
-**Canary host**: <hostname>
-**Bundle range**: <prior-tag>..HEAD (<n> commits, <m> modules in scope)
-**Iterations**: <count>
-**Breaking module**: `path/to/module.nix`
-**Failure mode**: <one-line summary, e.g. "operator.nix authorized_keys missing trailing newline → sshd rejects bob's key">
-**Proposed fix**: <one-paragraph fix description>
-**Re-canary status**: green | pending operator review
-
-### Bisect log
-- Iter 1: commented out [<module list>] → smoke-test <green|red>
-- Iter 2: ...
+**Failed step**: <make target or command>
+**Host**: <hostname, if applicable>
+**Root cause**: <one-line summary>
+**Evidence**: <file:line references>
+**Fix applied**: <description of change, or "pending operator approval">
+**Verification**: <what was run to confirm the fix>
 ```
-
-## Post-Execution Checks
-
-After the bisect succeeds and the bundle deploys cleanly:
-
-1. Verify all `# DEBUG-BISECT:` comment markers are removed (`grep -rn 'DEBUG-BISECT' modules/`).
-2. Verify the canary's `nixos-rebuild list-generations` shows the resumed generation as active and prior generations are intact for rollback safety.
-3. Update tasks.md if a NEW failure mode was discovered that future operators should know about — append a note to the bundle's canary task (T083 in spec 001) with a link to the debug report.
 
 ## Operating Principles
 
-- **Read-only on commits**: never amend bundle commits during bisect; all bisect mutations live in the working tree until the fix is identified, then the fix is a NEW commit on top.
-- **Smoke-test is the oracle**: do not declare a module "fine" without actually deploying + smoke-testing. Eval-passing ≠ runtime-passing (the post-mortem incident proved this).
-- **Operator authority**: the bisect candidate ordering is a heuristic, not a mandate. If the operator has stronger priors, follow theirs.
-- **No silent assumptions**: if the failure does not match any common pattern in step 4, say so. Do not guess.
+- **Investigate before acting**: Read the error, read the code, form a hypothesis, then act.
+- **Minimal fixes**: Fix what's broken. Don't refactor, don't improve, don't clean up.
+- **Operator authority**: Present findings and proposed fixes. Let the operator decide on non-obvious choices.
+- **No silent assumptions**: If the failure is ambiguous, say so. Don't guess.
+- **Preserve history**: Fixes are new commits, not amends.
