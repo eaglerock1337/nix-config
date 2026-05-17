@@ -24,6 +24,7 @@ A physical Raspberry Pi managed by this repo.
 | `usbDevice0` / `usbDevice1` | `/dev/disk/by-id/...` | The two USB drives that form the RAID1 mirror. |
 | `nvmeDevice` | `/dev/disk/by-id/...` \| null | NVMe drive identifier; null on Pi 4 nodes. |
 | `bootEepromBootOrder` | hex (e.g. `0xf14`) | EEPROM `BOOT_ORDER` value. Set once via `rpi-eeprom-config` during SD baseline. |
+| `rescueIp` | IPv4 | Static IP for initrd dropbear SSH rescue shell (`hlc.rescueIp` option). Should match the node's DHCP reservation so the operator can reach the rescue shell at the expected address. |
 
 **Lifecycle**:
 

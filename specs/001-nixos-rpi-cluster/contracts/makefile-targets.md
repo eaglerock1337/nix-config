@@ -179,6 +179,50 @@ Single-node `nixos-rebuild --rollback --target-host`. Wraps `sudo nixos-rebuild 
 **Post-conditions**: Previous generation active on the target.
 **Failure mode**: Non-zero. NixOS boot-generation rollback at the console is always available as a final fallback.
 
+### Added Phase 5 (US3) — disaster recovery operations
+
+These targets support the initrd rescue shell (dropbear SSH as `root@`) and the `hlc-recover` script available in the initrd when RAID fails to assemble.
+
+#### `make provision-backup-boot HOST=<host>`
+
+Backup SD firmware partition contents before `provision-stage2` overwrites them with provisioned NixOS boot files. Creates `.bootstrap-backup.tar.gz` on the firmware partition, enabling `hlc-recover sd-boot` in the initrd rescue shell without requiring a full SD reflash.
+
+**Pre-conditions**: `provision-mount` has run (firmware partition mounted at `/mnt/boot/firmware`).
+**Post-conditions**: `.bootstrap-backup.tar.gz` exists on the firmware partition.
+**Failure mode**: Non-zero exit if firmware partition not mounted or tar fails.
+
+#### `make recover-status HOST=<host>`
+
+Query initrd rescue node state. Connects as `root@<HOST>.<DOMAIN>` (dropbear SSH in initrd) and runs `hlc-recover status` which reports block devices, blkid, RAID state, and mount points.
+
+**Pre-conditions**: Node is in initrd rescue mode (RAID failed to assemble; dropbear running).
+**Post-conditions**: Status output printed to operator console.
+**Failure mode**: Non-zero exit if SSH connection fails (node may not be in rescue mode).
+
+#### `make recover-wipe HOST=<host>`
+
+Wipe RAID on an initrd rescue node. Prompts for confirmation, then connects as `root@` and runs `hlc-recover wipe -y` (stops arrays, zeros superblocks, wipefs, sgdisk on all `/dev/sd?` devices).
+
+**Pre-conditions**: Node is in initrd rescue mode.
+**Post-conditions**: USB drives fully wiped; ready for reprovisioning.
+**Failure mode**: Non-zero exit on SSH failure. Operator confirmation gate prevents accidental execution.
+
+#### `make recover-sd-boot HOST=<host>`
+
+Restore SD bootstrap boot files on an initrd rescue node. Connects as `root@` and runs `hlc-recover sd-boot` which extracts the `.bootstrap-backup.tar.gz` created by `provision-backup-boot` onto the firmware partition, restoring the original SD bootstrap kernel/initrd.
+
+**Pre-conditions**: Node is in initrd rescue mode; `.bootstrap-backup.tar.gz` exists on firmware partition.
+**Post-conditions**: SD card firmware partition contains original bootstrap boot files; `reboot -f` will boot into SD bootstrap.
+**Failure mode**: Non-zero exit if backup tarball not found (node provisioned before backup feature; requires full SD reflash).
+
+#### `make recover HOST=<host>`
+
+Full recovery cycle for a node stuck in initrd rescue. Composite: wipe RAID → restore SD boot → reboot → wait for SD bootstrap → provision (full two-phase flow). Prompts for confirmation before starting.
+
+**Pre-conditions**: Node is in initrd rescue mode (dropbear SSH reachable as `root@`).
+**Post-conditions**: Node fully reprovisioned (same as `make provision` post-conditions).
+**Failure mode**: Non-zero exit at any stage. Partial progress is safe — operator can resume at the appropriate step manually.
+
 ## Out of scope (future cluster-operations automation spec)
 
 These targets are explicitly **not** added by this spec:

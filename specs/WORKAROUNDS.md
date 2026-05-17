@@ -83,6 +83,18 @@ listed below under a separate header, also in numerical order.
 
 ---
 
+### W-013: `provision-stage1` failure tolerated in composite `make provision`
+
+- **Site(s)**: `Makefile` — `provision` composite target; uses `-$(MAKE) provision-stage1` (leading `-` ignores exit code)
+- **Deviates from**: Strict fail-fast provisioning (all stages must succeed in sequence)
+- **Reason**: When a node is being reprovisioned or the RAID was previously assembled (e.g. from a prior partial provision attempt), `provision-stage1` (disko) may fail because the array is already assembled or the `check_raid_clear` pre-flight sees existing RAID. Subsequent steps (`provision-mount`, `provision-backup-boot`, `provision-stage2`) handle the already-mounted state gracefully. Ignoring stage1 failure allows the composite to continue where the RAID is intact but nixos-install needs to run.
+- **Exit condition**: Refine `provision-stage1` to distinguish recoverable states (RAID already assembled = skip gracefully) from genuine failures (disko format error = abort). Replace `-$(MAKE)` with explicit state detection.
+- **Target phase / feature**: Phase 8 polish or follow-on ops automation spec.
+- **Opened**: 2026-05-16
+- **Resolved**: (open)
+
+---
+
 ## Resolved Workarounds
 
 ### W-004: `pam_systemd` disabled for sshd in bootstrap image

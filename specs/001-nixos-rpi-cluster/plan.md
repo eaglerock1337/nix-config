@@ -7,7 +7,7 @@
 
 Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS using the `nvmd/nixos-raspberrypi` fork, with a three-scope layered module structure, full-disk provisioning via `nixos-anywhere`/`disko`, operator shell UX (MOTD, PS1, toolbox, home-manager), and k3s OS-level prerequisites installed. Cluster bootstrap is out of scope. The implementation is sequenced as 8 phases (Phase 1–8, matching tasks.md numbering), each gated by `make smoke-test` on a canary node before any fleet roll.
 
-**Status**: Phases 1–5 complete (Phase 5 being reworked for two-phase provision per FR-012 amendment 2026-05-13). Phases 6–8 pending.
+**Status**: Phases 1–4 complete. Phase 5 in progress: 6/9 work-set nodes provisioned (hlc-501, 502, 504, 505, 506, 508); hlc-401 testing outstanding; hlc-503 debugging needed; hlc-507 hardware issue (DECOM). DR infrastructure (hlc-recover, backup-boot, recovery targets) complete. Closure sizes verified (provision 2.5 GB, full 3.5 GB). Phases 6–8 pending.
 
 ---
 
@@ -338,12 +338,16 @@ Implementation requires:
 6. Update `modules/cluster/hlc/default.nix` — import `options.nix`, remove inline option declarations.
 7. Update all 12 host configs — accept `clusterModule` parameter with default.
 8. Update `flake.nix` — add `mkHlcProvision` builder and `<host>-provision` outputs.
-9. Add Makefile targets: `provision` (two-phase composite), `provision-stage{1,2,3}`, `provision-mount`, `provision-reinstall` (RAID-retry for failed stage2), `update-node`, `rollback`, `reprovision` (per contracts/makefile-targets.md).
+9. Add Makefile targets: `provision` (two-phase composite), `provision-stage{1,2,3}`, `provision-mount`, `provision-backup-boot`, `provision-reinstall` (RAID-retry for failed stage2), `update-node`, `rollback`, `reprovision` (per contracts/makefile-targets.md).
 10. Verify closure sizes: `nix path-info -Sh` on both `hlc-501` and `hlc-501-provision` — provision should be significantly smaller.
-11. Provision `hlc-501`: `make provision HOST=hlc-501`. Verify: stage2 completes without timeout, mid-provision smoke-test green (clears stale SSH keys), stage3 pushes full config, final smoke-test green.
-12. Recovery test (FR-011, SC-005): power down `hlc-501`, detach USB drives, power on. SD recovery boots; SSH in, run `mdadm --examine`. Re-attach USB drives, normal boot resumes.
-13. Provision remaining work-set serially: `make provision HOST=<host>` for `hlc-502..508`, then `hlc-401`. Smoke-test after each.
-14. `hlc-401` provisioning validates Pi 4 path: `/srv` absent without error.
+11. Create `hlc-recover-script.nix` (DR-002): ash-compatible POSIX sh recovery tool injected into the initrd via `boot.initrd.extraUtilsCommands`. Provides guided recovery commands (`status`, `mount`, `umount`, `raid-boot`, `wipe`, `sd-boot`) in the dropbear rescue shell.
+12. Add `provision-backup-boot` step (DR-002): before `provision-stage2`, tar existing SD bootstrap boot files to `/boot/firmware/.bootstrap-backup.tar.gz` so `hlc-recover sd-boot` can restore them without a full SD reflash.
+13. Add FAT32 kernel modules to initrd (`vfat`, `fat`, `nls_cp437`, `nls_iso8859_1`): required for `hlc-recover raid-boot` and `hlc-recover sd-boot` to mount the firmware partition in the rescue shell. Without these, `mount /dev/mmcblk0p1` fails with "wrong fs type, missing codepage" (discovered 2026-05-16 on hlc-501).
+14. Add recovery Makefile targets: `recover`, `recover-status`, `recover-wipe`, `recover-sd-boot` for operator-driven recovery from the initrd rescue shell (per contracts/makefile-targets.md).
+15. Provision `hlc-501`: `make provision HOST=hlc-501`. Verify: stage2 completes without timeout, mid-provision smoke-test green (clears stale SSH keys), stage3 pushes full config, final smoke-test green.
+16. Recovery test (FR-011, SC-005): power down `hlc-501`, detach USB drives, power on. SD recovery boots; `make recover-status HOST=hlc-501` shows rescue state; `hlc-recover` available in dropbear shell. Re-attach USB drives, normal boot resumes.
+17. Provision remaining work-set serially: `make provision HOST=<host>` for `hlc-502..508`, then `hlc-401`. Smoke-test after each.
+18. `hlc-401` provisioning validates Pi 4 path: `/srv` absent without error.
 
 **Phase exit gate**: All 9 work-set nodes provisioned via two-phase flow. SC-005 verified for at least one Pi 5 and `hlc-401`. Closure size comparison documented. Tag `phase5-provisioned`.
 

@@ -28,6 +28,8 @@ endef
 
 # Abort if root filesystem is on md OR any md array is assembled.
 # Uses output comparison — SSH failure (empty output) also aborts (fail-safe).
+# Exit code 2: distinguishes "provisioned node" refusal from disko failures (exit 1).
+# The composite `provision` target tolerates exit 1 (W-013) but aborts on exit 2.
 define check_raid_clear
 	@echo "==> pre-flight: checking $(HOST) has no RAID (root device or assembled array)"
 	@raid_status=$$(ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
@@ -37,7 +39,7 @@ define check_raid_clear
 	if [ "$$raid_status" != "CLEAR" ]; then \
 		echo "ERROR: $(HOST) has active RAID or md root filesystem — live provisioned node detected."; \
 		echo "       Boot from SD card before provisioning, or use 'make rollback HOST=$(HOST)'."; \
-		exit 1; \
+		exit 2; \
 	fi
 endef
 
@@ -148,9 +150,12 @@ endif
 # DR-002: backup-boot saves SD bootstrap files before stage2 overwrites them,
 # enabling hlc-recover sd-boot in initrd rescue without reflashing.
 provision:
-	# W-013: stage1 (disko) may fail when RAID is already assembled; subsequent
-	# steps (mount, backup-boot, stage2) handle the mounted state gracefully.
-	-$(MAKE) provision-stage1 HOST=$(HOST)
+	# W-013: stage1 (disko) may fail with exit 1 when RAID is already assembled;
+	# subsequent steps handle the mounted state gracefully. Exit 2 = provisioned
+	# node refusal (FR-013 idempotency) — must abort.
+	@$(MAKE) provision-stage1 HOST=$(HOST); rc=$$?; \
+	if [ $$rc -eq 2 ]; then exit 2; \
+	elif [ $$rc -ne 0 ]; then echo "WARNING: provision-stage1 exited $$rc (continuing per W-013)"; fi
 	$(MAKE) provision-mount HOST=$(HOST)
 	$(MAKE) provision-backup-boot HOST=$(HOST)
 	$(MAKE) provision-stage2 HOST=$(HOST)
