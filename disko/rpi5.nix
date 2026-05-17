@@ -70,6 +70,7 @@
       usb-raid = {
         type = "mdadm";
         level = 1;
+        extraArgs = [ "--assume-clean" ];
         content = {
           type = "gpt";
           partitions = {
