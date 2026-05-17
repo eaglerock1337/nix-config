@@ -145,7 +145,7 @@
 - [ ] T055 [US3] Provision `hlc-507`: `make provision HOST=hlc-507`. Run `make smoke-test HOST=hlc-507`. **Note**: hlc-507 currently in `DECOM_HOSTS` (hardware issue as of 2026-05-08); skip and return once resolved.
 - [X] T056 [US3] Provision `hlc-508`: `make provision HOST=hlc-508`. Run `make smoke-test HOST=hlc-508`. **Confirmed 2026-05-17**.
 - [X] T057 [US3] Fill real device IDs for `hlc-401` in `hosts/hlc-401/configuration.nix`. Pi 4: USB drives only; `hlc.disko.nvmeDevice = null`.
-- [ ] T058 [US3] Provision `hlc-401` (Pi 4): `make provision HOST=hlc-401`. After reboot, verify `/srv` does NOT exist (absent without error, FR-010). Verify `/` on mdadm array. Run `make smoke-test HOST=hlc-401` — green.
+- [X] T058 [US3] Provision `hlc-401` (Pi 4): `make provision HOST=hlc-401`. After reboot, verify `/srv` does NOT exist (absent without error, FR-010). Verify `/` on mdadm array. Run `make smoke-test HOST=hlc-401` — green.
 - [ ] T059 [US3] Commit all device-ID updates and provisioning-validated configs. Tag `phase5-provisioned`. **Exception**: hlc-507 (`DECOM_HOSTS`, hardware issue) excluded from this tag. hlc-503 requires debugging (not decommissioned). hlc-401 testing outstanding. Tag is valid once hlc-401 and hlc-503 are provisioned; hlc-507 provisioned when hardware issue resolves.
 
 **Checkpoint**: US3 complete. All available work-set nodes provisioned via two-phase flow. SC-005 verified. Closure size comparison documented. Nodes in `DECOM_HOSTS` provisioned once hardware issues resolve.
