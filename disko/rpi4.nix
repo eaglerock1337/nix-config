@@ -1,13 +1,8 @@
 { config, ... }:
-# Disko schema for Raspberry Pi 4 cluster nodes (T029)
+# Disko schema for Raspberry Pi 4 cluster nodes
 # Layout:
 #   /boot/firmware  — SD card vfat (mmcblk0p1); declared in modules/hardware/rpi4.nix
 #   /               — mdadm RAID1 across two USB drives, ext4 (full array, ~28.6 GiB)
-#
-# No NVMe on Pi 4 — /srv/ssd mount is absent (FR-010, FR-014).
-# Device paths are set per-host in hosts/hlc-4NN/configuration.nix via hlc.disko.*
-# options. Fill in real /dev/disk/by-path/ paths before running `make provision`.
-# USB: confirm Pi 4 by-path patterns via `ls -la /dev/disk/by-path/ | grep us` on hlc-401.
 {
   disko.devices = {
     disk = {
@@ -53,7 +48,6 @@
           type = "gpt";
           partitions = {
             root = {
-              # USB drives are ~28.6 GiB; single partition uses full array
               size = "100%";
               content = {
                 type = "filesystem";

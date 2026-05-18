@@ -60,6 +60,8 @@
     };
   };
 
-  # Pi 4 thermal: passive heatsink; 1750 MHz overclock validated (R-012)
-  # No nvme dtparam on Pi 4 — no M.2 HAT / PCIe lane on this variant.
+  # Pi 4 class-level disko device defaults (same SoC addresses across all Pi 4 units)
+  hlc.disko.usbDevice0 = lib.mkDefault "/dev/disk/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usbv3-0:2:1.0-scsi-0:0:0:0";
+  hlc.disko.usbDevice1 = lib.mkDefault "/dev/disk/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usbv3-0:1:1.0-scsi-0:0:0:0";
+  hlc.disko.nvmeDevice = lib.mkDefault null;
 }

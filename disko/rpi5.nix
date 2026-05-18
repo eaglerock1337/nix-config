@@ -1,16 +1,9 @@
 { config, lib, ... }:
-# Disko schema for Raspberry Pi 5 cluster nodes (T028)
+# Disko schema for Raspberry Pi 5 cluster nodes
 # Layout:
 #   /boot/firmware  — SD card vfat (mmcblk0p1); declared in modules/hardware/rpi5.nix
 #   /               — mdadm RAID1 across two USB drives, ext4 (full array, ~28.6 GiB)
 #   /srv            — NVMe xfs (Pi 5 M.2 HAT); omitted when nvmeDevice is null
-#
-# Device paths are set per-host in hosts/hlc-5NN/configuration.nix via hlc.disko.*
-# options. Fill in real /dev/disk/by-path/ paths before running `make provision`.
-# USB (identical across all Pi 5 nodes — fixed SoC addresses, FR-010a):
-#   left (a-drive):  platform-xhci-hcd.0-usb-0:1:1.0-scsi-0:0:0:0
-#   right (b-drive): platform-xhci-hcd.1-usb-0:1:1.0-scsi-0:0:0:0
-# NVMe: /dev/nvme0n1 (only one NVMe slot per Pi 5; no ambiguity)
 {
   disko.devices = {
     disk = {
@@ -74,7 +67,6 @@
           type = "gpt";
           partitions = {
             root = {
-              # USB drives are ~28.6 GiB; single partition uses full array
               size = "100%";
               content = {
                 type = "filesystem";

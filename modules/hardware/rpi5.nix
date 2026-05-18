@@ -58,7 +58,8 @@
     };
   };
 
-  # Pi 5 thermal: stock 2.4 GHz, official Active Cooler, kernel-controlled fan curve (R-012)
-  # No overclock — Pi 5 silicon sensitive to overvoltage; workload is not CPU-bound.
-  # Fan is controlled via kernel thermal trip points; no config.txt override needed.
+  # Pi 5 class-level disko device defaults (same SoC addresses across all Pi 5 units)
+  hlc.disko.usbDevice0 = lib.mkDefault "/dev/disk/by-path/platform-xhci-hcd.0-usb-0:1:1.0-scsi-0:0:0:0";
+  hlc.disko.usbDevice1 = lib.mkDefault "/dev/disk/by-path/platform-xhci-hcd.1-usb-0:1:1.0-scsi-0:0:0:0";
+  hlc.disko.nvmeDevice = lib.mkDefault "/dev/nvme0n1";
 }
