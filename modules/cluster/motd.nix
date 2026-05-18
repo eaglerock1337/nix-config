@@ -6,6 +6,10 @@
 
 let
   cfg = config.cluster.motd;
+  esc = builtins.fromJSON ''"\u001b"'';
+  teal = "${esc}[38;5;109m";
+  gold = "${esc}[38;5;214m";
+  reset = "${esc}[0m";
 in {
   options.cluster.motd = {
     banner = lib.mkOption {
@@ -35,7 +39,7 @@ in {
 
       ${cfg.banner}
 
-            Cluster node: ${config.networking.fqdn}
+            ${teal}Cluster node${gold}:${reset} ${esc}[38;5;15m${config.networking.fqdn}${reset}
 
       ${cfg.quote}
     '';

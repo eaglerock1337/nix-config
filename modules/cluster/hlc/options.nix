@@ -7,7 +7,7 @@
   options.hlc = {
     prompt.glyph = lib.mkOption {
       type = lib.types.str;
-      default = "☁️🏔️☁️";
+      default = "☁️ 🏔️ ☁️";
       description = ''
         Full HLC PS1 glyph sequence. Default is emoji-presentation (U+FE0F
         selectors): cloud + snow-capped mountain + cloud. Per-host fallback

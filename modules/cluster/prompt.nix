@@ -12,31 +12,21 @@ in {
       type = lib.types.str;
       default = "-";
       description = ''
-        Central decoration shown between user@host and cwd in the remote PS1, and
-        substituting silicon's `////` separator in the local PS1. Defaults to a
-        generic dash; each cluster (HLC, Ecto-1, ...) overrides with its own glyph
-        in `modules/cluster/<name>/default.nix`.
+        Central decoration shown between user@host and cwd in the PS1. Defaults to
+        a generic dash; each cluster (HLC, Ecto-1, ...) overrides with its own
+        glyph in `modules/cluster/<name>/default.nix`.
       '';
     };
   };
 
   config = {
-    # PS1 emitted via /etc/profile.d so login shells (including non-PTY SSH command
-    # execution) pick it up. Cluster nodes do not import the workstation
-    # `programs.bash.promptInit`, so this file is the sole PS1 source.
-    environment.etc."profile.d/cluster-prompt.sh".text = ''
+    # PS1 set via promptInit so it runs at the correct point in bash
+    # initialization. profile.d scripts are sourced before promptInit, so
+    # the NixOS default PS1 would overwrite a profile.d-based approach.
+    programs.bash.promptInit = ''
       # Cluster PS1 (generated from modules/cluster/prompt.nix)
-
-      if [ -n "$SSH_CONNECTION" ]; then
-        # Remote form: two-line box-drawing, no color, FQDN.
-        # \H = FQDN, \u = user, \w = cwd. Bold only on box-drawing glyphs.
-        PS1='\[\e[1m\]┌─╸\[\e[0m\]\u@\H ${cfg.glyph} [\w]\n\[\e[1m\]└──╸\[\e[0m\]\$ '
-      else
-        # Local form: Gruvbox neutral blue path + cluster glyph (rarely seen —
-        # cluster nodes are headless, this only fires on serial / direct login).
-        PS1='\[\e[38;5;67m\]\w\[\e[0m\] ${cfg.glyph} \$ '
-      fi
-      export PS1
+      # 256-color Gruvbox palette: 109=teal, 214=gold, 142=green, 15=bright white
+      PS1='\[\e[38;5;109m\]┌─╸\[\e[38;5;214m\]\u\[\e[38;5;15m\]@\[\e[38;5;214m\]\H\[\e[0m\] ${cfg.glyph} \[\e[38;5;109m\][\[\e[38;5;142m\]\w\[\e[38;5;109m\]]\[\e[0m\]\n\[\e[38;5;109m\]└──╸\[\e[38;5;15m\]\$\[\e[0m\] '
     '';
   };
 }

@@ -154,9 +154,9 @@
 
 ## Phase 6: User Story 4 — Operator UX (Priority: P4)
 
-**Goal**: HLC MOTD, two-form PS1, sysadmin toolbox, modular home-manager, SSH hardening — live across all work-set nodes. W-001 and W-003 closed.
+**Goal**: HLC MOTD (Gruvbox-colorized), unified PS1 (Gruvbox 256-color), sysadmin toolbox, modular home-manager, SSH hardening — live across all work-set nodes. W-001 and W-003 closed.
 
-**Independent Test**: SSH as `bob@hlc-501` → HLC MOTD (banner + `Cluster node: hlc-501.marks.dev` + Bob Ross quote), remote PS1 (`┌─╸bob@hlc-501.marks.dev ☁⛰︎☁ [~]` / `└──╸$`), all toolbox commands on `$PATH`. SSH as `eaglerock@silicon` → same toolbox, no HLC MOTD, workstation PS1 unaffected.
+**Independent Test**: SSH as `bob@hlc-501` → Gruvbox-colorized HLC MOTD (banner + `Cluster node: hlc-501.marks.dev` + Bob Ross quote), Gruvbox PS1 (`┌─╸bob@hlc-501 ☁️ 🏔️ ☁️ [~]` / `└──╸$`), all toolbox commands on `$PATH`. SSH as `eaglerock@silicon` → same toolbox, no HLC MOTD, workstation PS1 unaffected.
 
 **Module layout** (per spec Session 2026-05-11 Q16–Q19):
 
@@ -179,14 +179,13 @@
 
 ### Create Cluster-Tier Mechanism Modules
 
-- [X] T062 [P] [US4] Create `modules/cluster/prompt.nix`: generic cluster-tier PS1 mechanism (no cluster-specific glyph fallback options at this tier — those belong in the cluster's own scope, e.g. HLC sets `hlc.prompt.glyph`). Define option:
-  - `cluster.prompt.glyph` (string, default = `"-"`) — central decoration between user@host and cwd in the remote prompt. Generic fallback (dash); each cluster overrides in its `modules/cluster/<name>/default.nix`.
-  Generate `/etc/profile.d/cluster-prompt.sh` via `environment.etc."profile.d/cluster-prompt.sh".text`. The script sets `PS1` based on `$SSH_CONNECTION`:
-  - **Remote form** (SSH; `$SSH_CONNECTION` non-empty): `PS1='\e[1m┌─╸\e[0m\u@\H ${cfg.glyph} [\w]\n\e[1m└──╸\e[0m\$ '`. No `\033[...m` color codes. Bold (`\e[1m`) on box-drawing glyphs only. `\H` expands to FQDN **only if** the kernel hostname is fully-qualified — verify at T075 via `hostname -f`; if `\H` returns only the short name (kernel hostname unqualified despite `networking.domain` set), substitute `$(hostname -f)` via shell subshell in the PS1 string.
-  - **Local form** (`$SSH_CONNECTION` empty): same color escapes as silicon's existing prompt but with `${cfg.glyph}` substituting `////` at the end: `PS1='\[<gruvbox-path-color>\]\w\[\033[0m\] ${cfg.glyph} \$ '`. Read actual color codes from silicon's existing `programs.bash.promptInit` (in `modules/hosts/common.nix` today, moved to `modules/hosts/workstation.nix` per T070).
-- [X] T063 [P] [US4] Create `modules/cluster/motd.nix`: cluster-tier MOTD mechanism. Define options under `cluster.motd`:
-  - `cluster.motd.banner` (string, no default) — ASCII banner shown at SSH login; per-cluster value.
-  - `cluster.motd.quote` (string, no default) — short quote/tagline shown after the hostname line.
+- [X] T062 [P] [US4] Create `modules/cluster/prompt.nix`: generic cluster-tier PS1 mechanism. Define option:
+  - `cluster.prompt.glyph` (string, default = `"-"`) — central decoration between user@host and cwd. Generic fallback (dash); each cluster overrides in its `modules/cluster/<name>/default.nix`.
+  Single unified PS1 (no local/remote distinction) set via `programs.bash.promptInit` (not profile.d — NixOS default promptInit overwrites profile.d scripts). Two-line box-drawing with Gruvbox 256-color palette (109=teal on box-drawing/brackets, 214=gold on user/hostname, 142=green on cwd, 15=bright white on `@`/`$`): `PS1='┌─╸\u@\H <glyph> [\w]\n└──╸\$ '`. `\H` returns short hostname (accepted).
+- [X] T063 [P] [US4] Create `modules/cluster/motd.nix`: cluster-tier MOTD mechanism with Gruvbox 256-color styling. Define options under `cluster.motd`:
+  - `cluster.motd.banner` (string, no default) — styled ASCII banner shown at SSH login; per-cluster value (HLC: gold borders, teal ASCII art, green "Happy Little Cloud", red "Bob Ross").
+  - `cluster.motd.quote` (string, no default) — styled quote/tagline shown after the hostname line.
+  ANSI escape bytes embedded via `builtins.fromJSON ''"\u001b"''` (single backslash — Nix indented strings treat `\` as literal). `Cluster node:` line: teal label, gold colon, bright white FQDN. `services.openssh.settings.PrintMotd = true`. Written to `/etc/motd` via `environment.etc."motd".text`.
   Generate `environment.etc."motd".text = "${config.cluster.motd.banner}\nCluster node: ${config.networking.fqdn}\n${config.cluster.motd.quote}\n"`. Set `services.openssh.settings.PrintMotd = true` (or NixOS-appropriate option). This module is generic — HLC values are set in `modules/cluster/hlc/default.nix` (T072).
 
 ### Create Option-Driven Operator Module
@@ -247,8 +246,8 @@
 ### Canary Deploy + Validation
 
 - [X] T074 [US4] **[BUNDLE-CANARY]** Deploy operator-UX bundle to `hlc-501`: `make update-node HOST=hlc-501`. Then `make smoke-test HOST=hlc-501`. **On smoke-test fail**: `make rollback HOST=hlc-501`, then run `/speckit-debug` skill — comment-out imports in `modules/cluster/common.nix` one at a time, `make update-node HOST=hlc-501`, `make smoke-test HOST=hlc-501`, repeat to isolate the breaking module. Fix, then resume.
-- [ ] T075 [US4] Validate PS1 on `hlc-501`: (a) `ssh bob@hlc-501` from `TERM=xterm-256color` terminal — observe two-line box-drawing remote PS1 with `☁️🏔️☁️` (emoji presentation by default); (b) `ssh -o "SendEnv TERM" bob@hlc-501` with `TERM=xterm` — remote PS1 still legible. Confirm glyph renders cleanly without breaking column alignment. If emoji renders broken (mojibake, missing glyphs, mis-aligned spacing) on this host's typical client, set `hlc.prompt.glyph = "☁⛰︎☁"` (text-presentation fallback) in `hosts/hlc-501/configuration.nix`, rebuild, redeploy.
-- [X] T076 [US4] Validate MOTD on `hlc-501`: `ssh bob@hlc-501` — observe HLC ASCII banner, then `Cluster node: hlc-501.marks.dev`, then Bob Ross quote. Verify hostname is dynamic (not hardcoded).
+- [X] T075 [US4] Validate PS1 on `hlc-501`: `ssh bob@hlc-501` — observe unified two-line Gruvbox-colorized PS1 with `☁️ 🏔️ ☁️` glyph, teal box-drawing, gold user/hostname, green cwd, bright white `@`/`$`. Short hostname (`bob@hlc-501`) confirmed and accepted. Glyph spacing tuned (spaces between emoji). Set via `programs.bash.promptInit` to avoid NixOS default overwrite.
+- [X] T076 [US4] Validate MOTD on `hlc-501`: `ssh bob@hlc-501` — observe Gruvbox-colorized HLC ASCII banner (gold borders, teal art, green "Happy Little Cloud", red "Bob Ross"), then `Cluster node: hlc-501.marks.dev` (teal label, bright white hostname), then colored Bob Ross quote. ANSI escapes via `builtins.fromJSON ''"\u001b"''` (single backslash). Verify hostname is dynamic (not hardcoded).
 - [X] T077 [US4] Validate toolbox on `hlc-501`: `ssh bob@hlc-501 "which bat curl dig fd fzf git htop ip jq k9s kubectl helm lsof mdadm ncdu nc parted lspci rg rsync strace tcpdump tmux tree lsusb vim wget"` — all MUST resolve.
 - [X] T078 [US4] Validate SSH hardening on `hlc-501`: `ssh -o PreferredAuthentications=password bob@hlc-501` MUST be rejected. Key-based login MUST still work.
 

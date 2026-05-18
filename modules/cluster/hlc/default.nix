@@ -1,4 +1,12 @@
-{ config, lib, operatorPubkeys, ... }: {
+{ config, lib, operatorPubkeys, ... }:
+let
+  esc = builtins.fromJSON ''"\u001b"'';
+  gold = "${esc}[38;5;214m";
+  teal = "${esc}[38;5;109m";
+  green = "${esc}[38;5;142m";
+  red = "${esc}[38;5;167m";
+  reset = "${esc}[0m";
+in {
   imports = [
     ./options.nix
     ../common.nix
@@ -14,10 +22,22 @@
     nix.settings.trusted-users = [ "root" "bob" ];
 
     # HLC MOTD content (cluster.motd mechanism in modules/cluster/motd.nix).
-    # Banner + quote sourced verbatim from sibling .txt files so the displayed
-    # indent is preserved (Nix `''` indent-stripping would otherwise flatten it).
-    cluster.motd.banner = builtins.readFile ./motd-banner.txt;
-    cluster.motd.quote = builtins.readFile ./motd-quote.txt;
+    # Colored inline — 256-color Gruvbox palette.
+    cluster.motd.banner = builtins.concatStringsSep "\n" [
+      "${gold}  ##########################################${reset}"
+      "${gold}  #${teal}             __  ____    ______         ${gold}#${reset}"
+      "${gold}  #${teal}            / / / / /   / ____/         ${gold}#${reset}"
+      "${gold}  #${teal}           / /_/ / /   / /              ${gold}#${reset}"
+      "${gold}  #${teal}          / __  / /___/ /___            ${gold}#${reset}"
+      "${gold}  #${teal}         /_/ /_/_____/\\____/            ${gold}#${reset}"
+      "${gold}  #                                        #${reset}"
+      "${gold}  #          \"${green}Happy Little Cloud${gold}\"          #${reset}"
+      "${gold}  #                                        #${reset}"
+      "${gold}  ##########################################${reset}"
+    ];
+    cluster.motd.quote = ''
+      ${gold}  "${teal}Let's build just a happy little cloud.${gold}"${reset}
+                                        ${gold}~${reset} ${red}Bob Ross${reset}'';
 
     # Wire HLC glyph into the generic cluster prompt mechanism
     cluster.prompt.glyph = config.hlc.prompt.glyph;
