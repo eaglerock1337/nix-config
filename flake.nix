@@ -9,7 +9,7 @@
     disko.url = "github:nix-community/disko";
     disko.inputs.nixpkgs.follows = "nixpkgs";
     nixos-anywhere.url = "github:nix-community/nixos-anywhere";
-    # T012: sops-nix deferred per W-002; input added now for flake hygiene
+    # sops-nix deferred per W-002; input added now for flake hygiene
     sops-nix.url = "github:Mic92/sops-nix";
     sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -34,7 +34,7 @@
       };
     };
 
-    # Thin mkHlcNode wrapper — provisioned nixosConfiguration for a cluster node.
+    # mkHlcNode — provisioned nixosConfiguration for a cluster node.
     # SD bootstrap images are separate derivations built by mkHlcBootstrap below.
     mkHlcNode = { hostPath, extraModules ? [] }:
       # Using nixos-raspberrypi.lib.nixosSystem so nvmd's overlays (vendor kernel,
@@ -58,7 +58,7 @@
         ] ++ extraModules;
       };
 
-    # Provision — minimal builder — small closure for nixos-anywhere stage2.
+    # mkHlcProvision — small closure for nixos-anywhere stage2.
     # No home-manager; passes clusterModule = provision.nix via specialArgs so the
     # host config imports the minimal cluster module instead of the full one.
     mkHlcProvision = { hostPath, extraModules ? [] }:
