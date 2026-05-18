@@ -3,7 +3,7 @@
     ../hosts/common.nix
     ./motd.nix
     ./prompt.nix
-    # TODO Phase 7: import ../k8s/prereqs.nix
+    ../k8s/prereqs.nix
   ];
 
   networking.domain = lib.mkDefault "marks.dev";
