@@ -71,6 +71,42 @@ listed below under a separate header, also in numerical order.
 
 ---
 
+### W-014: Alacritty does not render color emoji in PS1 glyph
+
+- **Site(s)**: `modules/cluster/prompt.nix` — PS1 glyph `☁️🏔️☁️`; `modules/hosts/desktop-ui.nix` — `noto-fonts-color-emoji` installed as fallback font
+- **Deviates from**: FR-017 (PS1 glyph MUST render correctly with selected presentation strategy)
+- **Reason**: Alacritty uses a GPU-based text rendering pipeline that does not support color bitmap emoji fonts (e.g. Noto Color Emoji). The emoji font is installed and fontconfig falls back to it, but Alacritty ignores the color layer. Gibson (Ubuntu Mono) renders correctly; silicon (Alacritty + Fira Code) does not. The glyph renders as monochrome/missing rather than full-color emoji.
+- **Exit condition**: Either (a) switch silicon's terminal emulator to one with color emoji support (kitty, wezterm, foot), or (b) Alacritty gains color emoji support upstream, or (c) replace emoji glyph with Nerd Font symbols that Alacritty renders natively.
+- **Target phase / feature**: Follow-on terminal/UX polish.
+- **Opened**: 2026-05-17
+- **Resolved**: (open)
+
+---
+
+### W-015: hlc-503 not provisioned (defective USB controller)
+
+- **Site(s)**: `Makefile` — hlc-503 in `DECOM_HOSTS`; `tasks.md` T051 unchecked; `hosts/hlc-503/configuration.nix` exists (dry-run passes) but node not physically provisioned.
+- **Deviates from**: Spec scope — 9 in-scope nodes (`hlc-401`, `hlc-501..508`) all physically provisioned.
+- **Reason**: USB 3.0 controller negotiates at 5 Gbps but delivers ~350 KB/s sustained writes. Confirmed via dd stress test, drive swap to known-good node, PSU/thermal/EEPROM ruled out. Board-level defect. Provisioning via USB RAID is not viable at this throughput.
+- **Exit condition**: Replace Pi 5 board or repurpose hlc-503 for SD-only workloads outside the RAID-provisioned fleet. Remove from `DECOM_HOSTS` and run `make provision HOST=hlc-503` once hardware is resolved.
+- **Target phase / feature**: Follow-on hardware replacement. May resolve before or after PR merge.
+- **Opened**: 2026-05-17
+- **Resolved**: (open)
+
+---
+
+### W-016: hlc-507 not provisioned (hardware issue)
+
+- **Site(s)**: `Makefile` — hlc-507 in `DECOM_HOSTS`; `tasks.md` T055/T084 unchecked; `hosts/hlc-507/configuration.nix` exists (dry-run passes) but node not physically provisioned.
+- **Deviates from**: Spec scope — 9 in-scope nodes (`hlc-401`, `hlc-501..508`) all physically provisioned.
+- **Reason**: Hardware issue identified 2026-05-08. Node added to `DECOM_HOSTS`; Makefile refuses update-node/provision operations.
+- **Exit condition**: Diagnose and repair hardware issue, or replace board. Remove from `DECOM_HOSTS` and run `make provision HOST=hlc-507` once hardware is resolved.
+- **Target phase / feature**: Follow-on hardware replacement. May resolve before or after PR merge.
+- **Opened**: 2026-05-17
+- **Resolved**: (open)
+
+---
+
 ## Resolved Workarounds
 
 ### W-001: Inline minimal host configs (defers Principle III)
