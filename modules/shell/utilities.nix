@@ -21,6 +21,7 @@
     yq              # YAML processor
     sd              # Intuitive sed replacement
     git             # Version control
+    gnumake         # GNU Make (Makefile-driven workflows)
     busybox         # Compact utility shell
     killall         # Kill processes by name
 
