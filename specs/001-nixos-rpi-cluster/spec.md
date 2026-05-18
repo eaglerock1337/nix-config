@@ -61,9 +61,9 @@ After a node is reachable on the SD baseline, the operator runs `nixos-anywhere`
 
 ### User Story 4 — Consistent Operator Shell Environment Across All Managed Systems (Priority: P4)
 
-When the operator SSHes into any managed NixOS system (silicon today; the 9 cluster nodes after this spec), they land in a familiar bash environment: a styled PS1 that distinguishes local-vs-remote sessions, a curated sysadmin toolbox identical across systems, sensible home-manager defaults (e.g., neovim) shared with workstations where appropriate, and on cluster nodes a dynamic MOTD showing the HLC ASCII banner, the node hostname, and the Bob Ross quote. The toolbox lives in its own module included on every NixOS host (cluster nodes and silicon); each package carries a one-line comment describing its purpose.
+When the operator SSHes into any managed NixOS system (silicon today; the 9 cluster nodes after this spec), they land in a familiar bash environment: a cluster-themed Gruvbox-colorized PS1 on cluster nodes (distinct from silicon's workstation PS1), a curated sysadmin toolbox identical across systems, sensible home-manager defaults (e.g., neovim) shared with workstations where appropriate, and on cluster nodes a dynamic MOTD showing the HLC ASCII banner, the node hostname, and the Bob Ross quote. The toolbox lives in its own module included on every NixOS host (cluster nodes and silicon); each package carries a one-line comment describing its purpose.
 
-**Why this priority**: Consistent operator UX across nodes reduces cognitive load and incident time. The previous attempt's PS1 fight contributed to debugging confusion; doing this once, in one shared module, with parameterization for "remote vs. local" and "server vs. workstation," prevents recurrence.
+**Why this priority**: Consistent operator UX across nodes reduces cognitive load and incident time. The previous attempt's PS1 fight contributed to debugging confusion; doing this once, in one shared module, with parameterization for "workstation vs. cluster," prevents recurrence.
 
 **Independent Test**: Operator SSHes as `bob@hlc-501` and observes: HLC MOTD with hostname `hlc-501.marks.dev`, styled PS1, all toolbox commands resolvable on `$PATH`. Operator SSHes as `eaglerock@silicon` and observes: same toolbox commands resolvable, no HLC MOTD, workstation-specific home-manager defaults preserved.
 
@@ -71,7 +71,7 @@ When the operator SSHes into any managed NixOS system (silicon today; the 9 clus
 
 1. **Given** an SSH session into any cluster node as `bob`, **When** the session opens, **Then** the MOTD shown matches the post-mortem reference (HLC ASCII banner, `Cluster node: <fqdn>`, Bob Ross quote) with hostname interpolated dynamically.
 2. **Given** an SSH session into any managed system, **When** the operator runs each tool in the documented toolbox, **Then** every tool resolves and runs.
-3. **Given** a local terminal on silicon and a remote SSH session, **When** the operator inspects the prompt, **Then** the PS1 visibly differs to indicate local vs. remote.
+3. **Given** a terminal on silicon and an SSH session into a cluster node, **When** the operator inspects the prompt, **Then** the PS1 visibly differs between workstation and cluster (silicon uses its own workstation PS1; cluster nodes use the unified Gruvbox two-line box-drawing PS1).
 4. **Given** server-side users (`bob`) and workstation users (`eaglerock`), **When** their home-manager configurations are evaluated, **Then** shared defaults (e.g., neovim baseline) apply to both, while workstation-only modules (i3, polybar, etc.) apply only to workstations.
 
 ---
@@ -146,7 +146,7 @@ Every in-scope node has the packages and OS-level configuration required to part
 #### Operator UX (shell, MOTD, toolbox, home-manager)
 
 - **FR-015**: All NixOS hosts (cluster nodes and `silicon`) MUST share a single sysadmin toolbox module. Each package in the module MUST carry an inline comment describing its purpose; the module MUST be the sole source of these tools across the fleet.
-- **FR-016**: Bash MUST be the canonical shell. The bash environment MUST be shared across all NixOS hosts; the styled PS1 MUST visibly differ when the session is local vs. remote (mirroring `silicon`'s existing behavior).
+- **FR-016**: Bash MUST be the canonical shell. The bash environment MUST be shared across all NixOS hosts; the cluster PS1 MUST be visually distinct from the workstation PS1 (silicon retains its own prompt via `modules/hosts/workstation.nix`; cluster nodes use the unified Gruvbox two-line prompt via `modules/cluster/prompt.nix`).
 - **FR-017**: A stylized HLC-themed PS1 MUST be defined for cluster nodes, using the Bob Ross-themed glyph sequence `☁⛰☁` (cloud, mountain, cloud) as the HLC motif. The PS1 is a single unified form for all contexts (local and remote) — a two-line, box-drawing prompt with Gruvbox 256-color palette (109=teal, 214=gold, 142=green, 15=bright white):
       ```
       ┌─╸<user>@<hostname> ☁⛰☁ [<cwd>]
@@ -261,8 +261,8 @@ Every in-scope node has the packages and OS-level configuration required to part
 - Q3: HLC PS1 design — silicon reuse or HLC-themed? → A: HLC-themed, "happy little cloud" motif (small ASCII or Unicode cloud glyph) alongside username/hostname; visibly distinct local vs. remote, mirroring silicon's local/remote behavior. Exact glyph and color finalized during planning. Resolved in FR-017.
 - Q4: HLC PS1 glyph palette? → A: `☁⛰☁` (cloud + mountain + cloud). Mountain glyph emoji-presentation handling deferred to plan. Resolved in FR-017.
 - Q5: HLC PS1 layout — where do glyphs sit? → A: Glyphs sit between user@host and cwd in the remote form. (Initially answered as a single unified layout; superseded by Q7 once local/remote forms were split.) Resolved in FR-017.
-- Q6: HLC PS1 color scheme? → A: Split. Local prompt keeps silicon's existing Gruvbox color treatment (operator's terminal is unconstrained). Remote prompt is no-color (xterm-safe over SSH); bold permitted on glyphs only. Resolved in FR-017.
-- Q7: HLC PS1 local-vs-remote forms? → A: Local = silicon's structure with `☁⛰☁` substituting `////` (single-line, color preserved). Remote = two-line box-drawing per `remote-ps1.txt` (`┌─╸user@fqdn ☁⛰☁ [cwd]` then `└──╸$`), no color, FQDN. Resolved in FR-017.
+- Q6: HLC PS1 color scheme? → A: ~~Split. Local prompt keeps silicon's existing Gruvbox color treatment (operator's terminal is unconstrained). Remote prompt is no-color (xterm-safe over SSH); bold permitted on glyphs only.~~ **Superseded during Phase 6**: unified Gruvbox 256-color PS1 adopted per operator direction. Resolved in FR-017.
+- Q7: HLC PS1 local-vs-remote forms? → A: ~~Local = silicon's structure with `☁⛰☁` substituting `////` (single-line, color preserved). Remote = two-line box-drawing per `remote-ps1.txt` (`┌─╸user@fqdn ☁⛰☁ [cwd]` then `└──╸$`), no color, FQDN.~~ **Superseded during Phase 6**: single unified two-line Gruvbox-colorized PS1 for all contexts (no local/remote distinction). Resolved in FR-017.
 
 ### Session 2026-04-30
 

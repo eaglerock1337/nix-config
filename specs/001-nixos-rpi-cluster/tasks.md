@@ -284,7 +284,7 @@
   - `boot.kernelModules = [ "br_netfilter" "overlay" "ip_tables" ]`
   - `boot.kernel.sysctl = { "net.ipv4.ip_forward" = 1; "net.bridge.bridge-nf-call-iptables" = 1; "net.bridge.bridge-nf-call-ip6tables" = 1; }`
   - `systemd.enableCgroupAccounting = true` (cgroups v2)
-  - `environment.systemPackages = with pkgs; [ k9s kubectl ]`
+  - Note: `k9s` and `kubectl` already provided by `modules/shell/utilities.nix` (T060) — do NOT duplicate in this module's systemPackages
 - [ ] T091 [US5] Update `modules/cluster/common.nix`: replace the `# TODO Phase 7: import ../k8s/prereqs.nix` stub with a real `import ../k8s/prereqs.nix`. Run `make dry-run HOST=hlc-501` — must succeed.
 - [ ] T092 [US5] Run `make build HOST=hlc-501` — full build must succeed after T090–T091.
 - [ ] T093 [US5] Apply k3s prereqs to `hlc-501`: `make update-node HOST=hlc-501` → `make smoke-test HOST=hlc-501` — green.
@@ -300,7 +300,7 @@
   - `ssh bob@hlc-501 "sysctl net.ipv4.ip_forward"` → `1`
   - `ssh bob@hlc-501 "sysctl net.bridge.bridge-nf-call-iptables"` → `1`
   - `ssh bob@hlc-501 "cat /sys/fs/cgroup/cgroup.controllers"` — contains `memory cpu io` (cgroups v2 active)
-- [ ] T096 [US5] Roll k3s prereqs to `hlc-502..508` serially: for each, `make update-node HOST=<host>` + `make smoke-test HOST=<host>`. Spot-check T094/T095 verifications on `hlc-504` (midpoint).
+- [ ] T096 [US5] Roll k3s prereqs to `hlc-502..508` serially (hlc-503 and hlc-507 DECOM — Makefile refuses; skip): for each active node, `make update-node HOST=<host>` + `make smoke-test HOST=<host>`. Spot-check T094/T095 verifications on `hlc-504` (midpoint).
 - [ ] T097 [US5] Roll k3s prereqs to `hlc-401` (Pi 4): `make update-node HOST=hlc-401` + `make smoke-test HOST=hlc-401`. Verify same T094/T095 checks pass on Pi 4.
 - [ ] T098 [US5] Commit. Tag `phase7-k3s-prereqs`.
 
