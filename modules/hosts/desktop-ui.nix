@@ -62,9 +62,10 @@
     themix-gui
 
     # Fonts
-    fira    
+    fira
     nerd-fonts.fira-code
     nerd-fonts.droid-sans-mono
+    noto-fonts-color-emoji
   ];
 
   # Enable networking
