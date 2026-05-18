@@ -26,7 +26,7 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 **Open follow-ups**:
 
-- A flake-update task in `/speckit-tasks` will run `nix flake update raspberrypi-nvmd` (or whatever the input is named on swap) and record the resulting `flake.lock` revision in the commit message.
+- ~~A flake-update task in `/speckit-tasks` will run `nix flake update raspberrypi-nvmd` (or whatever the input is named on swap) and record the resulting `flake.lock` revision in the commit message.~~ Resolved: input named `nixos-raspberrypi`; `nix flake update nixos-raspberrypi` run in Phase 1; flake.lock committed. Confirmed working on all 7 active work-set nodes.
 
 ---
 
@@ -70,7 +70,7 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 **Open follow-ups**:
 
-- Cross-check upstream `services.k3s` for any additional `wantedBy` or `requiredBy` sets that need overriding.
+- ~~Cross-check upstream `services.k3s` for any additional `wantedBy` or `requiredBy` sets that need overriding.~~ Resolved: only `wantedBy` needed override; `systemd.services.k3s.wantedBy = lib.mkForce [ ]` confirmed sufficient. k3s enabled-but-stopped verified on all 7 active nodes.
 
 ---
 
@@ -95,8 +95,8 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 **Open follow-ups**:
 
-- Confirm NVMe device path on Pi 5 with `nvmd` kernel: typically `/dev/nvme0n1`. To be verified on `hlc-501` during Phase 4 canary.
-- Confirm USB drive device names are stable across boots (the `/dev/disk/by-id/` paths will be used in the disko schemas, not `/dev/sd*`, to avoid renumbering issues).
+- ~~Confirm NVMe device path on Pi 5 with `nvmd` kernel: typically `/dev/nvme0n1`.~~ Resolved: confirmed `/dev/nvme0n1` on all Pi 5 nodes (2026-05-08).
+- ~~Confirm USB drive device names are stable across boots.~~ Resolved: `/dev/disk/by-path/` used (FR-010a); `xhci-hcd.0`=left/a, `xhci-hcd.1`=right/b; confirmed stable across reboots on hlc-501 and hlc-504.
 
 ---
 
@@ -120,7 +120,7 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 **Open follow-ups**:
 
-- Verify `BOOT_ORDER = 0xf14` is the right value on both Pi 4 (bcm2711) and Pi 5 (bcm2712) bootloaders; the encoding is the same but the EEPROM ages differ.
+- ~~Verify `BOOT_ORDER = 0xf14` is the right value on both Pi 4 (bcm2711) and Pi 5 (bcm2712) bootloaders.~~ Resolved: `0xf14` confirmed working on both Pi 4 (hlc-401) and Pi 5 (hlc-501..508). USB-first, SD-fallback verified via recovery test.
 - Decide whether the SD bootstrap config gets `nixos-rebuild` updates over time, or is treated as a frozen recovery image (operator preference; default to "frozen, only updated on flash" for simplicity).
 
 ---
@@ -261,8 +261,8 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 **Open follow-ups**:
 
-- Confirm the exact NixOS option path in the nvmd fork. The previous upstream used `raspberry-pi-nix.config = { ... }`. nvmd's option name verified during Phase 1.
-- Confirm `dtparam=nvme` is not already implied by nvmd's RPi 5 module; if so, dropping the explicit setting is fine.
+- ~~Confirm the exact NixOS option path in the nvmd fork.~~ Resolved: nvmd uses `raspberry-pi.config` (not `raspberry-pi-nix.config`). Confirmed and implemented in `modules/hardware/rpi4.nix` and `rpi5.nix`.
+- ~~Confirm `dtparam=nvme` is not already implied by nvmd's RPi 5 module.~~ Resolved: not implied; explicitly set in `modules/hardware/rpi5.nix`. NVMe confirmed working on all Pi 5 nodes.
 
 ---
 
@@ -313,7 +313,7 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 **Open follow-ups**:
 
-- Confirm nvmd's mechanism for declaring EEPROM config (likely a `raspberry-pi-nix.eeprom-config = { ... }` option or similar). If not available, fall back to a NixOS `systemd.services.<name>` that runs `rpi-eeprom-config --apply` on first boot, gated by a marker file in `/boot`.
+- ~~Confirm nvmd's mechanism for declaring EEPROM config.~~ Resolved: nvmd does not expose an EEPROM config option. Fell back to custom `systemd.services.rpi-eeprom-config` one-shot in `modules/hardware/rpi-eeprom.nix`, gated by marker file `/boot/.eeprom-configured`. Confirmed working on all provisioned nodes.
 
 ---
 

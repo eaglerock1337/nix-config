@@ -11,18 +11,6 @@ listed below under a separate header, also in numerical order.
 
 ## Outstanding Workarounds
 
-### W-001: Inline minimal host configs (defers Principle III)
-
-- **Site(s)**: After Phase 0 baseline reset, only `hosts/hlc-501/configuration.nix` and `hosts/silicon/*` exist (matching `main`). As Phase 3 re-adds the work-set hosts (`hlc-401`, `hlc-502..508`) and the decom-set host configs (`hlc-402..404`, dry-run-only per Constitution §"Cluster Topology"), each new `hosts/hlc-NNN/configuration.nix` is brought up as a thin per-host file plus inline minimal config until Phase 5 reintroduces the shared modules.
-- **Deviates from**: Constitution Principle III (Modular Design)
-- **Reason**: The previous attempt to land shared modules + 12 hosts in one push produced a non-recoverable bricked node (hlc-508) and an interactive-ssh hang that did not reproduce in dry-run. Inlining a minimal canonical config per host gives zero blast radius per host and lets us isolate any future module regression to the exact module being reintroduced.
-- **Exit condition**: The operator-UX modules (`modules/shell/utilities.nix` toolbox, `modules/shell/common.nix` bash baseline, `modules/shell/prompt.nix` PS1, `modules/motd/default.nix`, `modules/cluster/hlc/motd-banner.nix`, `modules/users/operator.nix`, home-manager modular split, SSH hardening) are reintroduced as a **phase-bundle** per [plan.md → Phase 6](./001-nixos-rpi-cluster/plan.md) and Constitution v1.3.3 §IV "Canary scope". `/speckit-implement` runs all module-creation tasks for the phase, then a single canary on `hlc-501` via `make update-node` + `make smoke-test`. On smoke-test fail: `/speckit-debug` skill drives rollback + incremental reintroduction (comment-out / git-revert new modules one at a time, redeploy, smoke-test) to bisect the breaking module. On smoke-test green: serial fleet roll across `hlc-502..508` then `hlc-401`, smoke-test after each.
-- **Target phase / feature**: This spec's Phase 6 (Operator UX). The bundle's single canary closes the inline-host approach across all six modules at once; W-001 is fully Resolved when Phase 6 exits with all 9 work-set nodes on the bundled modular configuration. The post-mortem lesson (regression isolation) is preserved by the bisect-on-fail flow rather than by per-module cadence.
-- **Opened**: 2026-04-26
-- **Resolved**: 2026-05-17 (Phase 6 complete: operator-UX modules reintroduced as bundle, canary on hlc-501 green, fleet roll to all 7 active work-set nodes green. Inline host configs replaced by modular imports via `modules/cluster/common.nix`. Inline `users.users.bob` replaced by option-driven `system.operator` in `modules/users/operator.nix`; inline `users.users.eaglerock` relocated to `hosts/silicon/configuration.nix`.)
-
----
-
 ### W-002: Passwordless `wheel` sudo (`security.sudo.wheelNeedsPassword = false`)
 
 - **Site(s)**: Current sites: `modules/sd/bootstrap.nix` (bootstrap image; permanent for that module, mirrors W-004 disposition) and `modules/cluster/common.nix` (provisioned hosts; added 2026-05-05 so `bob` can satisfy `--use-remote-sudo` on provisioned nodes before secrets management lands). As Phase 6 introduces `modules/users/operator.nix`, the setting moves from the inline `modules/cluster/common.nix` entry into that module; the inline entry in `modules/cluster/common.nix` is removed in T063.
@@ -32,18 +20,6 @@ listed below under a separate header, also in numerical order.
 - **Target phase / feature**: Future feature spec — secrets-management spec (`/speckit-specify` not yet run). Out of scope for the current /speckit-plan cycle.
 - **Opened**: 2026-04-26
 - **Resolved**: (open)
-
----
-
-### W-003: Default `PasswordAuthentication = true` (NixOS 25.11 sshd default)
-
-- **Site(s)**: After Phase 0, no per-host SSH hardening exists; `services.openssh.settings.PasswordAuthentication` retains its NixOS default. Reintroduced explicitly in Phase 5 SSH-hardening sub-step on all 9 work-set hosts (decom-set hosts not flashed; not in scope).
-- **Deviates from**: Spec FR-020 (`password authentication MUST be off post-provisioning`)
-- **Reason**: Operator explicitly opted to keep password auth enabled as a short-term fallback during initial bring-up. Rationale: a misconfigured `authorized_keys` block (typo, key file path bug, encoding error) on a headless rack node would otherwise brick the node at first boot. Until at least one node has been validated end-to-end with key-only login, password auth provides recovery. Risk accepted on the basis that `bob` has no password set (NixOS defaults disable password login when no password hash exists), so the remaining attack surface is keyboard-interactive auth attempts which an attacker on the management subnet could attempt — explicit known risk.
-- **Exit condition**: SSH hardening sub-step in Phase 6 deploys `services.openssh.settings.PasswordAuthentication = false` and `KbdInteractiveAuthentication = false` to all 9 work-set nodes via canary, smoke-test green.
-- **Target phase / feature**: Phase 6 (Operator UX) — SSH hardening is the last sub-step of that phase and closes both this entry and W-001.
-- **Opened**: 2026-04-26
-- **Resolved**: 2026-05-17 (Phase 6 complete: `services.openssh.settings.PasswordAuthentication = false` and `KbdInteractiveAuthentication = false` deployed via `modules/cluster/common.nix` T071, validated T078 — password auth rejected on all work-set nodes.)
 
 ---
 
@@ -96,6 +72,30 @@ listed below under a separate header, also in numerical order.
 ---
 
 ## Resolved Workarounds
+
+### W-001: Inline minimal host configs (defers Principle III)
+
+- **Site(s)**: After Phase 0 baseline reset, only `hosts/hlc-501/configuration.nix` and `hosts/silicon/*` exist (matching `main`). As Phase 3 re-adds the work-set hosts (`hlc-401`, `hlc-502..508`) and the decom-set host configs (`hlc-402..404`, dry-run-only per Constitution §"Cluster Topology"), each new `hosts/hlc-NNN/configuration.nix` is brought up as a thin per-host file plus inline minimal config until Phase 5 reintroduces the shared modules.
+- **Deviates from**: Constitution Principle III (Modular Design)
+- **Reason**: The previous attempt to land shared modules + 12 hosts in one push produced a non-recoverable bricked node (hlc-508) and an interactive-ssh hang that did not reproduce in dry-run. Inlining a minimal canonical config per host gives zero blast radius per host and lets us isolate any future module regression to the exact module being reintroduced.
+- **Exit condition**: Phase 6 bundle canary + fleet roll.
+- **Target phase / feature**: Phase 6 (Operator UX).
+- **Opened**: 2026-04-26
+- **Resolved**: 2026-05-17 (Phase 6 complete: operator-UX modules reintroduced as bundle, canary on hlc-501 green, fleet roll to all 7 active work-set nodes green. Inline host configs replaced by modular imports via `modules/cluster/common.nix`. Inline `users.users.bob` replaced by option-driven `system.operator` in `modules/users/operator.nix`; inline `users.users.eaglerock` relocated to `hosts/silicon/configuration.nix`.)
+
+---
+
+### W-003: Default `PasswordAuthentication = true` (NixOS 25.11 sshd default)
+
+- **Site(s)**: All cluster nodes prior to Phase 6.
+- **Deviates from**: Spec FR-020 (`password authentication MUST be off post-provisioning`)
+- **Reason**: Short-term fallback during initial bring-up — misconfigured authorized_keys on headless rack nodes would otherwise brick on first boot.
+- **Exit condition**: Phase 6 SSH hardening sub-step.
+- **Target phase / feature**: Phase 6 (Operator UX).
+- **Opened**: 2026-04-26
+- **Resolved**: 2026-05-17 (Phase 6 complete: `services.openssh.settings.PasswordAuthentication = false` and `KbdInteractiveAuthentication = false` deployed via `modules/cluster/common.nix` T071, validated T078 — password auth rejected on all work-set nodes.)
+
+---
 
 ### W-004: `pam_systemd` disabled for sshd in bootstrap image
 
