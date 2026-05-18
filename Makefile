@@ -43,38 +43,16 @@ define check_raid_clear
 	fi
 endef
 
-help:
-	@echo "Targets:"
-	@echo "  build-image HOST=<host> [REBUILD=1]      Build SD card image for a pi node"
-	@echo "  flash-image HOST=<host> DEV=<dev>        Flash built image to SD card device"
-	@echo "  local-dry                                Dry-run NixOS config for local host"
-	@echo "  local-switch                             Apply NixOS config for local host"
-	@echo "  update                                   Update all flake inputs"
-	@echo "  dry-run HOST=<host>                      Dry-run toplevel for a cluster host"
-	@echo "  build HOST=<host>                        Build toplevel for a cluster host"
-	@echo "  smoke-test HOST=<host>                   SSH reachability check via FQDN"
-	@echo "  ip HOST=<host>                           Print derived IP for a host"
-	@echo "  provision HOST=<host>                    Two-phase provision (stage1-3 + smoke-tests)"
-	@echo "  provision-stage1 HOST=<host>             disko: partition + format + mount disks"
-	@echo "  provision-mount HOST=<host>              Mount /boot/firmware (W-011)"
-	@echo "  provision-backup-boot HOST=<host>        Backup SD bootstrap boot files before install"
-	@echo "  provision-stage2 HOST=<host>             Install provision-minimal config + reboot"
-	@echo "  provision-stage3 HOST=<host>             Wait for reboot + push full config"
-	@echo "  provision-reinstall HOST=<host>          RAID-retry: skip disko, reinstall + full config"
-	@echo "  reprovision HOST=<host>                  Reprovision USB RAID; preserve NVMe /srv data"
-	@echo "  reprovision-stage1 HOST=<host>           disko USB RAID only (NVMe skipped)"
-	@echo "  update-node HOST=<host> [IP=<ip>]        Deploy config update to a provisioned node"
-	@echo "  rollback HOST=<host> [IP=<ip>]           Roll back to prior NixOS generation"
-	@echo "  recover HOST=<host>                      Full recovery: wipe + sd-boot + reboot + provision"
-	@echo "  recover-status HOST=<host>               Show initrd rescue node status (root SSH)"
-	@echo "  recover-wipe HOST=<host>                 Wipe RAID on rescue node (root SSH)"
-	@echo "  recover-sd-boot HOST=<host>              Restore SD bootstrap boot on rescue node"
+help: ## Show available targets
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$|^##@' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; /^##@/{printf "\n\033[1m%s\033[0m\n", substr($$0,4); next} {printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 ifdef REBUILD
 _REBUILD_FLAG := --rebuild
 endif
 
-build-image:
+##@Image
+build-image: ## Build SD card image (HOST= [REBUILD=1])
 ifndef HOST
 	$(error HOST is not set. Usage: make build-image HOST=hlc-501)
 endif
@@ -83,7 +61,7 @@ endif
 		$(_REBUILD_FLAG) \
 		-L
 
-flash-image: build-image
+flash-image: build-image ## Flash built image to SD card (HOST= DEV=)
 ifndef HOST
 	$(error HOST is not set. Usage: make flash-image HOST=hlc-501 DEV=/dev/sdX)
 endif
@@ -94,18 +72,18 @@ endif
 	@sleep 5
 	zstdcat result/sd-image/*.img.zst | sudo dd if=/dev/stdin of=$(DEV) bs=4M conv=fsync status=progress
 
-local-dry:
+##@Local
+local-dry: ## Dry-run NixOS config for local host
 	sudo nixos-rebuild dry-run --flake .#$$(hostname)
 
-local-switch:
+local-switch: ## Apply NixOS config for local host
 	sudo nixos-rebuild switch --flake .#$$(hostname)
 
-update:
+update: ## Update all flake inputs
 	nix flake update $(NIX_FLAGS)
 
-# Phase 2 Foundational targets —————————————————————————————————————————————
-
-dry-run:
+##@Cluster
+dry-run: ## Dry-run toplevel for cluster host (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make dry-run HOST=hlc-501)
 endif
@@ -113,7 +91,7 @@ endif
 		.#nixosConfigurations.$(HOST).config.system.build.toplevel \
 		--dry-run -L
 
-build:
+build: ## Build toplevel for cluster host (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make build HOST=hlc-501)
 endif
@@ -121,7 +99,7 @@ endif
 		.#nixosConfigurations.$(HOST).config.system.build.toplevel \
 		-L
 
-smoke-test:
+smoke-test: ## SSH reachability check via FQDN (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make smoke-test HOST=hlc-501)
 endif
@@ -136,20 +114,15 @@ endif
 	ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 bob@$(HOST).$(HLC_DOMAIN) uname -a
 	@echo "==> smoke-test PASS: $(HOST)"
 
-ip:
+ip: ## Print derived IP for host (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make ip HOST=hlc-501)
 endif
 	@if [ -z '$(IP)' ]; then echo "ERROR: cannot derive IP for HOST=$(HOST)" >&2; exit 1; fi
 	@echo $(IP)
 
-# Phase 5–6 (US3–US4) targets ————————————————————————————————————————————————
-
-# Two-phase provision (R-016): stage2 installs provision-minimal config (small
-# closure); stage3 pushes the full config via update-node (differential nix copy).
-# DR-002: backup-boot saves SD bootstrap files before stage2 overwrites them,
-# enabling hlc-recover sd-boot in initrd rescue without reflashing.
-provision:
+##@Provision
+provision: ## Full provision: stage1-3 + smoke-tests (HOST=)
 	# W-013: stage1 (disko) may fail with exit 1 when RAID is already assembled;
 	# subsequent steps handle the mounted state gracefully. Exit 2 = provisioned
 	# node refusal (FR-013 idempotency) — must abort.
@@ -164,7 +137,7 @@ provision:
 	@echo "==> final smoke-test $(HOST)"
 	$(MAKE) smoke-test HOST=$(HOST)
 
-provision-stage1:
+provision-stage1: ## disko: partition + format + mount (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make provision HOST=hlc-501)
 endif
@@ -179,7 +152,7 @@ endif
 		--disko-mode disko \
 		--phases disko
 
-provision-mount:
+provision-mount: ## Mount /boot/firmware — W-011 (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make provision HOST=hlc-501)
 endif
@@ -192,7 +165,7 @@ endif
 	ssh root@$(HOST).$(HLC_DOMAIN) \
 		"mkdir -p /mnt/boot/firmware && mount /dev/mmcblk0p1 /mnt/boot/firmware"
 
-provision-backup-boot:
+provision-backup-boot: ## Backup SD bootstrap boot files (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make provision-backup-boot HOST=hlc-501)
 endif
@@ -207,7 +180,7 @@ endif
 			--exclude='.bootstrap-backup.tar.gz' ."
 	@echo "--- bootstrap boot backup saved to /boot/firmware/.bootstrap-backup.tar.gz"
 
-provision-stage2:
+provision-stage2: ## Install provision-minimal + reboot (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make provision HOST=hlc-501)
 endif
@@ -220,7 +193,7 @@ endif
 		--disko-mode disko \
 		--phases install,reboot
 
-provision-stage3:
+provision-stage3: ## Wait for reboot + push full config (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make provision-stage3 HOST=hlc-501)
 endif
@@ -245,13 +218,13 @@ endif
 	@echo "--- pushing full config via update-node"
 	$(MAKE) update-node HOST=$(HOST)
 
-reprovision: reprovision-stage1 provision-mount provision-backup-boot provision-stage2
+reprovision: reprovision-stage1 provision-mount provision-backup-boot provision-stage2 ## Reprovision USB RAID; preserve NVMe /srv (HOST=)
 	@echo "==> reprovision-stage3 $(HOST): pushing full config"
 	$(MAKE) provision-stage3 HOST=$(HOST)
 	@echo "==> final reprovision smoke-test $(HOST)"
 	$(MAKE) smoke-test HOST=$(HOST)
 
-reprovision-stage1:
+reprovision-stage1: ## disko USB RAID only, NVMe skipped (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make reprovision HOST=hlc-501)
 endif
@@ -267,7 +240,8 @@ endif
 		--disko-mode disko \
 		--phases disko
 
-update-node:
+##@Operations
+update-node: ## Deploy config to provisioned node (HOST= [IP=])
 ifndef HOST
 	$(error HOST is not set. Usage: make update-node HOST=hlc-501)
 endif
@@ -284,7 +258,7 @@ endif
 	&& ssh bob@$(IP) "sudo nix-env -p /nix/var/nix/profiles/system --set $$TOPLEVEL" \
 	&& ssh bob@$(IP) "sudo $$TOPLEVEL/bin/switch-to-configuration switch"
 
-provision-reinstall:
+provision-reinstall: ## RAID-retry: skip disko, reinstall (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make provision-reinstall HOST=hlc-501)
 endif
@@ -321,7 +295,7 @@ endif
 	@echo "==> final reinstall smoke-test $(HOST)"
 	$(MAKE) smoke-test HOST=$(HOST)
 
-rollback:
+rollback: ## Roll back to prior NixOS generation (HOST= [IP=])
 ifndef HOST
 	$(error HOST is not set. Usage: make rollback HOST=hlc-501)
 endif
@@ -331,9 +305,8 @@ endif
 	ssh bob@$(IP) "sudo nix-env --rollback -p /nix/var/nix/profiles/system"
 	ssh bob@$(IP) "sudo /nix/var/nix/profiles/system/bin/switch-to-configuration switch"
 
-# Recovery targets — for nodes stuck in initrd rescue mode (root SSH only) ——
-
-recover-status:
+##@Recovery
+recover-status: ## Show initrd rescue node status (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make recover-status HOST=hlc-501)
 endif
@@ -342,7 +315,7 @@ endif
 	ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
 		root@$(HOST).$(HLC_DOMAIN) hlc-recover status
 
-recover-wipe:
+recover-wipe: ## Wipe RAID on rescue node (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make recover-wipe HOST=hlc-501)
 endif
@@ -354,7 +327,7 @@ endif
 	ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
 		root@$(HOST).$(HLC_DOMAIN) 'hlc-recover wipe -y'
 
-recover-sd-boot:
+recover-sd-boot: ## Restore SD bootstrap boot on rescue node (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make recover-sd-boot HOST=hlc-501)
 endif
@@ -363,7 +336,7 @@ endif
 	ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
 		root@$(HOST).$(HLC_DOMAIN) hlc-recover sd-boot
 
-recover:
+recover: ## Full recovery: wipe + sd-boot + reboot + provision (HOST=)
 ifndef HOST
 	$(error HOST is not set. Usage: make recover HOST=hlc-501)
 endif
