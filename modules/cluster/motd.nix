@@ -1,4 +1,4 @@
-# Cluster-tier MOTD mechanism (FR-018).
+# Cluster-tier MOTD mechanism
 # Generic across clusters; cluster-specific banner/quote supplied via options.
 # Hostname line is dynamic, interpolated from config.networking.fqdn.
 

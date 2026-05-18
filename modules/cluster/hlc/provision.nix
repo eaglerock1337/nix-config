@@ -1,4 +1,4 @@
-# Provision-minimal cluster module (T034, R-016).
+# Provision-minimal cluster module
 # Installed by nixos-anywhere stage2 to get a bootable, SSH-reachable system
 # with a small closure. The full config is pushed later via `make update-node`
 # (provision-stage3).
@@ -14,10 +14,8 @@
     ../../users/operator.nix
   ];
 
-  # --- Networking ---
   networking.domain = "marks.dev";
 
-  # --- User management ---
   users.mutableUsers = false;
 
   # HLC cluster operator (provision-minimal: account only, no home-manager)
@@ -30,19 +28,15 @@
   # Allow bob to receive nix store paths via `nix copy` from gibson
   nix.settings.trusted-users = [ "root" "bob" ];
 
-  # W-010: root SSH for nixos-anywhere provisioning and recovery operations
   users.users.root.openssh.authorizedKeys.keys = operatorPubkeys;
 
-  # --- SSH ---
   services.openssh.enable = true;
   services.openssh.settings.PasswordAuthentication = false;
   services.openssh.settings.KbdInteractiveAuthentication = false;
 
-  # --- Sudo ---
   # W-002: passwordless wheel during cluster transition
   security.sudo.wheelNeedsPassword = false;
 
-  # --- Nix settings ---
   nix.settings = {
     experimental-features = "nix-command flakes";
     auto-optimise-store = true;
@@ -59,10 +53,8 @@
     ];
   };
 
-  # --- Locale & time (minimal) ---
   time.timeZone = "America/New_York";
   i18n.defaultLocale = "en_US.UTF-8";
 
-  # Allow unfree (matches hosts/common.nix)
   nixpkgs.config.allowUnfree = true;
 }

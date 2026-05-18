@@ -68,14 +68,14 @@ in {
 
     # Drivers needed before stage 2
     boot.initrd.availableKernelModules = [
-      "genet"        # bcmgenet NIC (Pi 4 and Pi 5)
-      "md_mod"       # mdadm core
-      "raid1"        # RAID-1 personality
-      "usb_storage"  # USB mass storage (for RAID drives)
-      "xhci_hcd"     # USB 3.0 host controller
-      "vfat"         # FAT32 firmware partition mount (recovery)
-      "fat"          # FAT core module (dep of vfat)
-      "nls_cp437"    # codepage for FAT filenames
+      "genet"         # bcmgenet NIC (Pi 4 and Pi 5)
+      "md_mod"        # mdadm core
+      "raid1"         # RAID-1 personality
+      "usb_storage"   # USB mass storage (for RAID drives)
+      "xhci_hcd"      # USB 3.0 host controller
+      "vfat"          # FAT32 firmware partition mount (recovery)
+      "fat"           # FAT core module (dep of vfat)
+      "nls_cp437"     # codepage for FAT filenames
       "nls_iso8859_1" # codepage for FAT filenames
     ];
 

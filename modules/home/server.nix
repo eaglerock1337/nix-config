@@ -1,6 +1,6 @@
-# Server-tier home-manager defaults.
-# Consumed by cluster operator home files (home/bob.nix for HLC; future
-# home/<slimer>.nix for Ecto-1). Layered on top of base.nix.
+# Server-tier home-manager defaults
+# Consumed by cluster operator home files
+# (home/bob.nix for HLC; home/slimer.nix for Ecto-1). Layered on top of base.nix.
 
 { pkgs, ... }:
 

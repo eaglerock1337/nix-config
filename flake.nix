@@ -4,13 +4,10 @@
     home-manager.url = "github:nix-community/home-manager/release-25.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
-    # T007: nvmd/nixos-raspberrypi replaces archived nix-community/raspberry-pi-nix
     nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
     nixos-hardware.url = "github:nixos/nixos-hardware/master";
-    # T010: disko for declarative disk layout (Phase 5 / US3)
     disko.url = "github:nix-community/disko";
     disko.inputs.nixpkgs.follows = "nixpkgs";
-    # T011: nixos-anywhere for one-shot remote provisioning (Phase 5 / US3)
     nixos-anywhere.url = "github:nix-community/nixos-anywhere";
     # T012: sops-nix deferred per W-002; input added now for flake hygiene
     sops-nix.url = "github:Mic92/sops-nix";
@@ -37,7 +34,7 @@
       };
     };
 
-    # T009: thin mkHlcNode wrapper — provisioned nixosConfiguration for a cluster node.
+    # Thin mkHlcNode wrapper — provisioned nixosConfiguration for a cluster node.
     # SD bootstrap images are separate derivations built by mkHlcBootstrap below.
     mkHlcNode = { hostPath, extraModules ? [] }:
       # Using nixos-raspberrypi.lib.nixosSystem so nvmd's overlays (vendor kernel,
@@ -54,14 +51,14 @@
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
           }
-          # T028/T029: disko NixOS module provides disko.devices option; imported here
+          # disko NixOS module provides disko.devices option; imported here
           # so hardware modules (rpi4.nix, rpi5.nix) can set disk layouts.
           disko.nixosModules.disko
           hostPath
         ] ++ extraModules;
       };
 
-    # T037: provision-minimal builder — small closure for nixos-anywhere stage2.
+    # Provision — minimal builder — small closure for nixos-anywhere stage2.
     # No home-manager; passes clusterModule = provision.nix via specialArgs so the
     # host config imports the minimal cluster module instead of the full one.
     mkHlcProvision = { hostPath, extraModules ? [] }:
@@ -69,7 +66,7 @@
         specialArgs = {
           inherit inputs operatorPubkeys;
           clusterModule = ./modules/cluster/hlc/provision.nix;
-        };
+        };`
         modules = [
           disko.nixosModules.disko
           hostPath
@@ -127,7 +124,7 @@
         ];
       };
 
-      # Pi 5 work-set (hlc-501..508) — provisioned nodes
+      # Pi 5 work-set (hlc-501..508)
       hlc-501 = mkHlcNode { hostPath = ./hosts/hlc-501/configuration.nix; };
       hlc-502 = mkHlcNode { hostPath = ./hosts/hlc-502/configuration.nix; };
       hlc-503 = mkHlcNode { hostPath = ./hosts/hlc-503/configuration.nix; };
@@ -137,7 +134,7 @@
       hlc-507 = mkHlcNode { hostPath = ./hosts/hlc-507/configuration.nix; };
       hlc-508 = mkHlcNode { hostPath = ./hosts/hlc-508/configuration.nix; };
 
-      # Pi 4 work-set — hlc-401 provisioned; hlc-402..404 deferred (config-only per Constitution)
+      # Pi 4 work-set — (hlc-401..404)
       hlc-401 = mkHlcNode { hostPath = ./hosts/hlc-401/configuration.nix; };
       hlc-402 = mkHlcNode { hostPath = ./hosts/hlc-402/configuration.nix; };
       hlc-403 = mkHlcNode { hostPath = ./hosts/hlc-403/configuration.nix; };
@@ -153,7 +150,7 @@
       };
     }) pi5Hosts)
 
-    # T037: -provision variants for two-phase provisioning (R-016).
+    # Provision variants for two-phase provisioning
     # Small closure (no home-manager, toolbox, MOTD, PS1, /etc/hosts, git-clone).
     # Used by nixos-anywhere stage2; full config pushed later via update-node.
     // builtins.listToAttrs (map (h: {

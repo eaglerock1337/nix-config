@@ -1,8 +1,6 @@
-# Top-level catchall consumed by every NixOS host (workstation + cluster).
+# Top-level catchall consumed by every NixOS host (workstation + cluster)
 # Holds only truly universal content: nix settings, time, locale, openssh,
-# allowUnfree, binfmt. Workstation-specific configuration (PS1, docker, helper
-# functions) lives in modules/hosts/workstation.nix and is imported only by
-# workstation hosts.
+# allowUnfree, binfmt.
 
 { pkgs, ... }:
 
@@ -36,10 +34,8 @@
     ];
   };
 
-  # Time zone
   time.timeZone = "America/New_York";
 
-  # Internationalisation
   i18n.defaultLocale = "en_US.UTF-8";
 
   i18n.extraLocaleSettings = {
@@ -57,7 +53,6 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
-  # OpenSSH daemon — single source of truth across the fleet
   services.openssh.enable = true;
 
   # `nr` rebuilds the local host's NixOS config; `ndr` dry-runs it. Both shell

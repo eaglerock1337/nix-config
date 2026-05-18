@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# smoke-test.sh — post-deploy reachability check for an HLC node.
-# Constitution v1.1.0 § Safety & Change Management gate 5.
+# smoke-test.sh — post-deploy reachability check for an HLC node
 # Usage: scripts/smoke-test.sh <hostname> <ip>
 # Exit non-zero on any failure with a descriptive message.
 

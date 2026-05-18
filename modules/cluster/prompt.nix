@@ -1,4 +1,4 @@
-# Cluster-tier PS1 mechanism (FR-017, R-002).
+# Cluster-tier PS1 mechanism
 # Generic across clusters; cluster-specific glyph supplied via `cluster.prompt.glyph`.
 # HLC sets the glyph through its own `hlc.prompt.glyph` option in modules/cluster/hlc/default.nix.
 

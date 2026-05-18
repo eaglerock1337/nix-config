@@ -1,13 +1,12 @@
 { lib, inputs, ... }:
-# Raspberry Pi 5 (bcm2712) hardware module (T030, R-011, R-012, R-015)
+# Raspberry Pi 5 (bcm2712) hardware module
 {
   imports = [
     inputs.nixos-raspberrypi.nixosModules.raspberry-pi-5.base
     inputs.disko.nixosModules.disko
     ../../disko/rpi5.nix
     ./rpi-eeprom.nix
-    # sd-image lives in flake.nix mkHlcBootstrap — not here; provisioned configs
-    # never include the SD image module (fileSystems from disko/rpi5.nix in Phase 5)
+    # sd-image module lives in flake.nix mkHlcBootstrap — do not include here
   ];
 
   nixpkgs.hostPlatform = "aarch64-linux";
@@ -34,7 +33,7 @@
   # Pi family for rpi-eeprom.nix — gates Pi 5-specific EEPROM settings
   hlc.piFamily = "rpi5";
 
-  # Headless server config.txt profile (R-011, FR-025)
+  # Headless server config.txt profile
   # Confirmed option path: hardware.raspberry-pi.config.<section>.{options,base-dt-params,dt-overlays}
   hardware.raspberry-pi.config.all = {
     options = {

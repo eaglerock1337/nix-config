@@ -1,4 +1,4 @@
-# Shared HLC option declarations (T033).
+# Shared HLC option declarations
 # Imported by both default.nix (full config) and provision.nix (minimal config)
 # to avoid NixOS duplicate-option declaration errors when both flake outputs
 # evaluate against the same host configuration.

@@ -1,5 +1,5 @@
 { config, lib, pkgs, ... }:
-# One-shot EEPROM config service (T032, FR-026, R-013)
+# One-shot EEPROM config service
 # Applies boot-order and Pi-family-specific EEPROM settings on first boot.
 # Idempotent: gated by marker file /boot/firmware/.eeprom-configured.
 #

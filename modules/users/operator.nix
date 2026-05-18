@@ -1,7 +1,7 @@
-# Option-driven operator user (FR-020, closes W-001 inline-host pattern).
+# Option-driven operator user
 # A single `system.operator = { name; pubkeys; ... }` config materializes the
 # operator account uniformly across workstations and clusters. Each host context
-# (HLC, silicon, future Ecto-1) sets its own values.
+# (HLC, silicon, Ecto-1) sets its own values.
 #
 # This module ONLY generates the user account. Cluster-only security policy
 # (key-only SSH, passwordless wheel) lives in modules/cluster/common.nix.
@@ -17,7 +17,7 @@ in {
       default = null;
       description = ''
         Operator login name. Host sets this to materialize the operator account
-        (e.g. "bob" on HLC, "eaglerock" on silicon, future "slimer" on Ecto-1).
+        (e.g. "bob" on HLC, "eaglerock" on silicon, "slimer" on Ecto-1).
         Leave null on hosts that do not need an operator user.
       '';
     };

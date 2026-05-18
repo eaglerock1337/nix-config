@@ -9,14 +9,12 @@
   networking.domain = lib.mkDefault "marks.dev";
   users.mutableUsers = false;
 
-  # Cluster security policy. Workstations explicitly opt out by NOT importing
-  # this module — silicon keeps password sudo + password SSH at NixOS defaults.
+  # Cluster security policy
 
   # W-002: passwordless wheel during cluster transition; remove once sops-nix
   # secrets management lands (feature 002).
   security.sudo.wheelNeedsPassword = false;
 
-  # W-003 closed: key-only SSH enforced post-provisioning on cluster nodes.
   services.openssh.settings.PasswordAuthentication = false;
   services.openssh.settings.KbdInteractiveAuthentication = false;
 

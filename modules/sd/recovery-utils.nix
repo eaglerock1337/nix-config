@@ -95,29 +95,29 @@ let
 in
 {
   environment.systemPackages = with pkgs; [
-    curl        # HTTP fetches
-    dmidecode   # hardware info
-    dnsutils    # DNS diagnostics; provides dig/nslookup
-    e2fsprogs   # ext4 filesystem tools
-    ethtool     # NIC diagnostics and offload control
-    git         # repo access
-    gptfdisk    # GPT partition manipulation; provides sgdisk
-    htop        # process monitor
-    iproute2    # ip command
-    lsof        # open file/socket listing
-    util-linux  # block device tools; provides lsblk
-    mdadm       # RAID management
-    parted      # partition editor
-    pciutils    # PCIe device info; provides lspci
-    strace      # syscall tracer for process-level debugging
+    curl          # HTTP fetches
+    dmidecode     # hardware info
+    dnsutils      # DNS diagnostics; provides dig/nslookup
+    e2fsprogs     # ext4 filesystem tools
+    ethtool       # NIC diagnostics and offload control
+    git           # repo access
+    gptfdisk      # GPT partition manipulation; provides sgdisk
+    htop          # process monitor
+    iproute2      # ip command
+    lsof          # open file/socket listing
+    util-linux    # block device tools; provides lsblk
+    mdadm         # RAID management
+    parted        # partition editor
+    pciutils      # PCIe device info; provides lspci
+    strace        # syscall tracer for process-level debugging
     smartmontools # SMART disk health; provides smartctl
-    sysstat     # sar/iostat/mpstat for system performance
-    tcpdump     # network packet capture
-    tmux        # terminal multiplexer
-    usbutils    # USB device info; provides lsusb
-    vim         # editor
-    xfsprogs    # XFS filesystem tools
-    hlc-recover  # guided RAID/SD recovery (see let block above)
-    hlc-triage   # one-shot diagnostic capture (see let block above)
+    sysstat       # sar/iostat/mpstat for system performance
+    tcpdump       # network packet capture
+    tmux          # terminal multiplexer
+    usbutils      # USB device info; provides lsusb
+    vim           # editor
+    xfsprogs      # XFS filesystem tools
+    hlc-recover   # guided RAID/SD recovery (see let block above)
+    hlc-triage    # one-shot diagnostic capture (see let block above)
   ];
 }

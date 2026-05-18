@@ -1,13 +1,12 @@
 { lib, inputs, ... }:
-# Raspberry Pi 4 (bcm2711) hardware module (T031, R-011, R-012, R-015)
+# Raspberry Pi 4 (bcm2711) hardware module
 {
   imports = [
     inputs.nixos-raspberrypi.nixosModules.raspberry-pi-4.base
     inputs.disko.nixosModules.disko
     ../../disko/rpi4.nix
     ./rpi-eeprom.nix
-    # sd-image lives in flake.nix mkHlcBootstrap — not here; provisioned configs
-    # never include the SD image module (fileSystems from disko/rpi4.nix in Phase 5)
+    # sd-image module lives in flake.nix mkHlcBootstrap — do not include here
   ];
 
   nixpkgs.hostPlatform = "aarch64-linux";
@@ -34,7 +33,7 @@
   # Pi family for rpi-eeprom.nix — rpi4 uses universal EEPROM settings only
   hlc.piFamily = "rpi4";
 
-  # Headless server config.txt profile (R-011, FR-025)
+  # Headless server config.txt profile
   # Confirmed option path: hardware.raspberry-pi.config.<section>.{options,base-dt-params,dt-overlays}
   hardware.raspberry-pi.config.all = {
     options = {
@@ -44,7 +43,7 @@
       disable_splash = { enable = true; value = 1; };
       # Zero firmware boot delay
       boot_delay = { enable = true; value = 0; };
-      # Modest overclock for passive-heatsink Pi 4 (R-012): validated safe under sustained load
+      # Modest overclock for passive-heatsink Pi 4: validated safe under sustained load
       # 1750 MHz with over_voltage=2 stays well within passive cooling margin
       over_voltage = { enable = true; value = 2; };
       arm_freq = { enable = true; value = 1750; };
