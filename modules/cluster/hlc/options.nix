@@ -18,21 +18,20 @@
     };
 
     # Disko device options consumed by disko/rpi{4,5}.nix
+    # Class-level defaults set in modules/hardware/rpi{4,5}.nix via lib.mkDefault
     disko = {
       usbDevice0 = lib.mkOption {
         type = lib.types.str;
-        default = "PLACEHOLDER";
-        description = "First USB storage device path (by-path); filled before provisioning.";
+        description = "First USB storage device path (by-path). Class default set in hardware module.";
       };
       usbDevice1 = lib.mkOption {
         type = lib.types.str;
-        default = "PLACEHOLDER";
-        description = "Second USB storage device path (by-path); filled before provisioning.";
+        description = "Second USB storage device path (by-path). Class default set in hardware module.";
       };
       nvmeDevice = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "NVMe device path (by-path); null on Pi 4 nodes (no NVMe).";
+        description = "NVMe device path; null on Pi 4 (no NVMe). Pi 5 default set in hardware module.";
       };
       skipNvmeFormat = lib.mkOption {
         type = lib.types.bool;

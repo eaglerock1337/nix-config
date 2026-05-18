@@ -1,7 +1,10 @@
 # Sysadmin Tool Reference
 
+> **Status**: Reference documentation only. The `syshelp` command does not yet
+> exist — see [W-017](../specs/WORKAROUNDS.md#w-017-cluster-operations-managed-via-makefile-no-dedicated-cli-tool)
+> for the planned Go CLI utility that will surface this as `hlc syshelp`.
+
 Curated CLI utilities available on all managed systems (HLC cluster nodes, desktop).
-Run `syshelp` in any shell to see this list with color formatting.
 
 ## Network
 

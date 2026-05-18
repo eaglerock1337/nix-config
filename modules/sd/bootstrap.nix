@@ -17,8 +17,6 @@
 
   services.openssh = {
     enable = true;
-    # Bootstrap-only: provisioned hosts retain default password auth posture
-    # until W-003 closes in Phase 6 SSH hardening.
     settings.PasswordAuthentication = false;
     settings.KbdInteractiveAuthentication = false;
   };
@@ -49,8 +47,7 @@
   };
 
   # W-002: passwordless wheel for bob — required for `nixos-rebuild switch
-  # --target-host bob@<ip> --use-remote-sudo` canary path. Bootstrap-scoped
-  # here; provisioned-host scope lands in modules/users/operator.nix at Phase 6.
+  # --target-host bob@<ip> --use-remote-sudo` canary path.
   security.sudo.wheelNeedsPassword = false;
 
   users.users.bob = {

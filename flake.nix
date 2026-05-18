@@ -66,7 +66,7 @@
         specialArgs = {
           inherit inputs operatorPubkeys;
           clusterModule = ./modules/cluster/hlc/provision.nix;
-        };`
+        };
         modules = [
           disko.nixosModules.disko
           hostPath

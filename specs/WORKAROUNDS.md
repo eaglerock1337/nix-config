@@ -107,6 +107,18 @@ listed below under a separate header, also in numerical order.
 
 ---
 
+### W-017: Cluster operations managed via Makefile (no dedicated CLI tool)
+
+- **Site(s)**: `Makefile` — all cluster targets (provision, update-node, recover, etc.); `docs/syshelp-reference.md` — documents planned syshelp reference that is not yet implemented as a command.
+- **Deviates from**: Desired state: a purpose-built Go CLI utility (`hlc` or similar) that provides structured subcommands for cluster operations, built-in help, syshelp reference surfacing, and convenient aliases for common workflows.
+- **Reason**: Makefile was sufficient during initial cluster bring-up and grew organically. Now at 25+ targets with grouped help, pre-flight checks, IP derivation, decom guards, and multi-phase orchestration. Make is not ideal for this complexity — no argument validation, no subcommand structure, limited error handling, no built-in discoverability beyond `make help`.
+- **Exit condition**: Go CLI utility implemented that replaces Makefile cluster targets with structured subcommands (e.g. `hlc provision hlc-501`, `hlc update hlc-501`, `hlc recover hlc-501`, `hlc syshelp`). Makefile retained for local NixOS operations (`local-dry`, `local-switch`, `update`) only.
+- **Target phase / feature**: Follow-on feature spec — Go CLI utility. Out of scope for current PR.
+- **Opened**: 2026-05-18
+- **Resolved**: (open)
+
+---
+
 ## Resolved Workarounds
 
 ### W-001: Inline minimal host configs (defers Principle III)
