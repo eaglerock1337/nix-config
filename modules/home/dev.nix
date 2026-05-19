@@ -33,7 +33,6 @@ in {
     rubyPackages_3_4.rubocop
 
     # --- Misc Dev Tools ---
-    gnumake
     direnv
     gh      # GitHub CLI
 

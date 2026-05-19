@@ -1,28 +1,25 @@
-# Edit this configuration file to define what should be installed on
-# your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
-
-{ config, pkgs, ... }:
+{ operatorPubkeys, ... }:
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ../../modules/hosts/common.nix
-      ../../modules/hosts/grub.nix
-      ../../modules/hosts/desktop-ui.nix
-      ../../modules/hosts/gaming.nix
-      ../../modules/hardware/x1-carbon.nix
-      ./hardware-configuration.nix
-    ];
+  imports = [
+    ../../modules/hosts/workstation.nix
+    ../../modules/hosts/grub.nix
+    ../../modules/hosts/desktop-ui.nix
+    ../../modules/hosts/gaming.nix
+    ../../modules/hardware/x1-carbon.nix
+    ./hardware-configuration.nix
+  ];
 
-  networking.hostName = "silicon"; # Define your hostname.
+  networking.hostName = "silicon";
 
-  # This value determines the NixOS release from which the default
-  # settings for stateful data, like file locations and database versions
-  # on your system were taken. It‘s perfectly fine and recommended to leave
-  # this value at the release version of the first install of this system.
-  # Before changing this value read the documentation for this option
-  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "25.05"; # Did you read the comment?
+  system.operator = {
+    name = "eaglerock";
+    pubkeys = operatorPubkeys;
+    description = "Peter Marks";
+    extraGroups = [ "wheel" "networkmanager" "docker" ];
+  };
 
+  # See `man configuration.nix` before changing this — it pins stateful data
+  # locations to the release version that first installed this system.
+  system.stateVersion = "25.05";
 }
