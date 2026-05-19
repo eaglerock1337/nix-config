@@ -131,7 +131,7 @@ Per Session 2026-05-19 clarification: `home/eaglerock.nix` is generic for ALL wo
 
 ### 5. Picom Deduplication
 
-Currently triplicated: `i3.nix`, `polybar.nix`, and `ui.nix` (line 39–44, `services.picom` with `vSync = true`). After split: shared picom settings (`enable`, `fade`, `shadow`) move to `i3/common.nix`; backend + vsync live only in variant files (laptop.nix: xrender/vsync=false, gibson.nix: glx/vsync=true). Removed from both polybar.nix and ui.nix. The ui.nix reconciliation (T010a) MUST happen before the i3 split (T010b) to avoid module-system conflicts on `services.picom.vSync`.
+Currently defined in three places using two different mechanisms: `ui.nix` (line 39–44) uses home-manager `services.picom` module with `vSync = true`; `polybar.nix` (line 172) and `i3.nix` (line 301) both write raw `xdg.configFile."picom/picom.conf"`; `i3.nix` (line 244) also launches picom manually via i3 startup command. After split: T010a removes the `services.picom` block from `ui.nix`; T015 removes the raw picom config from `polybar.nix`; T010b consolidates the raw picom config from `i3.nix` into variant files with shared settings (`enable`, `fade`, `shadow`) in `i3/common.nix` and backend + vsync only in variant files (laptop.nix: xrender/vsync=false, gibson.nix: glx/vsync=true). The ui.nix reconciliation (T010a) MUST happen before the i3 split (T010b) to avoid conflicting picom management.
 
 ### 6. NVIDIA Driver Package
 

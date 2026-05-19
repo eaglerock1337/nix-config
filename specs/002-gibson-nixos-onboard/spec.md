@@ -146,7 +146,7 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 - **SC-002**: All three monitors display content with correct resolution (1440p center, 1080p sides) and workspaces are navigable via keybindings
 - **SC-003**: Ubuntu is bootable from the GRUB menu without any modification to the Ubuntu drive
 - **SC-004**: All three gaming peripheral types (Xbox controller, Logitech joystick, G29 wheel) are detected and functional in Steam games as a non-root user
-- **SC-005**: Silicon's `nixos-rebuild dry-run` produces identical results before and after Gibson onboarding (zero regression)
+- **SC-005**: Silicon's `nixos-rebuild dry-run` produces functionally identical results before and after Gibson onboarding (zero regression — store path changes from file renames are expected and acceptable)
 - **SC-006**: The i3-laptop/i3-gibson split and polybar parameterization result in no functional change to Silicon's desktop behavior
 - **SC-007**: Adding a future laptop host requires creating only a hardware module, host config, and selecting the laptop i3 variant — no shared module changes
 

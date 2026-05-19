@@ -55,14 +55,14 @@
 
 ### Import path updates (must run after all file moves + i3 split)
 
-- [ ] T011 [US5] Update import paths in `modules/nixos/` files: `common.nix` — `../shell/` → `./shell/`, `../users/operator.nix` → `./operator.nix`; `server.nix` — `../hosts/common.nix` → `./common.nix`, `./motd.nix` → `./server/motd.nix`, `./prompt.nix` → `./server/prompt.nix`, `../k8s/prereqs.nix` → `./k8s.nix`; `server/hlc/default.nix` — `../common.nix` → `../../server.nix`; `server/hlc/provision.nix` — `../../users/operator.nix` → `../../operator.nix`; `hardware/rpi/sd/recovery-utils.nix` — cluster path → `../../nixos/server/hlc/hlc-recover-script.nix`
-- [ ] T012 [US5] Update import paths in home, host, and flake files: `modules/home/workstation.nix` — change imports to `./workstation/i3/common.nix`, `./workstation/polybar.nix`, `./workstation/dunst.nix`, `./workstation/ui.nix`, `./workstation/dev.nix`, `./workstation/vscode.nix`; `modules/home/workstation/dunst.nix` — `./colors.nix` → `../colors.nix`; `modules/home/workstation/polybar.nix` — `./colors.nix` → `../colors.nix`; `hosts/silicon/configuration.nix` — `../../modules/hosts/` → `../../modules/nixos/` for all imports, `grub.nix` → `workstation/grub.nix`, `desktop-ui.nix` → `workstation/desktop-ui.nix`, `gaming.nix` → `workstation/gaming.nix`; add `../../modules/home/workstation/i3/laptop.nix` to `home-manager.users.eaglerock.imports`; all 12 `hosts/hlc-*/configuration.nix` — update RPi hardware module paths to `../../modules/hardware/rpi/rpi4.nix` or `rpi5.nix`; `flake.nix` — update cluster/sd paths to new locations under `modules/nixos/server/` and `modules/hardware/rpi/sd/` (note: some of these are now in `lib/hlc.nix` after T004)
+- [ ] T011 [P] [US5] Update import paths in `modules/nixos/` files: `common.nix` — `../shell/` → `./shell/`, `../users/operator.nix` → `./operator.nix`; `server.nix` — `../hosts/common.nix` → `./common.nix`, `./motd.nix` → `./server/motd.nix`, `./prompt.nix` → `./server/prompt.nix`, `../k8s/prereqs.nix` → `./k8s.nix`; `server/hlc/default.nix` — `../common.nix` → `../../server.nix`; `server/hlc/provision.nix` — `../../users/operator.nix` → `../../operator.nix`; `hardware/rpi/sd/recovery-utils.nix` — cluster path → `../../nixos/server/hlc/hlc-recover-script.nix`
+- [ ] T012 [P] [US5] Update import paths in home, host, and flake files: `modules/home/workstation.nix` — change imports to `./workstation/i3/common.nix`, `./workstation/polybar.nix`, `./workstation/dunst.nix`, `./workstation/ui.nix`, `./workstation/dev.nix`, `./workstation/vscode.nix`; `modules/home/workstation/dunst.nix` — `./colors.nix` → `../colors.nix`; `modules/home/workstation/polybar.nix` — `./colors.nix` → `../colors.nix`; `hosts/silicon/configuration.nix` — `../../modules/hosts/` → `../../modules/nixos/` for all imports, `grub.nix` → `workstation/grub.nix`, `desktop-ui.nix` → `workstation/desktop-ui.nix`, `gaming.nix` → `workstation/gaming.nix`; add `../../modules/home/workstation/i3/laptop.nix` to `home-manager.users.eaglerock.imports`; all 12 `hosts/hlc-*/configuration.nix` — update RPi hardware module paths to `../../modules/hardware/rpi/rpi4.nix` or `rpi5.nix`; `lib/hlc.nix` — update all paths extracted by T004 from old locations (`modules/cluster/`, `modules/sd/`) to new locations (`modules/nixos/server/`, `modules/hardware/rpi/sd/`); `flake.nix` — update any remaining cluster/sd paths to new locations
 - [ ] T013 [US5] Update comments and documentation referencing old paths, remove empty old directories: `modules/hosts/`, `modules/cluster/`, `modules/k8s/`, `modules/sd/`, `modules/shell/`, `modules/users/`. Create `modules/home/server/.gitkeep` placeholder
 
 ### custom.hostProfile + polybar parameterization
 
 - [ ] T014 [US5] Define `custom.hostProfile` NixOS options in `modules/nixos/workstation.nix` — `hasBattery` (bool, default false), `wlanInterface` (str, default ""), `ethInterface` (str, default ""), `defaultMonitor` (str, default "eDP-1"). Set Silicon values in `hosts/silicon/configuration.nix`: `hasBattery = true`, `wlanInterface = "wlp0s20f3"`, `defaultMonitor = "eDP-1"`. See research.md R-003
-- [ ] T015 [US5] Parameterize `modules/home/workstation/polybar.nix` with `osConfig.custom.hostProfile` — add `osConfig` to function args, use `lib.optionals osConfig.custom.hostProfile.hasBattery` for battery module, use `osConfig.custom.hostProfile.wlanInterface` for WiFi module, add ethernet module when `ethInterface != ""`, use `osConfig.custom.hostProfile.defaultMonitor` for bar monitor. Remove picom config from polybar (picom now lives only in i3 variant files). See research.md R-003
+- [ ] T015 [US5] Parameterize `modules/home/workstation/polybar.nix` with `osConfig.custom.hostProfile` — add `osConfig` to function args, use `lib.optionals osConfig.custom.hostProfile.hasBattery` for battery module, use `osConfig.custom.hostProfile.wlanInterface` for WiFi module, add ethernet module when `ethInterface != ""`, use `osConfig.custom.hostProfile.defaultMonitor` as fallback in existing `monitor = "\${env:MONITOR:...}"` pattern (polybar.nix:12). Update `services.polybar.script` to multi-monitor launch: loop over `polybar --list-monitors | cut -d: -f1`, launch `MONITOR=$m polybar mainbar &` per monitor (works universally for 1 or N monitors, replacing current single `polybar mainbar &`). Remove picom config from polybar (picom now lives only in i3 variant files). See research.md R-003
 
 ### Validation
 
@@ -176,7 +176,7 @@ Phase 1 (Setup)
 
 ```
 T003 (dirs) → T004 (HLC extract) → T005–T009 [parallel: file moves]
-→ T010a (picom reconcile ui.nix) → T010b (i3 split) → T011–T013 (import updates + cleanup)
+→ T010a (picom reconcile ui.nix) → T010b (i3 split) → T011+T012 [parallel: import updates] → T013 (cleanup)
 → T014 (hostProfile options) → T015 (polybar parameterize)
 → T016 (validate)
 ```
@@ -191,7 +191,7 @@ Key constraints:
 - **Phase 2 file moves**: T005–T009 fully parallel (different source directories)
 - **Phase 3 new files**: T017 + T018 parallel (separate new files)
 - **Phases 4, 5, 6**: Can run parallel after Phase 3 (different files/concerns)
-- **Phase 7**: T029 + T030 parallel
+- **Phase 7**: T030 + T031 parallel
 
 ---
 
