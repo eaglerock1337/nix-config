@@ -81,4 +81,13 @@ assets/             # Wallpapers, images
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
 at `specs/002-gibson-nixos-onboard/plan.md`
+
+Key design decisions for active feature (002-gibson-nixos-onboard):
+- Polybar parameterization: NixOS options (`custom.hostProfile`) + `osConfig`, NOT `extraSpecialArgs`
+- i3 split: `modules/home/workstation/i3/{common,laptop,gibson}.nix`; variant via `home-manager.users.eaglerock.imports` in host config
+- HLC helpers extracted to `lib/hlc.nix`; flake.nix stays pure composition (nixpkgs convention: `lib/` = pure functions, `modules/` = NixOS module-system participants)
+- Single shared `home/eaglerock.nix` for all workstations — no `eaglerock-gibson.nix`
+- Module reorg: `modules/hosts/` → `modules/nixos/`, `modules/cluster/` → `modules/nixos/server/`
+- NVIDIA driver: `nvidiaPackages.stable` default, commented `.latest` alternative for easy switching
+- Multi-monitor failure: graceful xrandr failure, no autorandr — i3 starts on whatever monitors succeed
 <!-- SPECKIT END -->

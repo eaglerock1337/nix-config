@@ -57,3 +57,32 @@ evtest                               # peripheral detection
 jstest /dev/input/js0                 # joystick test
 fftest /dev/input/event<X>           # G29 force feedback test
 ```
+
+## Module Directory Structure (post-reorg)
+
+```
+modules/
+├── nixos/                    # NixOS system modules
+│   ├── common.nix            # Shared across all hosts
+│   ├── workstation.nix       # Workstation entry point (defines custom.hostProfile options)
+│   ├── server.nix            # Server entry point (was cluster/common.nix)
+│   ├── k8s.nix               # K8s prerequisites
+│   ├── operator.nix          # Operator user module
+│   ├── shell/                # Shell config (common.nix, utilities.nix)
+│   ├── workstation/          # desktop-ui, gaming, grub, grub/
+│   └── server/               # motd, prompt, hlc/
+├── home/                     # Home-manager modules
+│   ├── base.nix, colors.nix  # Shared
+│   ├── workstation.nix       # Workstation entry point (imports i3/common.nix)
+│   ├── server.nix            # Server entry point
+│   ├── dotfiles/, themes/    # Shared support files (referenced by base.nix)
+│   ├── server/               # Future server home modules (.gitkeep)
+│   └── workstation/          # polybar, dunst, ui, dev, vscode, layouts/, scripts/
+│       └── i3/               # common.nix, laptop.nix, gibson.nix
+├── hardware/                 # Hardware modules
+│   ├── x1-carbon.nix         # Silicon laptop
+│   ├── gibson.nix            # Gibson desktop
+│   └── rpi/                  # rpi4.nix, rpi5.nix, rpi-eeprom.nix, sd/
+lib/
+└── hlc.nix                   # HLC helpers extracted from flake.nix
+```

@@ -76,18 +76,19 @@ The operator's gaming peripherals work under NixOS: Xbox One controllers connect
 
 ### User Story 5 - Module Architecture Supports Multiple Hosts (Priority: P3)
 
-The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (desktop) from the same flake, with shared modules for common functionality and separate modules where hardware differs. The i3 configuration is split into laptop and desktop variants. Polybar is parameterized to adapt to host-specific differences (monitors, network interfaces, battery presence). The architecture prepares for a future third laptop host (Carbon).
+The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (desktop) from the same flake, with a reorganized module directory structure. Modules are split into `modules/nixos/` (NixOS system modules) and `modules/home/` (home-manager modules), each with `workstation/` and `server/` subdirectories for role-specific configs. Shared modules live at each directory's root level. The i3 configuration is split into laptop and desktop variants under `modules/home/workstation/`. Polybar is parameterized to adapt to host-specific differences. The `modules/cluster/` directory is absorbed into `modules/nixos/server/`. The architecture prepares for future hosts (Carbon laptop, Pi cluster nodes).
 
 **Why this priority**: Good architecture prevents configuration drift and makes future host onboarding cheaper. Not blocking for Gibson itself but improves long-term maintainability.
 
-**Independent Test**: Both `nixos-rebuild dry-run --flake .#silicon` and `nixos-rebuild dry-run --flake .#gibson` succeed, importing the correct host-specific modules.
+**Independent Test**: Both `nixos-rebuild dry-run --flake .#silicon` and `nixos-rebuild dry-run --flake .#gibson` succeed, importing the correct host-specific modules. All import paths updated to reflect the reorganized structure.
 
 **Acceptance Scenarios**:
 
-1. **Given** the flake defines both `silicon` and `gibson`, **When** the configuration is evaluated, **Then** Silicon imports `i3-laptop.nix` and Gibson imports `i3-gibson.nix`
+1. **Given** the flake defines both `silicon` and `gibson`, **When** the configuration is evaluated, **Then** Silicon's `configuration.nix` imports `modules/home/workstation/i3/laptop.nix` and Gibson's imports `modules/home/workstation/i3/gibson.nix` via `home-manager.users.eaglerock.imports`
 2. **Given** polybar.nix is parameterized, **When** evaluated for Gibson, **Then** the battery module is absent, and network modules reference Gibson's interfaces
 3. **Given** polybar.nix is parameterized, **When** evaluated for Silicon, **Then** the battery module is present, WiFi module references `wlp0s20f3`, and behavior is identical to before the refactor
-4. **Given** a developer wants to add a third host (Carbon), **When** they review the module structure, **Then** they can onboard it by creating a hardware module, host config, and selecting `i3-laptop.nix` without modifying shared modules
+4. **Given** a developer wants to add a third host (Carbon), **When** they review the module structure, **Then** they can onboard it by creating a hardware module, host config, and selecting `i3/laptop.nix` without modifying shared modules
+5. **Given** the module reorganization is complete, **When** inspecting the directory structure, **Then** `modules/hosts/` no longer exists, `modules/cluster/` no longer exists, and all modules are under `modules/nixos/`, `modules/home/`, or `modules/hardware/`
 
 ---
 
@@ -104,7 +105,7 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 ### Functional Requirements
 
 - **FR-001**: System MUST boot NixOS on Gibson hardware (Ryzen 9 5950X, RTX 3080, 64GB RAM) with proprietary NVIDIA drivers loaded
-- **FR-002**: System MUST partition the 2TB NVMe with a 512MB EFI partition, 32GB swap partition, and the remainder as ext4 root
+- **FR-002**: System MUST declare a filesystem layout for the 2TB NVMe with a 512MB EFI partition, 32GB swap partition, and the remainder as ext4 root (partitioning is manual operator work during install)
 - **FR-003**: System MUST mount the Ubuntu NVMe at `/mnt/ubuntu`, the games NVMe (XFS) at `/srv`, and the HDD at `/mnt/hdd` using `by-uuid` disk identifiers (drives may be moved between slots), with `nofail` mount option on non-root drives
 - **FR-004**: System MUST present a GRUB boot menu with NixOS as default and Ubuntu as a selectable option via os-prober
 - **FR-005**: System MUST display the i3 window manager across three monitors (27" 1440p center, 24" 1080p left, 24" 1080p right) with workspace-to-monitor assignment: Left = ws 3 (Firefox) + ws 9 (spare), Right = ws 4 (Discord) + ws 10 (spare), Center = ws 1, 2, 5, 6, 7, 8
@@ -112,16 +113,21 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 - **FR-007**: System MUST display polybar on all three monitors, adapted for Gibson (no battery module, correct network interfaces for both ethernet and WiFi)
 - **FR-008**: System MUST support Xbox One controllers via the xpadneo driver, primarily over USB (wired) with Bluetooth as a secondary option
 - **FR-009**: System MUST support Logitech joysticks via standard HID drivers with full axis and button detection
-- **FR-010**: System MUST support the Logitech G29 racing wheel with force feedback via the lg4ff kernel module
+- **FR-010**: System MUST support the Logitech G29 racing wheel with force feedback via the `new-lg4ff` driver (`hardware.new-lg4ff.enable`)
 - **FR-011**: System MUST provide udev rules granting non-root users access to gaming HID devices
-- **FR-012**: System MUST include a hardware module (`gibson.nix`) for AMD CPU microcode, NVIDIA GPU configuration, and desktop-appropriate settings (no laptop power management)
-- **FR-013**: System MUST add a `nixosConfigurations.gibson` entry to `flake.nix` without affecting existing Silicon configuration
-- **FR-014**: The i3 configuration MUST be split into `i3-laptop.nix` (for Silicon and future laptops) and `i3-gibson.nix` (for Gibson's triple-monitor layout)
-- **FR-015**: The polybar configuration MUST be parameterized to handle host-specific differences (monitor names, network interfaces, battery presence) from a single shared module
+- **FR-012**: System MUST include a hardware module (`gibson.nix`) for AMD CPU microcode, NVIDIA GPU configuration using `nvidiaPackages.stable` (with commented `nvidiaPackages.latest` alternative for easy switching), and desktop-appropriate settings (no TLP, thermald, lid actions, or battery management)
+- **FR-013**: System MUST add a `nixosConfigurations.gibson` entry to `flake.nix` without affecting existing Silicon configuration. HLC helper functions (`mkHlcNode`, `mkHlcProvision`, `mkHlcBootstrap`, `mkSdImages`, host lists) MUST be extracted to `lib/hlc.nix` so flake.nix remains pure composition
+- **FR-014**: The i3 configuration MUST be split into three files under `modules/home/workstation/i3/`: `common.nix` (shared keybindings, colors, fonts, gaps, assigns, modes, window commands), `laptop.nix` (Silicon/future laptops: xrandr scaling, brightness keys, xrender picom), and `gibson.nix` (triple-monitor xrandr, glx picom, directional workspace movement). `workstation.nix` imports `i3/common.nix`; host-specific variant is imported in the host's `configuration.nix` via `home-manager.users.eaglerock.imports` alongside `home/eaglerock.nix`
+- **FR-015**: The polybar configuration MUST be parameterized to handle host-specific differences (default monitor, network interfaces, battery presence) via NixOS options defined in a `custom.hostProfile` option set (`hasBattery`, `wlanInterface`, `ethInterface`, `defaultMonitor`). Each host's `configuration.nix` sets these options; polybar reads them via `osConfig`. Single shared polybar module in `modules/home/workstation/`
 - **FR-016**: System MUST support both wired ethernet and WiFi via NetworkManager
 - **FR-017**: System MUST apply the Gruvbox Dark theme consistently (same as Silicon) across i3, polybar, GTK, terminal, and lock screen
 - **FR-018**: System MUST support 5.1 surround audio output and microphone input via onboard motherboard audio through PipeWire
 - **FR-019**: Gibson's i3 startup MUST replicate Silicon's workspace 1 layout (3 alacritty terminals) and floating scratchpad terminal
+- **FR-020**: The module directory MUST be reorganized: `modules/hosts/` renamed to `modules/nixos/`, with workstation-specific NixOS modules under `modules/nixos/workstation/` and server modules under `modules/nixos/server/`
+- **FR-021**: `modules/cluster/` MUST be absorbed into `modules/nixos/server/` (all files are NixOS system modules), preserving the `hlc/` subdirectory structure
+- **FR-022**: `modules/k8s/prereqs.nix` MUST be relocated to `modules/nixos/k8s.nix`, `modules/shell/` to `modules/nixos/shell/`, and `modules/users/operator.nix` to `modules/nixos/operator.nix`
+- **FR-023**: `modules/sd/` MUST be relocated to `modules/hardware/rpi/sd/` and existing RPi hardware modules (`rpi4.nix`, `rpi5.nix`, `rpi-eeprom.nix`) MUST be moved under `modules/hardware/rpi/`
+- **FR-024**: Workstation-specific home-manager modules (`i3*.nix`, `polybar.nix`, `dunst.nix`, `ui.nix`, `vscode.nix`, `dev.nix`, `layouts/`, `scripts/`) MUST be moved under `modules/home/workstation/`; shared modules (`base.nix`, `colors.nix`), shared support directories (`dotfiles/`, `themes/` — referenced by `base.nix`), and entry points (`workstation.nix`, `server.nix`) stay at `modules/home/` root
 
 ### Key Entities
 
@@ -157,10 +163,20 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 - Q: App-to-workspace assignments? → A: Same as Silicon base. Firefox stays on workspace 3, Discord stays on workspace 4. Workspaces 9 and 10 are dedicated spare workspaces for side monitors.
 - Q: Workspace-to-monitor mapping? → A: Left monitor: ws 3 (Firefox) + ws 9 (spare). Right monitor: ws 4 (Discord) + ws 10 (spare). Center monitor: ws 1, 2, 5, 6, 7, 8.
 
+### Session 2026-05-19
+
+- Q: Top-level module directory naming — should `modules/hosts/` be renamed? → A: Rename to `modules/nixos/`. Workstation-specific modules under `nixos/workstation/`, server under `nixos/server/`. `common.nix` stays at root. `grub.nix`+`grub/` go into `workstation/`. `k8s/prereqs.nix` → `nixos/k8s.nix`. `shell/` → `nixos/shell/`. `users/operator.nix` → `nixos/operator.nix`. `sd/` → `hardware/rpi/sd/`. `cluster/` absorbed into `nixos/server/`.
+- Q: Where do host-specific home-manager modules land? → A: `modules/home/workstation/` for UI modules (i3, polybar, dunst, ui, vscode, dev, layouts, scripts). `modules/home/server/` for server home config. Shared modules (`base.nix`, `colors.nix`), shared support directories (`dotfiles/`, `themes/` — referenced by `base.nix`), and entry points (`workstation.nix`, `server.nix`) stay at `modules/home/` root.
+- Q: Should `modules/nixos/server/` be pre-created? → A: Yes, create with `.gitkeep` placeholder now. Populated when first server host is onboarded. `modules/cluster/` content moves here immediately.
+- Q: How should host-specific i3/polybar customization be wired to reduce flake.nix complexity? → A: (1) Extract HLC helper functions (`mkHlcNode`, `mkHlcProvision`, `mkHlcBootstrap`, `mkSdImages`, host lists) into `lib/hlc.nix` — flake.nix imports and merges results. (2) `home/eaglerock.nix` is generic for ALL workstations — no host-specific values in it. (3) Host-specific i3 variant imported in the host's `configuration.nix` via `home-manager.users.eaglerock.imports` alongside `eaglerock.nix`. (4) Host-specific polybar values (battery, network interfaces) set as NixOS options in host `configuration.nix`, polybar reads via `osConfig`. No `hostProfile` in flake.nix `extraSpecialArgs`, no dynamic imports. (5) i3 split into three files under `modules/home/workstation/i3/`: `common.nix` (shared ~250 lines: colors, keybindings, fonts, gaps, assigns, modes), `laptop.nix` (laptop xrandr, brightness keys, xrender picom — merged with common via module system, not direct import), `gibson.nix` (triple-monitor xrandr, glx picom, extra workspace movement keybinds — merged with common via module system). `workstation.nix` imports `i3/common.nix`; variant files merge on top. flake.nix stays pure composition.
+- Q: Should HLC helpers live in `lib/hlc.nix` or `modules/helpers/hlc.nix`? → A: `lib/hlc.nix` — follows nixpkgs convention where `lib/` holds pure utility functions and `modules/` is reserved for NixOS module-system participants (things with `options`/`config`). HLC helpers are builder functions, not modules.
+- Q: Which NVIDIA driver package variant? → A: `nvidiaPackages.stable` as default, but hardware module should make it easy to switch to `nvidiaPackages.latest` (single-line change, commented alternative).
+- Q: Multi-monitor partial failure during i3 startup? → A: Let i3/xrandr fail gracefully — i3 starts on whatever monitors xrandr succeeds on. No custom retry logic or autorandr profiles.
+
 ## Assumptions
 
 - The operator will perform the NixOS installation manually (boot from USB, partition the 2TB NVMe, run `nixos-install`) — this spec covers the configuration, not the installation procedure
-- GPU output names (DP-0, DP-1, HDMI-0, etc.) will be discovered during initial install via `xrandr` and hardcoded into `i3-gibson.nix`
+- GPU output names (DP-0, DP-1, HDMI-0, etc.) will be discovered during initial install via `xrandr` and hardcoded into `i3/gibson.nix`
 - The Ubuntu installation uses a standard EFI/GRUB setup that os-prober can detect
 - The existing XFS games partition at `/srv` contains a Steam library that Steam on NixOS can adopt by adding the library path
 - The Logitech G29's RPM indicator LEDs are out of scope for initial onboarding (nice-to-have for a follow-up)
