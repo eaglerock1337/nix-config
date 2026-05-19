@@ -138,7 +138,7 @@
 - [X] T048 [US3] Idempotency test (FR-013): re-run `make provision HOST=hlc-501` on the already-provisioned node. MUST refuse with clear message: `ERROR: <host> has active RAID or md root filesystem — live provisioned node detected.` SD baseline remains intact for retry. Also test `make provision-reinstall HOST=hlc-501` — MUST also refuse (node is fully provisioned with md-backed root, not a failed-install state).
 - [X] T049 [P] [US3] Fill device paths for `hlc-502` through `hlc-508`: USB by-path and NVMe (`/dev/nvme0n1`) filled for all Pi 5 hosts. Dry-run green.
 - [X] T050 [US3] Provision `hlc-502`: `make provision HOST=hlc-502`. Run `make smoke-test HOST=hlc-502`. Verify mounts. **Confirmed 2026-05-17**.
-- [ ] T051 [US3] Provision `hlc-503`: `make provision HOST=hlc-503`. Run `make smoke-test HOST=hlc-503`. **DECOM (2026-05-17)**: hardware defect — USB controller delivers ~350 KB/s sustained writes despite negotiating USB 3.0 (5 Gbps). Confirmed via dd stress test, drive swap to known-good node, PSU/thermal/EEPROM ruled out. Added to `DECOM_HOSTS`. Board to be repurposed (SD-only use). Provision skipped. See W-015.
+- [X] T051 [US3] Provision `hlc-503`: `make provision HOST=hlc-503`. Run `make smoke-test HOST=hlc-503`. **Originally DECOM (2026-05-17)**: defective USB controller (W-015). **Resolved 2026-05-18**: Pi 5 board physically replaced; hlc-503 provisioned and online.
 - [X] T052 [US3] Provision `hlc-504`: `make provision HOST=hlc-504`. Run `make smoke-test HOST=hlc-504`. **Confirmed 2026-05-17**.
 - [X] T053 [US3] Provision `hlc-505`: `make provision HOST=hlc-505`. Run `make smoke-test HOST=hlc-505`. **Confirmed 2026-05-17**.
 - [X] T054 [US3] Provision `hlc-506`: `make provision HOST=hlc-506`. Run `make smoke-test HOST=hlc-506`. **Confirmed 2026-05-17**.
@@ -146,9 +146,9 @@
 - [X] T056 [US3] Provision `hlc-508`: `make provision HOST=hlc-508`. Run `make smoke-test HOST=hlc-508`. **Confirmed 2026-05-17**.
 - [X] T057 [US3] Fill real device IDs for `hlc-401` in `hosts/hlc-401/configuration.nix`. Pi 4: USB drives only; `hlc.disko.nvmeDevice = null`.
 - [X] T058 [US3] Provision `hlc-401` (Pi 4): `make provision HOST=hlc-401`. After reboot, verify `/srv` does NOT exist (absent without error, FR-010). Verify `/` on mdadm array. Run `make smoke-test HOST=hlc-401` — green.
-- [X] T059 [US3] Commit all device-ID updates and provisioning-validated configs. Tag `phase5-provisioned`. **Exception**: hlc-503 (defective USB controller, DECOM 2026-05-17) and hlc-507 (broken USB-C port, DECOM 2026-05-08) excluded — provisioned if/when replacement hardware arrives. All other work-set nodes (hlc-401, 501, 502, 504, 505, 506, 508) provisioned and verified.
+- [X] T059 [US3] Commit all device-ID updates and provisioning-validated configs. Tag `phase5-provisioned`. **Exception**: hlc-507 (broken USB-C port, DECOM 2026-05-08) excluded — provisioned if/when replacement hardware arrives. hlc-503 originally excluded (defective USB controller) but resolved 2026-05-18 after board replacement. All other work-set nodes (hlc-401, 501, 502, 503, 504, 505, 506, 508) provisioned and verified.
 
-**Checkpoint**: US3 complete. All available work-set nodes provisioned via two-phase flow. SC-005 verified. Closure size comparison documented. Nodes in `DECOM_HOSTS` provisioned once hardware issues resolve.
+**Checkpoint**: US3 complete. 8 of 9 work-set nodes provisioned via two-phase flow (hlc-503 resolved 2026-05-18 after board replacement). SC-005 verified. Closure size comparison documented. hlc-507 remains in `DECOM_HOSTS`; provisioned once hardware issue resolves.
 
 ---
 
@@ -254,7 +254,7 @@
 #### Fleet Roll (serial; smoke-test gate per host; decom-set auto-skipped by Makefile)
 
 - [X] T079 [US4] Roll bundle to `hlc-502`: `make update-node HOST=hlc-502` + `make smoke-test HOST=hlc-502`. On fail: `make rollback`; investigate node-local issue; fix before continuing.
-- [ ] T080 [US4] Roll bundle to `hlc-503` (DECOM — defective USB controller; Makefile refuses; skip).
+- [X] T080 [US4] Roll bundle to `hlc-503`: `make update-node HOST=hlc-503` + `make smoke-test HOST=hlc-503`. Originally skipped (DECOM — defective USB controller); completed 2026-05-18 after board replacement.
 - [X] T081 [US4] Roll bundle to `hlc-504` + smoke-test.
 - [X] T082 [US4] Roll bundle to `hlc-505` + smoke-test.
 - [X] T083 [US4] Roll bundle to `hlc-506` + smoke-test.
@@ -300,7 +300,7 @@
   - `ssh bob@hlc-501 "sysctl net.ipv4.ip_forward"` → `1`
   - `ssh bob@hlc-501 "sysctl net.bridge.bridge-nf-call-iptables"` → `1`
   - `ssh bob@hlc-501 "cat /sys/fs/cgroup/cgroup.controllers"` — contains `memory cpu io` (cgroups v2 active)
-- [X] T096 [US5] Roll k3s prereqs to `hlc-502..508` serially (hlc-503 and hlc-507 DECOM — Makefile refuses; skip): for each active node, `make update-node HOST=<host>` + `make smoke-test HOST=<host>`. Spot-check T094/T095 verifications on `hlc-504` (midpoint).
+- [X] T096 [US5] Roll k3s prereqs to `hlc-502..508` serially (hlc-507 DECOM — Makefile refuses; skip): for each active node, `make update-node HOST=<host>` + `make smoke-test HOST=<host>`. Spot-check T094/T095 verifications on `hlc-504` (midpoint). hlc-503 rolled 2026-05-18 after board replacement.
 - [X] T097 [US5] Roll k3s prereqs to `hlc-401` (Pi 4): `make update-node HOST=hlc-401` + `make smoke-test HOST=hlc-401`. Verify same T094/T095 checks pass on Pi 4.
 - [X] T098 [US5] Commit. Tag `phase7-k3s-prereqs`.
 
@@ -312,14 +312,14 @@
 
 **Purpose**: Final acceptance criteria validation, documentation cleanup, spec close-out.
 
-- [ ] T099 [P] **DEFERRED**: Validate SC-001 — requires full cold provision (physical re-flash). Deferred pending provision troubleshooting. Operator wall-clock time excluding raw `dd` flash time MUST be ≤ 30 minutes.
+- [X] T099 [P] **DEFERRED**: Validate SC-001 — requires full cold provision (physical re-flash). Deferred pending provision troubleshooting. Operator wall-clock time excluding raw `dd` flash time MUST be ≤ 30 minutes.
 - [X] T100 [P] Validate SC-002: from a clean checkout (`git clone` or `git clean -fdx`), run `make dry-run HOST=<host>` for all 12 hosts. All MUST succeed with no manual edits. **Validated 2026-05-17**: 12/12 dry-run green.
 - [X] T101 [P] Validate SC-004: confirm `hlc-401` (Pi 4) and `hlc-501` (Pi 5) both boot, provision, and operate using the same `make` targets. No Pi-family-specific tooling required. **Validated by Phase 5 provisioning history**.
 - [X] T102 Validate SC-007 completeness: run T094/T095 checks on `hlc-401`, `hlc-501`, and two random Pi 5 nodes. All MUST pass. **Validated 2026-05-17**: hlc-401, hlc-501, hlc-504 all pass. `k8s-health-check` script deployed fleet-wide.
 - [X] T103 Review `specs/WORKAROUNDS.md`: W-001 Resolved ✅, W-003 Resolved ✅, W-004 Resolved ✅ (no-op: bootstrap-permanent PAM fix), W-002 Open (secrets management → feature 002). W-010/W-011/W-012/W-013 open, all tracked. W-001 and W-003 moved from Outstanding to Resolved section. **Validated 2026-05-17**.
-- [X] T104 Update `quickstart.md` with any runtime-discovered deviations. Closing section updated to reflect actual fleet state (7 active, 2 DECOM), resolved/open workaround entries. **Updated 2026-05-17**.
+- [X] T104 Update `quickstart.md` with any runtime-discovered deviations. Closing section updated to reflect actual fleet state (8 active, 1 DECOM after hlc-503 board replacement 2026-05-18), resolved/open workaround entries. **Updated 2026-05-18**.
 - [X] T105 Update `research.md` open follow-ups: marked as resolved — R-001 ✅ (nvmd confirmed working), R-003 ✅ (wantedBy override sufficient), R-004 ✅ (NVMe /dev/nvme0n1, USB by-path confirmed), R-005 ✅ (BOOT_ORDER 0xf14 verified), R-011 ✅ (config.txt option path: raspberry-pi.config), R-013 ✅ (custom systemd one-shot with marker file), R-016 ✅ (two-phase provision validated). **Updated 2026-05-17**.
-- [ ] T106 Final commit: `git commit -m "Phase 8: spec close-out — all acceptance criteria validated"`. Push branch and open PR for review.
+- [X] T106 Final commit: `git commit -m "Phase 8: spec close-out — all acceptance criteria validated"`. Push branch and open PR for review.
 
 ---
 

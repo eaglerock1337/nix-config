@@ -26,7 +26,7 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 **Open follow-ups**:
 
-- ~~A flake-update task in `/speckit-tasks` will run `nix flake update raspberrypi-nvmd` (or whatever the input is named on swap) and record the resulting `flake.lock` revision in the commit message.~~ Resolved: input named `nixos-raspberrypi`; `nix flake update nixos-raspberrypi` run in Phase 1; flake.lock committed. Confirmed working on all 7 active work-set nodes.
+- ~~A flake-update task in `/speckit-tasks` will run `nix flake update raspberrypi-nvmd` (or whatever the input is named on swap) and record the resulting `flake.lock` revision in the commit message.~~ Resolved: input named `nixos-raspberrypi`; `nix flake update nixos-raspberrypi` run in Phase 1; flake.lock committed. Confirmed working on all 8 active work-set nodes.
 
 ---
 
@@ -70,7 +70,7 @@ This document resolves the technical unknowns surfaced by the spec and the plan'
 
 **Open follow-ups**:
 
-- ~~Cross-check upstream `services.k3s` for any additional `wantedBy` or `requiredBy` sets that need overriding.~~ Resolved: only `wantedBy` needed override; `systemd.services.k3s.wantedBy = lib.mkForce [ ]` confirmed sufficient. k3s enabled-but-stopped verified on all 7 active nodes.
+- ~~Cross-check upstream `services.k3s` for any additional `wantedBy` or `requiredBy` sets that need overriding.~~ Resolved: only `wantedBy` needed override; `systemd.services.k3s.wantedBy = lib.mkForce [ ]` confirmed sufficient. k3s enabled-but-stopped verified on all 8 active nodes.
 
 ---
 

@@ -83,18 +83,6 @@ listed below under a separate header, also in numerical order.
 
 ---
 
-### W-015: hlc-503 not provisioned (defective USB controller)
-
-- **Site(s)**: `Makefile` — hlc-503 in `DECOM_HOSTS`; `tasks.md` T051 unchecked; `hosts/hlc-503/configuration.nix` exists (dry-run passes) but node not physically provisioned.
-- **Deviates from**: Spec scope — 9 in-scope nodes (`hlc-401`, `hlc-501..508`) all physically provisioned.
-- **Reason**: USB 3.0 controller negotiates at 5 Gbps but delivers ~350 KB/s sustained writes. Confirmed via dd stress test, drive swap to known-good node, PSU/thermal/EEPROM ruled out. Board-level defect. Provisioning via USB RAID is not viable at this throughput.
-- **Exit condition**: Replace Pi 5 board or repurpose hlc-503 for SD-only workloads outside the RAID-provisioned fleet. Remove from `DECOM_HOSTS` and run `make provision HOST=hlc-503` once hardware is resolved.
-- **Target phase / feature**: Follow-on hardware replacement. May resolve before or after PR merge.
-- **Opened**: 2026-05-17
-- **Resolved**: (open)
-
----
-
 ### W-016: hlc-507 not provisioned (hardware issue)
 
 - **Site(s)**: `Makefile` — hlc-507 in `DECOM_HOSTS`; `tasks.md` T055/T084 unchecked; `hosts/hlc-507/configuration.nix` exists (dry-run passes) but node not physically provisioned.
@@ -214,3 +202,15 @@ listed below under a separate header, also in numerical order.
 - **Target phase / feature**: N/A — resolved alongside W-008 before code was ever deployed.
 - **Opened**: 2026-05-05
 - **Resolved**: 2026-05-11 (W-008 root cause was Unifi security rule; sysctls removed from `vendor-kernel-tcp.nix`)
+
+---
+
+### W-015: hlc-503 not provisioned (defective USB controller)
+
+- **Site(s)**: `Makefile` — hlc-503 in `DECOM_HOSTS`; `tasks.md` T051 unchecked; `hosts/hlc-503/configuration.nix` exists (dry-run passes) but node not physically provisioned.
+- **Deviates from**: Spec scope — 9 in-scope nodes (`hlc-401`, `hlc-501..508`) all physically provisioned.
+- **Reason**: USB 3.0 controller negotiates at 5 Gbps but delivers ~350 KB/s sustained writes. Confirmed via dd stress test, drive swap to known-good node, PSU/thermal/EEPROM ruled out. Board-level defect. Provisioning via USB RAID is not viable at this throughput.
+- **Exit condition**: Replace Pi 5 board or repurpose hlc-503 for SD-only workloads outside the RAID-provisioned fleet. Remove from `DECOM_HOSTS` and run `make provision HOST=hlc-503` once hardware is resolved.
+- **Target phase / feature**: Follow-on hardware replacement. May resolve before or after PR merge.
+- **Opened**: 2026-05-17
+- **Resolved**: 2026-05-18 — Pi 5 board physically replaced; hlc-503 provisioned and online. Removed from `DECOM_HOSTS`.

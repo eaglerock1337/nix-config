@@ -165,8 +165,8 @@ Module reintroduction order (W-001 exit plan):
 
 ## Closing
 
-- 7 active work-set nodes running NixOS on nvmd fork, USB-RAID root, full operator UX, k3s prereqs installed: hlc-401, hlc-501, hlc-502, hlc-504, hlc-505, hlc-506, hlc-508.
-- 2 nodes DECOM: hlc-503 (defective USB controller, 2026-05-17), hlc-507 (broken USB-C port, 2026-05-08). Provisioned if/when replacement hardware arrives.
+- 8 active work-set nodes running NixOS on nvmd fork, USB-RAID root, full operator UX, k3s prereqs installed: hlc-401, hlc-501, hlc-502, hlc-503, hlc-504, hlc-505, hlc-506, hlc-508. hlc-503 returned to service 2026-05-18 after physical board replacement (W-015 resolved).
+- 1 node DECOM: hlc-507 (hardware issue, 2026-05-08; W-016 open). Provisioned if/when replacement hardware arrives.
 - 3 deferred Pi 4s (`hlc-402..404`) remain on the old Debian cluster, untouched, with evaluable but unflashed NixOS configs.
 - Resolved ledger entries: W-001 (Phase 6 bundle canary + fleet roll), W-003 (Phase 6 SSH hardening), W-004/W-005/W-006/W-007/W-008/W-009 (see WORKAROUNDS.md).
 - Open ledger entries: W-002 (passwordless wheel → secrets management), W-010 (root SSH for nixos-anywhere), W-011 (firmware mount workaround), W-012 (--no-check-sigs), W-013 (provision-stage1 failure tolerance).

@@ -7,7 +7,7 @@
 
 Bring 9 Raspberry Pis (`hlc-401` on Pi 4; `hlc-501..508` on Pi 5) onto NixOS using the `nvmd/nixos-raspberrypi` fork, with a three-scope layered module structure, full-disk provisioning via `nixos-anywhere`/`disko`, operator shell UX (MOTD, PS1, toolbox, home-manager), and k3s OS-level prerequisites installed. Cluster bootstrap is out of scope. The implementation is sequenced as 8 phases (Phase 1–8, matching tasks.md numbering), each gated by `make smoke-test` on a canary node before any fleet roll.
 
-**Status**: Phases 1–6 complete. 7 active work-set nodes provisioned and running full config (hlc-401, 501, 502, 504, 505, 506, 508). hlc-503 DECOM (defective USB controller, 2026-05-17); hlc-507 DECOM (hardware issue). W-001 and W-003 closed. Operator UX live: Gruvbox-colorized PS1, MOTD, toolbox, home-manager, SSH hardening deployed fleet-wide. Phases 7–8 pending.
+**Status**: Phases 1–8 complete. 8 active work-set nodes provisioned and running full config (hlc-401, 501, 502, 503, 504, 505, 506, 508). hlc-503 returned to service 2026-05-18 after physical board replacement (W-015 resolved). hlc-507 DECOM (hardware issue; W-016 open). W-001 and W-003 closed. Operator UX live: Gruvbox-colorized PS1, MOTD, toolbox, home-manager, SSH hardening deployed fleet-wide. k3s prerequisites installed on all active nodes. Two tasks remain open: T055, T084 (hlc-507 hardware-blocked).
 
 ---
 
@@ -412,12 +412,12 @@ Final acceptance criteria validation and spec close-out. See tasks.md Phase 8 fo
 
 ## Post-spec State
 
-After all 6 phases:
+After all 8 phases:
 
-- All 9 work-set nodes running NixOS on nvmd fork, USB-RAID root, per-host operator UX, k3s prereqs installed.
+- 8 of 9 work-set nodes running NixOS on nvmd fork, USB-RAID root, per-host operator UX, k3s prereqs installed (hlc-401, 501, 502, 503, 504, 505, 506, 508). hlc-507 remains DECOM pending hardware replacement (W-016 open).
 - All 12 host configs evaluable from clean checkout (SC-002).
 - Deferred Pi 4s (`hlc-402..404`) on Debian, untouched.
-- Open ledger: W-002 (passwordless wheel → secrets management feature spec). W-001, W-003, W-004 closed (W-004 resolved as no-op: bootstrap-permanent PAM fix, no removal needed). W-001 + W-003 closed by Phase 6.
+- Open ledger: W-002 (passwordless wheel → secrets management feature spec), W-016 (hlc-507 hardware). W-001, W-003, W-004, W-015 closed. W-010/W-011/W-012/W-013 open (bootstrap-scoped or provision-scoped mitigations, all tracked in WORKAROUNDS.md).
 - The follow-on cluster-bootstrap spec starts here: flips `wantedBy`, drops k3s config, brings up the cluster. No reflashing required.
 
 ---
