@@ -115,19 +115,20 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 - **FR-009**: System MUST support Logitech joysticks via standard HID drivers with full axis and button detection
 - **FR-010**: System MUST support the Logitech G29 racing wheel with force feedback via the `new-lg4ff` driver (`hardware.new-lg4ff.enable`)
 - **FR-011**: System MUST provide udev rules granting non-root users access to gaming HID devices
-- **FR-012**: System MUST include a hardware module (`gibson.nix`) for AMD CPU microcode, NVIDIA GPU configuration using `nvidiaPackages.stable` (with commented `nvidiaPackages.latest` alternative for easy switching), and desktop-appropriate settings (no TLP, thermald, lid actions, or battery management)
+- **FR-012**: System MUST include a hardware module (`gibson.nix`) for AMD CPU microcode, NVIDIA GPU configuration using `nvidiaPackages.stable` (with commented `nvidiaPackages.latest` alternative for easy switching), NVIDIA power management enabled for suspend/resume (`nvidia.powerManagement.enable = true`), and desktop-appropriate settings (no TLP, thermald, lid actions, or battery management)
 - **FR-013**: System MUST add a `nixosConfigurations.gibson` entry to `flake.nix` without affecting existing Silicon configuration. HLC helper functions (`mkHlcNode`, `mkHlcProvision`, `mkHlcBootstrap`, `mkSdImages`, host lists) MUST be extracted to `lib/hlc.nix` so flake.nix remains pure composition
 - **FR-014**: The i3 configuration MUST be split into three files under `modules/home/workstation/i3/`: `common.nix` (shared keybindings, colors, fonts, gaps, assigns, modes, window commands), `laptop.nix` (Silicon/future laptops: xrandr scaling, brightness keys, xrender picom), and `gibson.nix` (triple-monitor xrandr, glx picom, directional workspace movement). `workstation.nix` imports `i3/common.nix`; host-specific variant is imported in the host's `configuration.nix` via `home-manager.users.eaglerock.imports` alongside `home/eaglerock.nix`
 - **FR-015**: The polybar configuration MUST be parameterized to handle host-specific differences (default monitor, network interfaces, battery presence) via NixOS options defined in a `custom.hostProfile` option set (`hasBattery`, `wlanInterface`, `ethInterface`, `defaultMonitor`). Each host's `configuration.nix` sets these options; polybar reads them via `osConfig`. Single shared polybar module in `modules/home/workstation/`
 - **FR-016**: System MUST support both wired ethernet and WiFi via NetworkManager
 - **FR-017**: System MUST apply the Gruvbox Dark theme consistently (same as Silicon) across i3, polybar, GTK, terminal, and lock screen
-- **FR-018**: System MUST support 5.1 surround audio output and microphone input via onboard motherboard audio through PipeWire
+- **FR-018**: System MUST support 5.1 surround audio output (analog multi-channel via motherboard's 3 audio jacks: front, rear, center/sub) and microphone input via onboard motherboard audio through PipeWire with the appropriate surround profile enabled
 - **FR-019**: Gibson's i3 startup MUST replicate Silicon's workspace 1 layout (3 alacritty terminals) and floating scratchpad terminal
 - **FR-020**: The module directory MUST be reorganized: `modules/hosts/` renamed to `modules/nixos/`, with workstation-specific NixOS modules under `modules/nixos/workstation/` and server modules under `modules/nixos/server/`
 - **FR-021**: `modules/cluster/` MUST be absorbed into `modules/nixos/server/` (all files are NixOS system modules), preserving the `hlc/` subdirectory structure
 - **FR-022**: `modules/k8s/prereqs.nix` MUST be relocated to `modules/nixos/k8s.nix`, `modules/shell/` to `modules/nixos/shell/`, and `modules/users/operator.nix` to `modules/nixos/operator.nix`
 - **FR-023**: `modules/sd/` MUST be relocated to `modules/hardware/rpi/sd/` and existing RPi hardware modules (`rpi4.nix`, `rpi5.nix`, `rpi-eeprom.nix`) MUST be moved under `modules/hardware/rpi/`
 - **FR-024**: Workstation-specific home-manager modules (`i3*.nix`, `polybar.nix`, `dunst.nix`, `ui.nix`, `vscode.nix`, `dev.nix`, `layouts/`, `scripts/`) MUST be moved under `modules/home/workstation/`; shared modules (`base.nix`, `colors.nix`), shared support directories (`dotfiles/`, `themes/` — referenced by `base.nix`), and entry points (`workstation.nix`, `server.nix`) stay at `modules/home/` root
+- **FR-025**: System MUST support suspend-to-RAM (sleep) but NOT hibernate (suspend-to-disk). The 32GB swap partition serves as runtime swap only, not a resume device. `systemd-logind` suspend-on-idle configuration is out of scope for initial onboarding
 
 ### Key Entities
 
@@ -153,17 +154,16 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 
 ### Session 2026-05-18
 
-- Q: How should workspaces be distributed across Gibson's three monitors? → A: Left: ws 3 (Firefox) + ws 9 (spare). Right: ws 4 (Discord) + ws 10 (spare). Center: ws 1, 2, 5, 6, 7, 8.
+- Q: Workspace-to-monitor mapping and app assignments? → A: Left monitor: ws 3 (Firefox) + ws 9 (spare). Right monitor: ws 4 (Discord) + ws 10 (spare). Center monitor: ws 1, 2, 5, 6, 7, 8. Same app assignments as Silicon base.
 - Q: Disk identifiers → A: All mounts must use `by-uuid` since drives may move between physical slots
 - Q: Does Gibson have Bluetooth for Xbox controller? → A: Yes but spotty; controller is usually plugged in via USB. Bluetooth is secondary.
 - Q: Root filesystem type for 2TB NVMe? → A: ext4 — simple, proven, matches Silicon
 - Q: Audio setup? → A: Onboard motherboard audio, 5.1 surround output with a dedicated microphone
 - Q: Wallpaper? → A: Start with Silicon's wallpaper (`wallpaper-gibson.png`), fresh wallpapers to be made later
 - Q: Startup layout? → A: Same as Silicon — workspace 1 layout with 3 terminals + floating scratchpad
-- Q: App-to-workspace assignments? → A: Same as Silicon base. Firefox stays on workspace 3, Discord stays on workspace 4. Workspaces 9 and 10 are dedicated spare workspaces for side monitors.
-- Q: Workspace-to-monitor mapping? → A: Left monitor: ws 3 (Firefox) + ws 9 (spare). Right monitor: ws 4 (Discord) + ws 10 (spare). Center monitor: ws 1, 2, 5, 6, 7, 8.
 
-### Session 2026-05-19
+### Session 2026-05-19 (a)
+
 
 - Q: Top-level module directory naming — should `modules/hosts/` be renamed? → A: Rename to `modules/nixos/`. Workstation-specific modules under `nixos/workstation/`, server under `nixos/server/`. `common.nix` stays at root. `grub.nix`+`grub/` go into `workstation/`. `k8s/prereqs.nix` → `nixos/k8s.nix`. `shell/` → `nixos/shell/`. `users/operator.nix` → `nixos/operator.nix`. `sd/` → `hardware/rpi/sd/`. `cluster/` absorbed into `nixos/server/`.
 - Q: Where do host-specific home-manager modules land? → A: `modules/home/workstation/` for UI modules (i3, polybar, dunst, ui, vscode, dev, layouts, scripts). `modules/home/server/` for server home config. Shared modules (`base.nix`, `colors.nix`), shared support directories (`dotfiles/`, `themes/` — referenced by `base.nix`), and entry points (`workstation.nix`, `server.nix`) stay at `modules/home/` root.
@@ -172,6 +172,11 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 - Q: Should HLC helpers live in `lib/hlc.nix` or `modules/helpers/hlc.nix`? → A: `lib/hlc.nix` — follows nixpkgs convention where `lib/` holds pure utility functions and `modules/` is reserved for NixOS module-system participants (things with `options`/`config`). HLC helpers are builder functions, not modules.
 - Q: Which NVIDIA driver package variant? → A: `nvidiaPackages.stable` as default, but hardware module should make it easy to switch to `nvidiaPackages.latest` (single-line change, commented alternative).
 - Q: Multi-monitor partial failure during i3 startup? → A: Let i3/xrandr fail gracefully — i3 starts on whatever monitors xrandr succeeds on. No custom retry logic or autorandr profiles.
+
+### Session 2026-05-19 (b)
+
+- Q: Does Gibson suspend/hibernate or shutdown only? → A: Suspend-to-RAM (sleep) supported, no hibernate. NVIDIA power management enabled for clean suspend/resume. 32GB swap is runtime-only, not a resume device.
+- Q: How does Gibson output 5.1 surround audio? → A: Analog multi-channel from motherboard (3 jacks: front, rear, center/sub). PipeWire with surround profile, no HDMI audio or external receiver.
 
 ## Assumptions
 

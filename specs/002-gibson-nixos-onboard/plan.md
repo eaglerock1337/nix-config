@@ -148,4 +148,5 @@ No constitution violations requiring justification.
 | Item | Status | Resolution |
 |------|--------|------------|
 | Unfree nvidia-x11, nvidia-settings | Tracked | Justified by hardware requirement; documented in commit message per Principle VI |
-| Constitution VII host table | Tracked | Amendment drafted (T031), applied only after Gibson physical install |
+| Constitution VII host table | Tracked | Amendment drafted (T032), applied only after Gibson physical install |
+| FR-011 udev scope for gaming HIDs | Tracked | T027 researches whether `steam-hardware` package (pulled by `programs.steam.enable`) covers all gaming HID udev rules; T028 adds explicit rules if not |

@@ -50,7 +50,7 @@
 
 ### i3 split (depends on T009 — workstation/ dir must exist)
 
-- [ ] T010a [US5] Reconcile picom: `modules/home/ui.nix` (line 39–44) enables `services.picom` with `vSync = true`. i3 variant files set different backends/vsync values — module system WILL error on conflicting definitions. Remove entire `services.picom` block from `ui.nix`. Shared picom settings (`enable`, `fade`, `shadow`) will be placed in `i3/common.nix` during T010b. Backend + vsync live only in variant files (`laptop.nix`: xrender/vsync=false; `gibson.nix`: glx/vsync=true). Must complete before T010b
+- [ ] T010a [US5] Reconcile picom: `modules/home/workstation/ui.nix` (line 39–44, moved by T009) enables `services.picom` with `vSync = true`. i3 variant files set different backends/vsync values — module system WILL error on conflicting definitions. Remove entire `services.picom` block from `ui.nix`. Shared picom settings (`enable`, `fade`, `shadow`) will be placed in `i3/common.nix` during T010b. Backend + vsync live only in variant files (`laptop.nix`: xrender/vsync=false; `gibson.nix`: glx/vsync=true). Must complete before T010b
 - [ ] T010b [US5] Split `modules/home/i3.nix` into `modules/home/workstation/i3/common.nix` + `modules/home/workstation/i3/laptop.nix` — extract shared config (~250 lines: keybindings, colors, fonts, gaps, assigns, modes, window commands, startup layout with 3 terminals + scratchpad) plus shared picom settings (from T010a) to `common.nix`; Silicon-specific config (xrandr scaling, brightness keys, xrender picom with `backend = "xrender"`, `vsync = false`) to `laptop.nix`. `laptop.nix` does NOT import `common.nix` — both are merged as separate NixOS modules. Remove original `i3.nix` after split. See research.md R-008
 
 ### Import path updates (must run after all file moves + i3 split)
@@ -80,11 +80,11 @@
 
 ### Implementation
 
-- [ ] T017 [P] [US1] Create `modules/hardware/gibson.nix` — AMD Ryzen 9 5950X microcode (`hardware.cpu.amd.updateMicrocode = true`), NVIDIA RTX 3080 config (`services.xserver.videoDrivers = ["nvidia"]`, `hardware.nvidia.open = true`, `hardware.nvidia.modesetting.enable = true`, `hardware.nvidia.powerManagement.enable = true`, `hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable` with commented `.latest` alternative), graphics (`hardware.graphics.enable = true`, `hardware.graphics.enable32Bit = true`), SSD fstrim, no TLP/battery/lid/thinkfan/thermald (desktop); PipeWire 5.1 surround audio via `services.pipewire.wireplumber.extraConfig` (R-007): rule `"90-onboard-surround"` to pin `output:analog-surround-51+input:analog-stereo`, rule `"91-nvidia-sink-priority"` to lower NVIDIA HDMI sink to priority 500; NVIDIA fallback: include `nouveau` in `boot.initrd.availableKernelModules`. See research.md R-001, R-007
+- [ ] T017 [P] [US1] Create `modules/hardware/gibson.nix` — AMD Ryzen 9 5950X microcode (`hardware.cpu.amd.updateMicrocode = true`), NVIDIA RTX 3080 config (`services.xserver.videoDrivers = ["nvidia"]`, `hardware.nvidia.open = true`, `hardware.nvidia.modesetting.enable = true`, `hardware.nvidia.powerManagement.enable = true`, `hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable` with commented `.latest` alternative), graphics (`hardware.graphics.enable = true`, `hardware.graphics.enable32Bit = true`), SSD fstrim, no TLP/battery/lid/thinkfan/thermald (desktop); PipeWire 5.1 surround audio via `services.pipewire.wireplumber.extraConfig` (R-007): rule `"90-onboard-surround"` to pin `output:analog-surround-51+input:analog-stereo`, rule `"91-nvidia-sink-priority"` to lower NVIDIA HDMI sink to priority 500; NVIDIA fallback: include `nouveau` in `boot.initrd.availableKernelModules`; explicitly disable hibernate: `systemd.sleep.extraConfig = "AllowHibernation=no\nAllowSuspendThenHibernate=no"` (FR-025 — 32GB swap is runtime-only, not a resume device). See research.md R-001, R-007
 - [ ] T018 [P] [US1] Create `hosts/gibson/hardware-configuration.nix` — minimal placeholder: `boot.initrd.availableKernelModules` for NVMe + USB + NVIDIA, `boot.kernelModules = ["kvm-amd"]`, basic fileSystems for root + boot; will be replaced by `nixos-generate-config` during install
 - [ ] T019 [US1] Create `hosts/gibson/configuration.nix` — imports `../../modules/nixos/workstation.nix`, `../../modules/nixos/workstation/grub.nix`, `../../modules/nixos/workstation/desktop-ui.nix`, `../../modules/nixos/workstation/gaming.nix`, `../../modules/hardware/gibson.nix`, `./hardware-configuration.nix`; sets `networking.hostName = "gibson"`, filesystem mounts (4 drives by-uuid with PLACEHOLDER values, nofail on non-root), `custom.hostProfile` values (`hasBattery = false`, `ethInterface = "TBD"`, `wlanInterface = "TBD"`, `defaultMonitor = "TBD"`); verify `networking.networkmanager.enable` is inherited from workstation module chain (FR-016) — confirm with `grep -r networkmanager modules/nixos/` post-reorg; NOTE: home-manager i3 variant import added in Phase 4 (T023)
 - [ ] T020 [US1] Add `nixosConfigurations.gibson` to `flake.nix` — use `nixpkgs.lib.nixosSystem` with `system = "x86_64-linux"`, import `hosts/gibson/configuration.nix`, home-manager integration importing shared `home/eaglerock.nix` (same file as Silicon — no `eaglerock-gibson.nix`), add `nvidia-x11` and `nvidia-settings` to unfree allowlist with comment per Principle VI
-- [ ] T021 [US1] Validate US1: run `make flake-check`, `make dry-run HOST=gibson`, `make local-dry` (Silicon must be unchanged)
+- [ ] T021 [US1] Validate US1: run `make flake-check`, `make dry-run HOST=gibson`, `make local-dry` (Silicon must be unchanged). Verify FR-016: `grep -r networkmanager` in built config confirms NetworkManager enabled via desktop-ui.nix inheritance
 
 **Checkpoint**: Gibson config evaluates. Silicon unchanged. MVP ready for physical install.
 
@@ -98,7 +98,7 @@
 
 ### Implementation
 
-- [ ] T022 [US2] Create `modules/home/workstation/i3/gibson.nix` — triple-monitor xrandr setup (output names TBD as placeholder strings: Left 1920x1080, Center 2560x1440, Right 1920x1080), `workspaceOutputAssign` mapping Left=ws3+9, Center=ws1+2+5+6+7+8, Right=ws4+10; directional workspace movement keybindings (`$mod+Ctrl+Left/Right`); same Gruvbox colors, terminal, modifier, fonts as common.nix (merged via module system); picom with `backend = "glx"`, `vsync = true`, `use-damage = false`, `unredir-if-possible = false` (NVIDIA-tuned per R-004); wallpaper reference to `assets/wallpaper-gibson.png`. Does NOT import `common.nix` — both are merged as separate NixOS modules via the module system. Monitor disconnect: no special handling needed — i3 natively reassigns workspaces to remaining outputs. See R-004, R-008
+- [ ] T022 [US2] Create `modules/home/workstation/i3/gibson.nix` — triple-monitor xrandr setup (output names TBD as placeholder strings: Left 1920x1080, Center 2560x1440, Right 1920x1080), `workspaceOutputAssign` mapping Left=ws3+9, Center=ws1+2+5+6+7+8, Right=ws4+10; directional workspace movement keybindings (`$mod+Ctrl+Left/Right`); same Gruvbox colors, terminal, modifier, fonts as common.nix (merged via module system); picom with `backend = "glx"`, `vsync = true`, `use-damage = false`, `unredir-if-possible = false` (NVIDIA-tuned per R-004); wallpaper: `cp assets/wallpaper.png assets/wallpaper-gibson.png` (Silicon's wallpaper as starting point), reference `assets/wallpaper-gibson.png` in gibson.nix. Does NOT import `common.nix` — both are merged as separate NixOS modules via the module system. Monitor disconnect: no special handling needed — i3 natively reassigns workspaces to remaining outputs. See R-004, R-008
 - [ ] T023 [US2] Wire Gibson i3 variant — add `../../modules/home/workstation/i3/gibson.nix` to `home-manager.users.eaglerock.imports` in `hosts/gibson/configuration.nix`; set final `custom.hostProfile` values (defaultMonitor TBD, ethInterface TBD, wlanInterface TBD — filled during physical install)
 - [ ] T024 [US2] Validate US2: `make dry-run HOST=gibson` and `make local-dry`, verify both evaluate; `make flake-check`
 
@@ -129,8 +129,9 @@
 
 ### Implementation
 
-- [ ] T027 [US4] Enhance `modules/nixos/workstation/gaming.nix` — add `hardware.xpadneo.enable = true` (Xbox One via xpadneo DKMS), `hardware.new-lg4ff.enable = true` (G29 enhanced force feedback), udev rule `TAG+="uaccess"` for G29 (vendor `046d`, product `c24f`), testing tool packages (alphabetically sorted): `evtest`, `jstest-gtk`, `linuxConsoleTools`, `oversteer`. Keep existing Steam config. See research.md R-002
-- [ ] T028 [US4] Validate US4: `make dry-run HOST=gibson` includes xpadneo/new-lg4ff; `make local-dry` also passes (inherits gaming.nix)
+- [ ] T027 [US4] Research: verify whether existing Steam config in `gaming.nix` already pulls in `steam-hardware` package (provides broad udev rules for gaming HIDs including Logitech joysticks). Check `nixpkgs` source for `programs.steam.enable` — if it includes `steam-hardware` udev rules, FR-011 is covered for all gaming HID devices. If not, T028 needs explicit Logitech joystick vendor:product udev rules alongside G29 rule
+- [ ] T028 [US4] Enhance `modules/nixos/workstation/gaming.nix` — add `hardware.xpadneo.enable = true` (Xbox One via xpadneo DKMS), `hardware.new-lg4ff.enable = true` (G29 enhanced force feedback), udev rule `TAG+="uaccess"` for G29 (vendor `046d`, product `c24f`), testing tool packages (alphabetically sorted): `evtest`, `jstest-gtk`, `linuxConsoleTools`, `oversteer`. Keep existing Steam config. If T027 confirms `steam-hardware` udev rules are NOT included by Steam module, add explicit Logitech joystick udev rules. See research.md R-002
+- [ ] T029 [US4] Validate US4: `make dry-run HOST=gibson` includes xpadneo/new-lg4ff; `make local-dry` also passes (inherits gaming.nix)
 
 **Checkpoint**: Peripheral support configured. Physical verification requires hardware.
 
@@ -140,10 +141,10 @@
 
 **Purpose**: Documentation, constitution prep, final validation
 
-- [ ] T029 [P] Update `CLAUDE.md` directory structure section to reflect post-reorg layout
-- [ ] T030 [P] Update `specs/002-gibson-nixos-onboard/quickstart.md` with finalized install procedure and post-install verification
-- [ ] T031 Draft constitution Principle VII amendment — update host capability table for Gibson as NixOS workstation. Save to `specs/002-gibson-nixos-onboard/constitution-amendment-draft.md`. NOT applied until physical install. Post-install follow-up: apply amendment and commit with `docs: amend constitution to vX.Y.Z` message.
-- [ ] T032 Final validation: `make flake-check`, `make dry-run HOST=gibson`, `make local-dry`, HLC spot-check (`make dry-run HOST=hlc-501`, `make dry-run HOST=hlc-401`). Verify SC-007: confirm a future laptop host can be onboarded by creating only hardware module + host config + selecting i3/laptop.nix — no shared module changes needed. Verify Gruvbox theme consistency (FR-017): confirm `colors.nix` is imported by all workstation home modules. Note: `build-vm` not used for Gibson — NVIDIA proprietary drivers make QEMU testing infeasible per Principle IV "when feasible" clause.
+- [ ] T030 [P] Update `CLAUDE.md` directory structure section to reflect post-reorg layout
+- [ ] T031 [P] Update `specs/002-gibson-nixos-onboard/quickstart.md` with finalized install procedure and post-install verification. Include NVIDIA fallback test (boot with `nomodeset` kernel param) and post-`nixos-generate-config` check: verify `hardware-configuration.nix` does NOT set `boot.resumeDevice` (FR-025)
+- [ ] T032 Draft constitution Principle VII amendment — update host capability table for Gibson as NixOS workstation. Save to `specs/002-gibson-nixos-onboard/constitution-amendment-draft.md`. NOT applied until physical install. Post-install follow-up: apply amendment and commit with `docs: amend constitution to vX.Y.Z` message.
+- [ ] T033 Final validation: `make flake-check`, `make dry-run HOST=gibson`, `make local-dry`, HLC spot-check (`make dry-run HOST=hlc-501`, `make dry-run HOST=hlc-401`). Verify SC-007: confirm a future laptop host can be onboarded by creating only hardware module + host config + selecting i3/laptop.nix — no shared module changes needed. Verify Gruvbox theme consistency (FR-017): confirm `colors.nix` is imported by all workstation home modules. Note: `build-vm` not used for Gibson — NVIDIA proprietary drivers make QEMU testing infeasible per Principle IV "when feasible" clause.
 
 **Checkpoint**: All configuration work complete. Ready for physical install on Gibson hardware.
 
@@ -181,7 +182,7 @@ T003 (dirs) → T004 (HLC extract) → T005–T009 [parallel: file moves]
 ```
 
 Key constraints:
-- T004 before T008 (lib/hlc.nix must exist before RPi module paths in lib/ are updated)
+- T004 before file moves (T004 rewrites flake.nix cluster/sd refs to `lib/hlc.nix` paths; moves must not break flake.nix mid-reorg)
 - T009 before T010a (workstation/ dir must exist for picom reconciliation and i3/ subdirectory)
 - T014 before T015 (hostProfile options must be defined before polybar reads them)
 
@@ -245,7 +246,7 @@ Phase 6 (US4): Gaming peripherals (T027-T028)
 Between Phase 3 and Phase 4, the operator performs the physical NixOS install:
 1. Boot NixOS ISO from USB
 2. Partition 2TB NVMe (512MB EFI + 32GB swap + rest ext4)
-3. `nixos-generate-config` → replace `hosts/gibson/hardware-configuration.nix`
+3. `nixos-generate-config` → replace `hosts/gibson/hardware-configuration.nix`; verify it does NOT set `boot.resumeDevice` (FR-025: no hibernate)
 4. `xrandr` → discover output names for `i3/gibson.nix` (Phase 4)
 5. `ip link` → discover interface names for `custom.hostProfile`
 6. Replace PLACEHOLDER UUIDs in `hosts/gibson/configuration.nix`
@@ -257,7 +258,7 @@ Between Phase 3 and Phase 4, the operator performs the physical NixOS install:
 
 - [P] tasks = different files, no dependencies within the phase
 - All import path updates (T011–T013) MUST run after all file moves (T005–T010b)
-- Constitution amendment (T031) drafted but NOT applied until Gibson has NixOS
+- Constitution amendment (T032) drafted but NOT applied until Gibson has NixOS
 - Hardware-specific values (UUIDs, xrandr outputs, interfaces) are TBD until physical install
 - Picom shared settings (`enable`, `fade`, `shadow`) in i3/common.nix; backend+vsync ONLY in variant files (laptop.nix: xrender; gibson.nix: glx) — removed from polybar.nix (T015) and ui.nix (T010a)
 - i3 variant wired via `home-manager.users.eaglerock.imports` in each host's `configuration.nix` — NOT via string interpolation or extraSpecialArgs
