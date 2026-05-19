@@ -1,7 +1,7 @@
 NIX_FLAGS   := --extra-experimental-features 'nix-command flakes'
 HLC_DOMAIN  ?= marks.dev
 
-.PHONY: build-image flash-image local-dry local-switch update \
+.PHONY: build-image flash-image local-dry local-switch flake-check update \
         dry-run build smoke-test ip \
         provision provision-stage1 provision-mount provision-backup-boot \
         provision-stage2 provision-stage3 provision-reinstall \
@@ -73,6 +73,9 @@ endif
 	zstdcat result/sd-image/*.img.zst | sudo dd if=/dev/stdin of=$(DEV) bs=4M conv=fsync status=progress
 
 ##@Local
+flake-check: ## Evaluate all flake outputs
+	nix flake check $(NIX_FLAGS)
+
 local-dry: ## Dry-run NixOS config for local host
 	sudo nixos-rebuild dry-run --flake .#$$(hostname)
 
