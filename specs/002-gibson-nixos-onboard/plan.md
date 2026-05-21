@@ -40,7 +40,7 @@ into common.nix + host variants.
 | VIII. Human-AI Collaboration | ✅ PASS | Single stakeholder; technical vocabulary throughout |
 | IX. Blast-Radius Isolation | ✅ PASS | `make dry-run HOST=silicon` after every Phase 2 commit; ~10 operator visual checkpoints; RPi configs content-immutable |
 
-**Unfree additions required**: `nvidia-x11`, `nvidia-settings` — justified by RTX 3080 proprietary driver requirement (FR-012). Commit message must document justification per Principle VI.
+**Unfree additions required**: `nvidia-x11`, `nvidia-settings` in `hosts/gibson/configuration.nix` (`nixpkgs.config.allowUnfreePredicate`) — justified by RTX 3080 proprietary driver requirement (FR-012). Commit message must document justification per Principle VI.
 
 ## Project Structure
 
@@ -204,8 +204,9 @@ config yet — just enough to add Gibson to the flake.
 
 **Files modified**:
 - `flake.nix` — add `nixosConfigurations.gibson` entry. Uses same pattern as
-  silicon (nixpkgs.lib.nixosSystem). Unfree allowlist adds `nvidia-x11`,
-  `nvidia-settings`.
+  silicon (nixpkgs.lib.nixosSystem).
+- `hosts/gibson/configuration.nix` — unfree allowlist (`nixpkgs.config.allowUnfreePredicate`)
+  for `nvidia-x11`, `nvidia-settings`
 
 **Verification**:
 - `make dry-run HOST=gibson` passes
@@ -427,7 +428,8 @@ removing the Ubuntu-era "NixOS not yet installed" restriction.
   mapping (FR-005), directional movement keybindings (FR-006), glx picom, startup layout (FR-019)
 - `modules/home/workstation/polybar-gibson.nix` — no battery module, Gibson network
   interfaces, correct default monitor (FR-007)
-- `assets/wallpaper-gibson.png` — copy from Silicon's wallpaper as starting point
+- `assets/laptop/` — existing assets moved here (wallpaper-gibson.png, wallpaper-gibson-blur.png, login.png). i3/laptop.nix updated to reference new path
+- `assets/gibson/` — copy of laptop assets as starting point. i3/gibson.nix references this directory
 
 **Note**: i3/gibson.nix and polybar-gibson.nix already wired to Gibson's
 configuration.nix in Phase 2 MG6/MG7. Phase 4 only customizes their content.
@@ -441,15 +443,19 @@ Verify Gruvbox Dark theme consistent across i3, polybar, GTK, terminal, lock scr
 **Goal**: Xbox controller, joysticks, G29 wheel with force feedback (US4).
 
 **Files modified**:
-- `modules/nixos/workstation/gaming.nix` — add `hardware.xpadneo.enable` (FR-008),
-  `hardware.new-lg4ff.enable` (FR-010), udev rules (FR-011)
+- `modules/nixos/workstation/gaming.nix` — udev rules (FR-011), and conditionally
+  `hardware.xpadneo.enable` (FR-008, only if native xpad insufficient per T098)
+- `hosts/gibson/configuration.nix` or Gibson-specific module — `hardware.new-lg4ff.enable` (FR-010)
 - `hosts/gibson/configuration.nix` — Steam config if not already in gaming.nix
 
-**Note**: gaming.nix is shared — changes here affect Silicon too. Phase 5 is
-approved for Silicon derivation changes from peripheral enablement (xpadneo,
-new-lg4ff add kernel modules even without hardware present). If the derivation
-changes, this is acceptable but operator MUST visually validate Silicon after
-applying. If changes are unacceptable, refactor to Gibson-only module.
+**Note**: gaming.nix is shared — changes here affect Silicon too. Silicon
+derivation changes from peripheral enablement are authorized per FR-026
+Phase 5 exception. Both hosts use Xbox One controllers. Phase 5 must first
+verify whether kernel-native xpad provides full support (USB + Bluetooth) on
+both hosts — xpadneo is only added if native xpad is insufficient. If xpadneo
+is needed, adding to shared gaming.nix is intentional standardization
+benefiting both hosts. Operator MUST visually validate Silicon after applying.
+If derivation change is unacceptable, refactor to Gibson-only module.
 
 **Verification**: `make dry-run HOST=silicon` — check for derivation changes.
 Apply on Gibson, test each peripheral. Operator visual spot check on Silicon
@@ -470,7 +476,8 @@ Suspend-to-RAM and NetworkManager are configured in Phase 3 alongside boot/stora
 ## Phase 7: Code Deduplication
 
 **Goal**: Extract shared logic from duplicated modules into common.nix + host
-deltas (FR-014b, FR-015b, FR-030). Runs in parallel with Phases 4-6.
+deltas (FR-014b, FR-015b, FR-030). Infrastructure work (hostProfile options)
+runs in parallel with Phases 4-6; i3/polybar dedup requires Phase 4 completion.
 
 **Prerequisites** (before polybar dedup):
 - Add `custom.hostProfile` NixOS options to `modules/nixos/workstation.nix` — `hasBattery`, `wlanInterface`, `ethInterface`, `defaultMonitor`
