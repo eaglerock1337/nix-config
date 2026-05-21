@@ -18,13 +18,13 @@
 
 **Purpose**: Minimum viable Gibson host config. `make dry-run HOST=gibson` passes. No hardware-specific values yet — stubs until install.
 
-- [ ] T001 Create `hosts/gibson/` directory
-- [ ] T002 Create `hosts/gibson/hardware-configuration.nix` — stub with minimal fileSystems (root `/` on ext4, `/boot` EFI vfat) and placeholder UUIDs. Enough to evaluate, real values filled during install
-- [ ] T003 Create `modules/hardware/gibson.nix` — NVIDIA driver config (`nvidiaPackages.stable`, commented `.latest` alternative), `hardware.nvidia.open = false`, `modesetting.enable`, `powerManagement.enable`, AMD microcode (`hardware.cpu.amd.updateMicrocode`), `hardware.graphics.enable` + `enable32Bit`, no TLP/thermald/lid. PipeWire WirePlumber rules: `90-onboard-surround` (5.1 surround profile for onboard HD-Audio) and `91-nvidia-sink-priority` (deprioritize NVIDIA HDMI sink so onboard analog is default). Reference: FR-012, FR-018, R-007
-- [ ] T004 Create `hosts/gibson/configuration.nix` — import `../../modules/hosts/workstation.nix`, `../../modules/hosts/grub.nix`, `../../modules/hosts/desktop-ui.nix`, `../../modules/hosts/gaming.nix`, `../../modules/hardware/gibson.nix`, `./hardware-configuration.nix`. Set hostname `gibson`, operator config, stateVersion. Reference: FR-013
-- [ ] T005 Add `nixosConfigurations.gibson` to `flake.nix` — same pattern as silicon (`nixpkgs.lib.nixosSystem`). Import home-manager with `home-manager.users.eaglerock = import ./home/eaglerock.nix`. Unfree allowlist (`nixpkgs.config.allowUnfreePredicate`) for `nvidia-x11`, `nvidia-settings` goes in `hosts/gibson/configuration.nix`
-- [ ] T006 Run `make dry-run HOST=gibson` — must pass
-- [ ] T007 Run `make dry-run HOST=silicon` — store path MUST be identical to pre-Phase-1 baseline (Principle IX). Record baseline store path for Phase 2 comparison
+- [x] T001 Create `hosts/gibson/` directory
+- [x] T002 Create `hosts/gibson/hardware-configuration.nix` — stub with minimal fileSystems (root `/` on ext4, `/boot` EFI vfat) and placeholder UUIDs. Enough to evaluate, real values filled during install
+- [x] T003 Create `modules/hardware/gibson.nix` — NVIDIA driver config (`nvidiaPackages.stable`, commented `.latest` alternative), `hardware.nvidia.open = true`, `modesetting.enable`, `powerManagement.enable`, AMD microcode (`hardware.cpu.amd.updateMicrocode`), `hardware.graphics.enable` + `enable32Bit`, no TLP/thermald/lid. PipeWire WirePlumber rules: `90-onboard-surround` (5.1 surround profile for onboard HD-Audio) and `91-nvidia-sink-priority` (deprioritize NVIDIA HDMI sink so onboard analog is default). Reference: FR-012, FR-018, R-007
+- [x] T004 Create `hosts/gibson/configuration.nix` — import `../../modules/hosts/workstation.nix`, `../../modules/hosts/grub.nix`, `../../modules/hosts/desktop-ui.nix`, `../../modules/hosts/gaming.nix`, `../../modules/hardware/gibson.nix`, `./hardware-configuration.nix`. Set hostname `gibson`, operator config, stateVersion. Reference: FR-013
+- [x] T005 Add `nixosConfigurations.gibson` to `flake.nix` — same pattern as silicon (`nixpkgs.lib.nixosSystem`). Import home-manager with `home-manager.users.eaglerock = import ./home/eaglerock.nix`. Unfree allowlist (`nixpkgs.config.allowUnfreePredicate`) for `nvidia-x11`, `nvidia-settings` goes in `hosts/gibson/configuration.nix`
+- [x] T006 Run `make dry-run HOST=gibson` — must pass
+- [x] T007 Run `make dry-run HOST=silicon` — store path MUST be identical to pre-Phase-1 baseline (Principle IX). Baseline: `/nix/store/2rf9w8697ri8a4yhh4hlxa15rckvmkdr-nixos-system-silicon-25.11.20260410.54170c5`
 
 **Checkpoint**: Gibson evaluates. Silicon unchanged. Phase 2 can begin.
 

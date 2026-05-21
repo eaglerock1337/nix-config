@@ -2,10 +2,10 @@
 
 {
   imports = [
-    ../../modules/hosts/workstation.nix
-    ../../modules/hosts/grub.nix
-    ../../modules/hosts/desktop-ui.nix
-    ../../modules/hosts/gaming.nix
+    ../../modules/nixos/workstation.nix
+    ../../modules/nixos/workstation/grub.nix
+    ../../modules/nixos/workstation/desktop-ui.nix
+    ../../modules/nixos/workstation/gaming.nix
     ../../modules/hardware/x1-carbon.nix
     ./hardware-configuration.nix
   ];

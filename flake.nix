@@ -124,6 +124,23 @@
         ];
       };
 
+      gibson = nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit self nixpkgs nixpkgs-unstable home-manager operatorPubkeys; };
+        modules = [
+          ./hosts/gibson/configuration.nix
+
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.extraSpecialArgs = { inherit unstable; };
+            home-manager.users.eaglerock = import ./home/eaglerock.nix;
+            home-manager.backupFileExtension = "backup";
+          }
+        ];
+      };
+
       # Pi 5 work-set (hlc-501..508)
       hlc-501 = mkHlcNode { hostPath = ./hosts/hlc-501/configuration.nix; };
       hlc-502 = mkHlcNode { hostPath = ./hosts/hlc-502/configuration.nix; };

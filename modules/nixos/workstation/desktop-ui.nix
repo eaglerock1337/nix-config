@@ -76,7 +76,7 @@
     displayManager = {
       lightdm = {
         enable = true;
-        background = ./. + "/../../assets/login.png";
+        background = ./. + "/../../../assets/login.png";
         greeters.enso = {
           enable = true;
           theme = {
