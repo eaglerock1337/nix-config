@@ -6,13 +6,12 @@
 - Physical access to Gibson
 - This repo cloned and on the `002-gibson-nixos-onboard` branch
 
-## Development (on Silicon)
+## Development (on Silicon or Gibson)
 
 ```bash
-# After code changes, validate both hosts
-nix flake check
-sudo nixos-rebuild dry-run --flake .#silicon   # regression check
-sudo nixos-rebuild dry-run --flake .#gibson    # new config check
+# After code changes, validate both hosts (Principle VII: use Makefile targets)
+make dry-run HOST=silicon   # regression check — must be unchanged
+make dry-run HOST=gibson    # new config check
 ```
 
 ## Installation (on Gibson)

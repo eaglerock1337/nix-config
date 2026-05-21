@@ -85,7 +85,7 @@ i3 variant is NOT part of hostProfile — it's wired via `home-manager.users.eag
 | `modules/hardware/rpi-eeprom.nix` | `modules/hardware/rpi/rpi-eeprom.nix` | Hardware |
 | `modules/sd/bootstrap.nix` | `modules/hardware/rpi/sd/bootstrap.nix` | Hardware |
 | `modules/sd/recovery-utils.nix` | `modules/hardware/rpi/sd/recovery-utils.nix` | Hardware |
-| `modules/home/i3.nix` | `modules/home/workstation/i3/common.nix` + `i3/laptop.nix` | Home (workstation) |
+| `modules/home/i3.nix` | Phase 2: `modules/home/workstation/i3/laptop.nix` (rename) + `i3/gibson.nix` (copy). Phase 7: extract `i3/common.nix`, reduce variants to deltas | Home (workstation) |
 | `modules/home/polybar.nix` | `modules/home/workstation/polybar.nix` | Home (workstation) |
 | `modules/home/dunst.nix` | `modules/home/workstation/dunst.nix` | Home (workstation) |
 | `modules/home/ui.nix` | `modules/home/workstation/ui.nix` | Home (workstation) |

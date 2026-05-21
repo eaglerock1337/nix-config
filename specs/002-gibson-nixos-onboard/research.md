@@ -113,9 +113,9 @@ unredir-if-possible = false;
 
 ## R-005: Module Reorganization — Import Path Impact
 
-**Decision**: Reorganize modules in a dedicated phase (Phase 1) before any Gibson-specific additions. Extract HLC helpers to `lib/hlc.nix`.
+**Decision**: Reorganize modules in Phase 2 using a copy-first-dedup-later strategy. File moves are content-unchanged only. Gibson gets independent copies of UI modules. Deduplication into common.nix + host variants deferred to Phase 7.
 
-**Rationale**: Mixing structural changes with feature additions makes regression isolation impossible. The reorg touches 10 files with functional imports and several files with comments/documentation references.
+**Rationale**: Prior attempt broke Silicon by combining structural moves with content changes. Constitution Principle IX mandates no-op verification for non-target hosts. Phase 2 makes ~10 atomic move groups, each verified with `make dry-run HOST=silicon` + operator visual spot check. Gibson gets standalone copies so its config is independent from Silicon during development. Phase 7 dedup runs in parallel with Phases 4-6.
 
 **Files with functional import paths to update** (10 unique files):
 1. `hosts/silicon/configuration.nix` — 4 imports (hosts/ → nixos/)
@@ -145,30 +145,30 @@ unredir-if-possible = false;
 
 **Principle III**: The module reorganization directly improves compliance — clearer separation of concerns, better naming.
 
-## R-008: i3 Split Architecture
+## R-008: i3 Split Architecture (Two-Stage)
 
-**Decision**: Split i3 into three files in `modules/home/workstation/i3/` subdirectory; variant wired via `home-manager.users.eaglerock.imports` in host config
+**Decision**: Two-stage approach. Phase 2 creates independent copies; Phase 7 deduplicates.
 
-**Rationale**: Current `i3.nix` is ~350 lines mixing shared config (keybindings, colors, fonts, gaps, assigns, modes, window commands, startup layout — ~250 lines) with Silicon-specific hardware setup (xrandr, brightness keys, xrender picom — ~100 lines). Splitting allows Gibson to reuse all shared config while specifying its own hardware-specific settings.
+### Phase 2 — Independent Copies
 
-**File structure**:
-- `i3/common.nix` — shared keybindings, colors, fonts, gaps, assigns, modes, window commands, startup layout (3 terminals + scratchpad). Imported by `workstation.nix` for all workstations
-- `i3/laptop.nix` — Silicon/future laptops: xrandr scaling, brightness keys, xrender picom. Does NOT import common.nix (it merges as a separate module)
-- `i3/gibson.nix` — triple-monitor xrandr, glx picom, directional workspace movement keybindings. Does NOT import common.nix (it merges as a separate module)
+- `i3/laptop.nix` — Silicon's current `i3.nix` renamed. Content unchanged. Full standalone i3 config.
+- `i3/gibson.nix` — Independent copy of Silicon's i3.nix, modified for Gibson (triple-monitor xrandr, glx picom, directional workspace movement). Full standalone config, no shared extraction.
 
-**Wiring**: `workstation.nix` imports `./workstation/i3/common.nix`. Host-specific variant imported in each host's `configuration.nix` via:
-```nix
-home-manager.users.eaglerock.imports = [
-  ../../modules/home/workstation/i3/laptop.nix  # Silicon
-];
-```
-This merges with the `home-manager.users.eaglerock = import ./home/eaglerock.nix` in flake.nix via NixOS module system merging.
+**Wiring (Phase 2)**: `workstation.nix` imports `./workstation/i3/laptop.nix` (was `./i3.nix`). Gibson's `configuration.nix` wires `i3/gibson.nix` via `home-manager.users.eaglerock.imports`. Silicon untouched in content.
+
+### Phase 7 — Deduplication (end state)
+
+- `i3/common.nix` — shared keybindings, colors, fonts, gaps, assigns, modes, window commands, startup layout (~250 lines). Imported by `workstation.nix` for all workstations.
+- `i3/laptop.nix` — reduced to Silicon-specific delta: xrandr scaling, brightness keys, xrender picom. Merges with common via module system.
+- `i3/gibson.nix` — reduced to Gibson-specific delta: triple-monitor xrandr, glx picom, directional workspace movement. Merges with common via module system.
+
+**Operator escape hatch**: If dedup for a specific module is too messy, operator decides to keep independent copies. Agent must ask before keeping duplicates.
 
 **Why subdirectory**: Three related files warrant a directory. Matches existing `grub/` pattern.
 
-**Why not dynamic import via string interpolation**: `./i3-${variant}.nix` in Nix imports is fragile — import paths are resolved at parse time. Explicit import in host config is transparent and lets `nix flake check` trace all imports statically.
+**Why not dynamic import**: `./i3-${variant}.nix` is fragile — import paths resolve at parse time. Explicit import in host config is transparent and lets `nix flake check` trace all imports statically.
 
-**Picom deduplication**: Currently duplicated in i3.nix and polybar.nix. After split, picom config lives only in variant files (different backends per GPU). Remove from polybar.nix entirely. If ui.nix also enables `services.picom`, reconcile to avoid conflict with manual config.
+**Picom handling**: During Phase 2, picom config stays inline in each i3 variant (laptop gets xrender, gibson gets glx). During Phase 7 dedup, picom is evaluated for extraction into its own module if meaningful shared logic exists — operator decides.
 
 ## R-009: HLC Helper Extraction to lib/hlc.nix
 

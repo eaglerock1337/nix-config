@@ -1,152 +1,265 @@
 # Tasks: Gibson NixOS Desktop Onboarding
 
 **Input**: Design documents from `specs/002-gibson-nixos-onboard/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, quickstart.md
+**Prerequisites**: plan.md (required), spec.md (required), research.md, data-model.md, quickstart.md
 
-**Organization**: Tasks grouped by user story. Module reorganization (US5) executes first as foundational work despite being P3 in the spec — it's a prerequisite for clean Gibson onboarding.
+**Tests**: No automated tests requested. Verification is via `make dry-run HOST=<host>` and operator visual spot checks (FR-028).
+
+**Organization**: Tasks follow the 8-phase structure mandated by FR-031. Phase 2 is broken into 10 move groups per FR-028. Each move group ends with a verification checkpoint.
 
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story (US1–US5)
-- All paths relative to repo root
+- **[Story]**: US1=Boot, US2=Triple-monitor, US3=Dual-boot, US4=Gaming, US5=Architecture
 
 ---
 
-## Phase 1: Setup
+## Phase 1: Gibson Scaffold
 
-**Purpose**: Branch and environment verification
+**Purpose**: Minimum viable Gibson host config. `make dry-run HOST=gibson` passes. No hardware-specific values yet — stubs until install.
 
-- [ ] T001 Verify branch `002-gibson-nixos-onboard` is clean and up-to-date with main
-- [ ] T002 Verify `make flake-check` and `make local-dry` pass on current state (pre-reorg baseline)
+- [ ] T001 Create `hosts/gibson/` directory
+- [ ] T002 Create `hosts/gibson/hardware-configuration.nix` — stub with minimal fileSystems (root `/` on ext4, `/boot` EFI vfat) and placeholder UUIDs. Enough to evaluate, real values filled during install
+- [ ] T003 Create `modules/hardware/gibson.nix` — NVIDIA driver config (`nvidiaPackages.stable`, commented `.latest` alternative), `hardware.nvidia.open = false`, `modesetting.enable`, `powerManagement.enable`, AMD microcode (`hardware.cpu.amd.updateMicrocode`), `hardware.graphics.enable` + `enable32Bit`, no TLP/thermald/lid. PipeWire 5.1 surround WirePlumber rules (R-007). Reference: FR-012, FR-018
+- [ ] T004 Create `hosts/gibson/configuration.nix` — import `../../modules/hosts/workstation.nix`, `../../modules/hosts/grub.nix`, `../../modules/hosts/desktop-ui.nix`, `../../modules/hosts/gaming.nix`, `../../modules/hardware/gibson.nix`, `./hardware-configuration.nix`. Set hostname `gibson`, operator config, stateVersion. Reference: FR-013
+- [ ] T005 Add `nixosConfigurations.gibson` to `flake.nix` — same pattern as silicon (`nixpkgs.lib.nixosSystem`). Add unfree allowlist entries: `nvidia-x11`, `nvidia-settings`. Import home-manager with `home-manager.users.eaglerock = import ./home/eaglerock.nix`
+- [ ] T006 Run `make dry-run HOST=gibson` — must pass
+- [ ] T007 Run `make dry-run HOST=silicon` — store path MUST be identical to pre-Phase-1 baseline (Principle IX). Record baseline store path for Phase 2 comparison
 
-**Checkpoint**: Baseline verified — reorg can begin
-
----
-
-## Phase 2: Foundational — Module Reorganization [US5] (Priority: P3 but blocks all other work)
-
-**Goal**: Reorganize module directory structure per spec FR-020 through FR-024, split i3 into common/variant, define custom.hostProfile NixOS options, parameterize polybar via osConfig. Zero functional change to Silicon — pure restructuring + parameterization.
-
-**⚠️ CRITICAL**: No Gibson-specific work can begin until this phase is complete and validated.
-
-**Independent Test**: `nix flake check` passes; `nixos-rebuild dry-run --flake .#silicon` produces identical closure; HLC node configs evaluate without error.
-
-### Directory creation
-
-- [ ] T003 [US5] Create new directory structure: `lib/`, `modules/nixos/`, `modules/nixos/workstation/`, `modules/nixos/server/`, `modules/nixos/shell/`, `modules/home/workstation/`, `modules/home/workstation/i3/`, `modules/home/server/`, `modules/hardware/rpi/`, `modules/hardware/rpi/sd/`
-
-### HLC extraction
-
-- [ ] T004 [US5] Extract HLC helpers from `flake.nix` to `lib/hlc.nix` — move `mkHlcNode`, `mkHlcProvision`, `mkHlcBootstrap`, `mkSdImages`, `pi4Hosts`, `pi5Hosts` (~80 lines) into a function that receives flake inputs and returns the helper attrset. Update `flake.nix` to `import ./lib/hlc.nix { inherit nixpkgs home-manager ...; }` and merge results. `lib/` is for pure utility functions per nixpkgs convention (not modules). See research.md R-009
-
-### File moves (parallel — each touches different source directories)
-
-- [ ] T005 [P] [US5] Move NixOS system modules: `git mv modules/hosts/common.nix modules/nixos/common.nix`, `git mv modules/hosts/workstation.nix modules/nixos/workstation.nix`, `git mv modules/hosts/desktop-ui.nix modules/nixos/workstation/desktop-ui.nix`, `git mv modules/hosts/gaming.nix modules/nixos/workstation/gaming.nix`, `git mv modules/hosts/grub.nix modules/nixos/workstation/grub.nix`, `git mv modules/hosts/grub/ modules/nixos/workstation/grub/`
-- [ ] T006 [P] [US5] Move cluster → server: `git mv modules/cluster/common.nix modules/nixos/server.nix`, `git mv modules/cluster/motd.nix modules/nixos/server/motd.nix`, `git mv modules/cluster/prompt.nix modules/nixos/server/prompt.nix`, `git mv modules/cluster/hlc/ modules/nixos/server/hlc/`
-- [ ] T007 [P] [US5] Move misc NixOS modules: `git mv modules/k8s/prereqs.nix modules/nixos/k8s.nix`, `git mv modules/shell/common.nix modules/nixos/shell/common.nix`, `git mv modules/shell/utilities.nix modules/nixos/shell/utilities.nix`, `git mv modules/users/operator.nix modules/nixos/operator.nix`
-- [ ] T008 [P] [US5] Move RPi + SD modules: `git mv modules/hardware/rpi4.nix modules/hardware/rpi/rpi4.nix`, `git mv modules/hardware/rpi5.nix modules/hardware/rpi/rpi5.nix`, `git mv modules/hardware/rpi-eeprom.nix modules/hardware/rpi/rpi-eeprom.nix`, `git mv modules/sd/bootstrap.nix modules/hardware/rpi/sd/bootstrap.nix`, `git mv modules/sd/recovery-utils.nix modules/hardware/rpi/sd/recovery-utils.nix`
-- [ ] T009 [P] [US5] Move home-manager workstation modules: `git mv modules/home/polybar.nix modules/home/workstation/polybar.nix`, `git mv modules/home/dunst.nix modules/home/workstation/dunst.nix`, `git mv modules/home/ui.nix modules/home/workstation/ui.nix`, `git mv modules/home/vscode.nix modules/home/workstation/vscode.nix`, `git mv modules/home/dev.nix modules/home/workstation/dev.nix`, `git mv modules/home/layouts/ modules/home/workstation/layouts/`, `git mv modules/home/scripts/ modules/home/workstation/scripts/`
-
-### i3 split (depends on T009 — workstation/ dir must exist)
-
-- [ ] T010a [US5] Reconcile picom: `modules/home/workstation/ui.nix` (line 39–44, moved by T009) enables `services.picom` with `vSync = true`. i3 variant files set different backends/vsync values — module system WILL error on conflicting definitions. Remove entire `services.picom` block from `ui.nix`. Shared picom settings (`enable`, `fade`, `shadow`) will be placed in `i3/common.nix` during T010b. Backend + vsync live only in variant files (`laptop.nix`: xrender/vsync=false; `gibson.nix`: glx/vsync=true). Must complete before T010b
-- [ ] T010b [US5] Split `modules/home/i3.nix` into `modules/home/workstation/i3/common.nix` + `modules/home/workstation/i3/laptop.nix` — extract shared config (~250 lines: keybindings, colors, fonts, gaps, assigns, modes, window commands, startup layout with 3 terminals + scratchpad) plus shared picom settings (from T010a) to `common.nix`; Silicon-specific config (xrandr scaling, brightness keys, xrender picom with `backend = "xrender"`, `vsync = false`) to `laptop.nix`. `laptop.nix` does NOT import `common.nix` — both are merged as separate NixOS modules. Remove original `i3.nix` after split. See research.md R-008
-
-### Import path updates (must run after all file moves + i3 split)
-
-- [ ] T011 [P] [US5] Update import paths in `modules/nixos/` files: `common.nix` — `../shell/` → `./shell/`, `../users/operator.nix` → `./operator.nix`; `server.nix` — `../hosts/common.nix` → `./common.nix`, `./motd.nix` → `./server/motd.nix`, `./prompt.nix` → `./server/prompt.nix`, `../k8s/prereqs.nix` → `./k8s.nix`; `server/hlc/default.nix` — `../common.nix` → `../../server.nix`; `server/hlc/provision.nix` — `../../users/operator.nix` → `../../operator.nix`; `hardware/rpi/sd/recovery-utils.nix` — cluster path → `../../nixos/server/hlc/hlc-recover-script.nix`
-- [ ] T012 [P] [US5] Update import paths in home, host, and flake files: `modules/home/workstation.nix` — change imports to `./workstation/i3/common.nix`, `./workstation/polybar.nix`, `./workstation/dunst.nix`, `./workstation/ui.nix`, `./workstation/dev.nix`, `./workstation/vscode.nix`; `modules/home/workstation/dunst.nix` — `./colors.nix` → `../colors.nix`; `modules/home/workstation/polybar.nix` — `./colors.nix` → `../colors.nix`; `hosts/silicon/configuration.nix` — `../../modules/hosts/` → `../../modules/nixos/` for all imports, `grub.nix` → `workstation/grub.nix`, `desktop-ui.nix` → `workstation/desktop-ui.nix`, `gaming.nix` → `workstation/gaming.nix`; add `../../modules/home/workstation/i3/laptop.nix` to `home-manager.users.eaglerock.imports`; all 12 `hosts/hlc-*/configuration.nix` — update RPi hardware module paths to `../../modules/hardware/rpi/rpi4.nix` or `rpi5.nix`; `lib/hlc.nix` — update all paths extracted by T004 from old locations (`modules/cluster/`, `modules/sd/`) to new locations (`modules/nixos/server/`, `modules/hardware/rpi/sd/`); `flake.nix` — update any remaining cluster/sd paths to new locations
-- [ ] T013 [US5] Update comments and documentation referencing old paths, remove empty old directories: `modules/hosts/`, `modules/cluster/`, `modules/k8s/`, `modules/sd/`, `modules/shell/`, `modules/users/`. Create `modules/home/server/.gitkeep` placeholder
-
-### custom.hostProfile + polybar parameterization
-
-- [ ] T014 [US5] Define `custom.hostProfile` NixOS options in `modules/nixos/workstation.nix` — `hasBattery` (bool, default false), `wlanInterface` (str, default ""), `ethInterface` (str, default ""), `defaultMonitor` (str, default "eDP-1"). Set Silicon values in `hosts/silicon/configuration.nix`: `hasBattery = true`, `wlanInterface = "wlp0s20f3"`, `defaultMonitor = "eDP-1"`. See research.md R-003
-- [ ] T015 [US5] Parameterize `modules/home/workstation/polybar.nix` with `osConfig.custom.hostProfile` — add `osConfig` to function args, use `lib.optionals osConfig.custom.hostProfile.hasBattery` for battery module, use `osConfig.custom.hostProfile.wlanInterface` for WiFi module, add ethernet module when `ethInterface != ""`, use `osConfig.custom.hostProfile.defaultMonitor` as fallback in existing `monitor = "\${env:MONITOR:...}"` pattern (polybar.nix:12). Update `services.polybar.script` to multi-monitor launch: loop over `polybar --list-monitors | cut -d: -f1`, launch `MONITOR=$m polybar mainbar &` per monitor (works universally for 1 or N monitors, replacing current single `polybar mainbar &`). Remove picom config from polybar (picom now lives only in i3 variant files). See research.md R-003
-
-### Validation
-
-- [ ] T016 [US5] Validate module reorganization: run `make flake-check`, `make local-dry` (must be functionally identical to pre-reorg), spot-check HLC Pi5 + Pi4: `make dry-run HOST=hlc-501`, `make dry-run HOST=hlc-401`. All must pass.
-
-**Checkpoint**: Module reorganization complete. Silicon and HLC unchanged. i3 split done. Polybar parameterized. Ready for Gibson.
+**Checkpoint**: Gibson evaluates. Silicon unchanged. Phase 2 can begin.
 
 ---
 
-## Phase 3: User Story 1 — Boot into NixOS on Gibson (Priority: P1) 🎯 MVP
+## Phase 2: Repo Restructure (US5 — Module Architecture)
 
-**Goal**: Gibson boots NixOS with NVIDIA drivers, all 4 drives mounted, from a new flake entry. Uses single shared `home/eaglerock.nix` — no `eaglerock-gibson.nix`.
+**Purpose**: Reorganize module directories per FR-020–FR-024. Each move is an atomic commit with content byte-identical (FR-029). Gibson gets independent copies of UI modules (FR-014, FR-015). 10 move groups, each with Silicon verification + operator visual spot check (FR-028).
 
-**Independent Test**: `nixos-rebuild dry-run --flake .#gibson` evaluates successfully; `nixos-rebuild dry-run --flake .#silicon` unchanged.
+**CRITICAL**: Every task that moves/renames files MUST make one atomic commit per logical move. Commit message states what was moved and that content is unchanged. `make dry-run HOST=silicon` after EVERY commit.
 
-### Implementation
+### Move Group 1: NixOS Module Moves
 
-- [ ] T017 [P] [US1] Create `modules/hardware/gibson.nix` — AMD Ryzen 9 5950X microcode (`hardware.cpu.amd.updateMicrocode = true`), NVIDIA RTX 3080 config (`services.xserver.videoDrivers = ["nvidia"]`, `hardware.nvidia.open = true`, `hardware.nvidia.modesetting.enable = true`, `hardware.nvidia.powerManagement.enable = true`, `hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.stable` with commented `.latest` alternative), graphics (`hardware.graphics.enable = true`, `hardware.graphics.enable32Bit = true`), SSD fstrim, no TLP/battery/lid/thinkfan/thermald (desktop); PipeWire 5.1 surround audio via `services.pipewire.wireplumber.extraConfig` (R-007): rule `"90-onboard-surround"` to pin `output:analog-surround-51+input:analog-stereo`, rule `"91-nvidia-sink-priority"` to lower NVIDIA HDMI sink to priority 500; NVIDIA fallback: include `nouveau` in `boot.initrd.availableKernelModules`; explicitly disable hibernate: `systemd.sleep.extraConfig = "AllowHibernation=no\nAllowSuspendThenHibernate=no"` (FR-025 — 32GB swap is runtime-only, not a resume device). See research.md R-001, R-007
-- [ ] T018 [P] [US1] Create `hosts/gibson/hardware-configuration.nix` — minimal placeholder: `boot.initrd.availableKernelModules` for NVMe + USB + NVIDIA, `boot.kernelModules = ["kvm-amd"]`, basic fileSystems for root + boot; will be replaced by `nixos-generate-config` during install
-- [ ] T019 [US1] Create `hosts/gibson/configuration.nix` — imports `../../modules/nixos/workstation.nix`, `../../modules/nixos/workstation/grub.nix`, `../../modules/nixos/workstation/desktop-ui.nix`, `../../modules/nixos/workstation/gaming.nix`, `../../modules/hardware/gibson.nix`, `./hardware-configuration.nix`; sets `networking.hostName = "gibson"`, filesystem mounts (4 drives by-uuid with PLACEHOLDER values, nofail on non-root), `custom.hostProfile` values (`hasBattery = false`, `ethInterface = "TBD"`, `wlanInterface = "TBD"`, `defaultMonitor = "TBD"`); verify `networking.networkmanager.enable` is inherited from workstation module chain (FR-016) — confirm with `grep -r networkmanager modules/nixos/` post-reorg; NOTE: home-manager i3 variant import added in Phase 4 (T023)
-- [ ] T020 [US1] Add `nixosConfigurations.gibson` to `flake.nix` — use `nixpkgs.lib.nixosSystem` with `system = "x86_64-linux"`, import `hosts/gibson/configuration.nix`, home-manager integration importing shared `home/eaglerock.nix` (same file as Silicon — no `eaglerock-gibson.nix`), add `nvidia-x11` and `nvidia-settings` to unfree allowlist with comment per Principle VI
-- [ ] T021 [US1] Validate US1: run `make flake-check`, `make dry-run HOST=gibson`, `make local-dry` (Silicon must be unchanged). Verify FR-016: `grep -r networkmanager` in built config confirms NetworkManager enabled via desktop-ui.nix inheritance
+- [ ] T008 [US5] Create `modules/nixos/` and `modules/nixos/workstation/` directories
+- [ ] T009 [US5] Move `modules/hosts/common.nix` → `modules/nixos/common.nix` — content unchanged. Update import in `modules/hosts/workstation.nix` (`./common.nix` path unchanged since both files move together)
+- [ ] T010 [US5] Move `modules/hosts/workstation.nix` → `modules/nixos/workstation.nix` — content unchanged
+- [ ] T011 [US5] Move `modules/hosts/desktop-ui.nix` → `modules/nixos/workstation/desktop-ui.nix` — content unchanged
+- [ ] T012 [US5] Move `modules/hosts/gaming.nix` → `modules/nixos/workstation/gaming.nix` — content unchanged
+- [ ] T013 [US5] Move `modules/hosts/grub.nix` + `modules/hosts/grub/` → `modules/nixos/workstation/grub.nix` + `modules/nixos/workstation/grub/` — content unchanged
+- [ ] T014 [US5] Update all import paths in `hosts/silicon/configuration.nix` — `../../modules/hosts/` → `../../modules/nixos/` (workstation.nix) and `../../modules/nixos/workstation/` (desktop-ui, gaming, grub)
+- [ ] T015 [US5] Update all import paths in `hosts/gibson/configuration.nix` — same path updates as Silicon
+- [ ] T016 [US5] Remove empty `modules/hosts/` directory
+- [ ] T017 [US5] Run `make dry-run HOST=silicon` — identical store path. Run `make dry-run HOST=gibson` — passes
+- [ ] T018 [US5] **CHECKPOINT 1**: Operator visual spot check on Silicon. **Check**: i3 starts, workspaces respond to Super+1-9, polybar visible on all bars, alacritty launches with correct colors. These are at risk because `workstation.nix` is the root NixOS module for Silicon's desktop
 
-**Checkpoint**: Gibson config evaluates. Silicon unchanged. MVP ready for physical install.
+### Move Group 2: Cluster/Server Module Moves
+
+- [ ] T019 [US5] Create `modules/nixos/server/` and `modules/nixos/server/hlc/` directories
+- [ ] T020 [US5] Move `modules/cluster/common.nix` → `modules/nixos/server/common.nix` — content unchanged
+- [ ] T021 [US5] Move `modules/cluster/motd.nix` → `modules/nixos/server/motd.nix` — content unchanged
+- [ ] T022 [US5] Move `modules/cluster/prompt.nix` → `modules/nixos/server/prompt.nix` — content unchanged
+- [ ] T023 [US5] Move `modules/cluster/hlc/` → `modules/nixos/server/hlc/` (all files: default.nix, hlc-recover-script.nix, hosts.nix, options.nix, provision.nix, raid-fallback.nix) — content unchanged
+- [ ] T024 [US5] Update `flake.nix` — `clusterModule` paths: `./modules/cluster/hlc/default.nix` → `./modules/nixos/server/hlc/default.nix` and `./modules/cluster/hlc/provision.nix` → `./modules/nixos/server/hlc/provision.nix`
+- [ ] T025 [US5] Update internal imports in moved server modules (relative paths like `../common.nix` — verify still correct after move)
+- [ ] T026 [US5] Remove empty `modules/cluster/` directory
+- [ ] T027 [US5] Run `make dry-run HOST=silicon` + `make dry-run HOST=hlc-501` — both unchanged
+- [ ] T028 [US5] **CHECKPOINT 2**: Operator visual spot check on Silicon. **Check**: polybar network modules, dunst notifications (send test with `notify-send`). Cluster moves shouldn't affect Silicon but verify imports intact
+
+### Move Group 3: Misc NixOS Module Moves
+
+- [ ] T029 [US5] Move `modules/k8s/prereqs.nix` → `modules/nixos/k8s.nix` — content unchanged. Remove empty `modules/k8s/`
+- [ ] T030 [US5] Move `modules/shell/` → `modules/nixos/shell/` (common.nix, utilities.nix) — content unchanged. Remove empty `modules/shell/`
+- [ ] T031 [US5] Move `modules/users/operator.nix` → `modules/nixos/operator.nix` — content unchanged. Remove empty `modules/users/`
+- [ ] T032 [US5] Update imports in `modules/nixos/common.nix` — shell/ and operator.nix paths. Update k8s import in `modules/nixos/server/common.nix`
+- [ ] T033 [US5] Run `make dry-run HOST=silicon` — identical store path
+- [ ] T034 [US5] **CHECKPOINT 3**: Operator visual spot check on Silicon. **Check**: open terminal, verify shell prompt renders correctly (Gruvbox colors, git branch display), `docker` command available, user groups correct (`groups` command)
+
+### Move Group 4: Hardware Module Moves
+
+- [ ] T035 [US5] Create `modules/hardware/rpi/` and `modules/hardware/rpi/sd/` directories
+- [ ] T036 [US5] Move `modules/hardware/rpi4.nix` → `modules/hardware/rpi/rpi4.nix` — content unchanged
+- [ ] T037 [US5] Move `modules/hardware/rpi5.nix` → `modules/hardware/rpi/rpi5.nix` — content unchanged
+- [ ] T038 [US5] Move `modules/hardware/rpi-eeprom.nix` → `modules/hardware/rpi/rpi-eeprom.nix` — content unchanged
+- [ ] T039 [US5] Move `modules/sd/` → `modules/hardware/rpi/sd/` (bootstrap.nix, recovery-utils.nix) — content unchanged. Remove empty `modules/sd/`
+- [ ] T040 [US5] Update import paths in `flake.nix` — SD bootstrap path, piModule references for rpi4/rpi5
+- [ ] T041 [US5] Update import paths in `modules/hardware/rpi/sd/recovery-utils.nix` — cluster import → server import
+- [ ] T042 [US5] Update any HLC host configs importing rpi hardware modules
+- [ ] T043 [US5] Run `make dry-run HOST=silicon` + `make dry-run HOST=hlc-501` — both unchanged
+- [ ] T044 [US5] **CHECKPOINT 4**: Operator visual spot check on Silicon. **Check**: i3 launches, monitor resolution correct. Minimal visual risk from hardware module moves (x1-carbon.nix not moved). Quick confirmation only
+
+### Move Group 5: Home-Manager Workstation Module Moves
+
+- [ ] T045 [US5] Create `modules/home/workstation/` directory
+- [ ] T046 [US5] Move `modules/home/dunst.nix` → `modules/home/workstation/dunst.nix` — content unchanged. Update `colors.nix` import path if relative (`./colors.nix` → `../colors.nix`)
+- [ ] T047 [US5] Move `modules/home/ui.nix` → `modules/home/workstation/ui.nix` — content unchanged. Update internal import paths
+- [ ] T048 [US5] Move `modules/home/dev.nix` → `modules/home/workstation/dev.nix` — content unchanged
+- [ ] T049 [US5] Move `modules/home/vscode.nix` → `modules/home/workstation/vscode.nix` — content unchanged
+- [ ] T050 [US5] Move `modules/home/layouts/` → `modules/home/workstation/layouts/` — content unchanged
+- [ ] T051 [US5] Move `modules/home/scripts/` → `modules/home/workstation/scripts/` — content unchanged
+- [ ] T052 [US5] Update all imports in `modules/home/workstation.nix` — `./dunst.nix` → `./workstation/dunst.nix`, `./ui.nix` → `./workstation/ui.nix`, etc.
+- [ ] T053 [US5] Run `make dry-run HOST=silicon` — identical store path
+- [ ] T054 [US5] **CHECKPOINT 5** (HIGH RISK): Operator visual spot check on Silicon. **Check**: alacritty transparency and colors, dunst notification popup (`notify-send "test" "checkpoint 5"`), i3 window borders and gaps and colors, VS Code launches correctly, picom compositing (window shadows visible, transparency works). These modules directly control Silicon's visual appearance
+
+### Move Group 6: i3 Duplication for Gibson
+
+- [ ] T055 [US5] Create `modules/home/workstation/i3/` directory
+- [ ] T056 [US5] Move `modules/home/i3.nix` → `modules/home/workstation/i3/laptop.nix` — content unchanged (rename only)
+- [ ] T057 [US5] Copy `modules/home/workstation/i3/laptop.nix` → `modules/home/workstation/i3/gibson.nix` — independent copy for Gibson. Content identical to laptop.nix at this point; Gibson-specific changes in Phase 4
+- [ ] T058 [US5] Update import in `modules/home/workstation.nix` — `./i3.nix` → `./workstation/i3/laptop.nix`
+- [ ] T059 [US5] Run `make dry-run HOST=silicon` — identical store path
+- [ ] T060 [US5] **CHECKPOINT 6** (HIGHEST RISK): Operator visual spot check on Silicon. This is the exact change type that broke Silicon before. **Check**: ALL i3 keybindings (Super+1 through Super+0, Super+Enter for terminal, Super+d for dmenu/rofi), workspace switching between all workspaces, window movement (Super+Shift+arrow), floating toggle (Super+Shift+space), resize mode (Super+r), i3bar/polybar visible on all outputs, picom compositing (transparency, shadows), scratchpad (Super+minus to show, Super+Shift+minus to move to scratchpad), workspace 1 layout restoration (3 terminals)
+
+### Move Group 7: Polybar Duplication for Gibson
+
+- [ ] T061 [US5] Move `modules/home/polybar.nix` → `modules/home/workstation/polybar-laptop.nix` — content unchanged (rename only). Update `colors.nix` import path if needed
+- [ ] T062 [US5] Copy `modules/home/workstation/polybar-laptop.nix` → `modules/home/workstation/polybar-gibson.nix` — independent copy. Content identical at this point; Gibson-specific changes in Phase 4
+- [ ] T063 [US5] Update import in `modules/home/workstation.nix` — `./polybar.nix` → `./workstation/polybar-laptop.nix`
+- [ ] T064 [US5] Run `make dry-run HOST=silicon` — identical store path
+- [ ] T065 [US5] **CHECKPOINT 7**: Operator visual spot check on Silicon. **Check**: polybar visible on all bars, all modules rendering (battery percentage, WiFi SSID, CPU/memory usage, workspace indicators, date/time, volume icon), click actions work (volume, network), correct Gruvbox colors
+
+### Move Group 8: Remaining Home Module Duplications
+
+- [ ] T066 [US5] Audit remaining workstation modules for Gibson-specific differences. Candidates: picom (if separate from i3 variant files), any module where Gibson needs different config. Most modules (dunst, dev, vscode) are expected to be shared
+- [ ] T067 [US5] For each module identified as needing Gibson-specific config: create independent copy in `modules/home/workstation/`. For shared modules: no action (imported via common workstation.nix path)
+- [ ] T068 [US5] Run `make dry-run HOST=silicon` — identical store path
+- [ ] T069 [US5] **CHECKPOINT 8**: Operator visual spot check on Silicon. **Check**: alacritty font and transparency, dunst notification style, GTK theme (open file dialog or settings). Low risk — most modules unchanged
+
+### Move Group 9: Flake.nix + Host Profile Changes
+
+- [ ] T070 [US5] Create `lib/hlc.nix` — extract HLC helper functions (`mkHlcNode`, `mkHlcProvision`, `mkHlcBootstrap`, `mkSdImages`, `pi4Hosts`, `pi5Hosts`) from `flake.nix`. Function receives inputs, returns helper set. Reference: R-009
+- [ ] T071 [US5] Update `flake.nix` — import `lib/hlc.nix`, replace inline helpers with imported versions. Verify all nixosConfigurations still reference correctly
+- [ ] T072 [US5] Add `custom.hostProfile` NixOS options to `modules/nixos/workstation.nix` — `hasBattery` (bool), `wlanInterface` (str), `ethInterface` (str), `defaultMonitor` (str). Reference: R-003
+- [ ] T073 [US5] Set `custom.hostProfile` values in `hosts/silicon/configuration.nix` — `hasBattery = true`, `wlanInterface = "wlp0s20f3"`, `defaultMonitor = "eDP-1"`
+- [ ] T074 [US5] Add `home-manager.users.eaglerock.imports` to Silicon's flake.nix config block — `[ ../../modules/home/workstation/i3/laptop.nix ]` (wires Silicon's i3 variant)
+- [ ] T075 [US5] Add `home-manager.users.eaglerock.imports` to Gibson's flake.nix config block — `[ ../../modules/home/workstation/i3/gibson.nix ../../modules/home/workstation/polybar-gibson.nix ]`
+- [ ] T076 [US5] Run `make dry-run HOST=silicon` — identical store path. Run `make dry-run HOST=gibson` — passes
+- [ ] T077 [US5] **CHECKPOINT 9**: Operator visual spot check on Silicon. This group changes flake.nix and Silicon's configuration.nix directly. **Check**: full desktop — LightDM login, i3 session startup, all workspace keybindings, polybar all modules, alacritty, dunst, picom, lock screen (if configured)
+
+### Move Group 10: Final Full Validation
+
+- [ ] T078 [US5] Run `make dry-run HOST=silicon` — compare store path to Phase 1 baseline recorded in T007
+- [ ] T079 [US5] Run `make dry-run HOST=gibson` — passes
+- [ ] T080 [US5] Run `make dry-run HOST=hlc-501` — spot check cluster node (content-immutable)
+- [ ] T081 [US5] **CHECKPOINT 10**: Complete Silicon desktop validation. Operator runs full daily workflow: terminal usage, browser launch (Firefox ws 3), VS Code (ws 2), workspace switching across all 10 workspaces, window movement between workspaces, multi-monitor if available, notifications, lock screen, volume control
+
+**Checkpoint**: Phase 2 complete. All module paths reorganized. Silicon unchanged. Gibson has independent module copies. Ready for Gibson-specific work.
 
 ---
 
-## Phase 4: User Story 2 — Triple-Monitor i3 Desktop (Priority: P1)
+## Phase 3: Gibson Boot & Storage (US1 + US3)
 
-**Goal**: Gibson has a triple-monitor i3 desktop with workspace assignments, directional keybindings, and polybar on all 3 screens. Silicon behavior unchanged.
+**Goal**: Gibson boots NixOS with correct filesystem layout and GRUB dual-boot with Ubuntu.
 
-**Independent Test**: Both hosts evaluate; Silicon's polybar has battery module + wlan=wlp0s20f3; Gibson's polybar has no battery + correct interfaces.
+**Independent Test**: Boot Gibson, verify all drives mounted, GRUB shows NixOS + Ubuntu.
 
-### Implementation
+**Operator prerequisite**: Manual NixOS install on Gibson (boot USB, partition 2TB NVMe, `nixos-install`). Discover UUIDs, GPU output names, network interfaces.
 
-- [ ] T022 [US2] Create `modules/home/workstation/i3/gibson.nix` — triple-monitor xrandr setup (output names TBD as placeholder strings: Left 1920x1080, Center 2560x1440, Right 1920x1080), `workspaceOutputAssign` mapping Left=ws3+9, Center=ws1+2+5+6+7+8, Right=ws4+10; directional workspace movement keybindings (`$mod+Ctrl+Left/Right`); same Gruvbox colors, terminal, modifier, fonts as common.nix (merged via module system); picom with `backend = "glx"`, `vsync = true`, `use-damage = false`, `unredir-if-possible = false` (NVIDIA-tuned per R-004); wallpaper: `cp assets/wallpaper.png assets/wallpaper-gibson.png` (Silicon's wallpaper as starting point), reference `assets/wallpaper-gibson.png` in gibson.nix. Does NOT import `common.nix` — both are merged as separate NixOS modules via the module system. Monitor disconnect: no special handling needed — i3 natively reassigns workspaces to remaining outputs. See R-004, R-008
-- [ ] T023 [US2] Wire Gibson i3 variant — add `../../modules/home/workstation/i3/gibson.nix` to `home-manager.users.eaglerock.imports` in `hosts/gibson/configuration.nix`; set final `custom.hostProfile` values (defaultMonitor TBD, ethInterface TBD, wlanInterface TBD — filled during physical install)
-- [ ] T024 [US2] Validate US2: `make dry-run HOST=gibson` and `make local-dry`, verify both evaluate; `make flake-check`
+- [ ] T082 [US1] Update `hosts/gibson/hardware-configuration.nix` with real values from `nixos-generate-config` — actual disk UUIDs, detected kernel modules, hardware scan results
+- [ ] T083 [US1] Configure filesystem mounts in `hosts/gibson/configuration.nix` — root (`/`) on 2TB NVMe ext4, `/boot` EFI vfat, swap (32GB, no resume device). Mount Ubuntu NVMe at `/mnt/ubuntu` with `nofail`, games NVMe (XFS) at `/srv` with `nofail`, HDD at `/mnt/hdd` with `nofail`. All `by-uuid`. Reference: FR-002, FR-003
+- [ ] T084 [US3] Configure GRUB dual-boot in `hosts/gibson/configuration.nix` — `boot.loader.grub.enable`, `efiSupport`, `device = "nodev"`, `useOSProber = true`, NixOS default. `boot.loader.efi.canTouchEfiVariables = true`. Reference: FR-004, R-002
+- [ ] T085 [US1] Configure suspend-to-RAM in `hosts/gibson/configuration.nix` — no hibernate, swap is runtime-only, NVIDIA power management handles suspend/resume. Reference: FR-025
+- [ ] T086 [US1] Configure NetworkManager in `hosts/gibson/configuration.nix` — wired ethernet + WiFi. Reference: FR-016
+- [ ] T087 [US1] Run `make dry-run HOST=silicon` — unchanged. Run `make dry-run HOST=gibson` — passes
+- [ ] T088 [US1] Operator: run `nixos-install --flake .#gibson` on Gibson, reboot, verify boot, login to i3, check `lsblk`/`mount` for all 4 drives, verify `nvidia-smi` shows RTX 3080
+- [ ] T089 [US3] Operator: reboot Gibson, verify GRUB menu shows NixOS + Ubuntu, boot into Ubuntu to confirm it's untouched, boot back to NixOS
 
-**Checkpoint**: Both hosts have correct i3 variant. Polybar parameterized per host. Silicon regression-free.
-
----
-
-## Phase 5: User Story 3 — GRUB Dual-Boot with Ubuntu (Priority: P2)
-
-**Goal**: Gibson's GRUB menu shows NixOS (default) and Ubuntu as boot options via os-prober.
-
-**Independent Test**: Gibson config includes os-prober; Silicon's GRUB unchanged.
-
-### Implementation
-
-- [ ] T025 [US3] Configure GRUB dual-boot in `hosts/gibson/configuration.nix` — `boot.loader.grub.useOSProber = true`, NixOS as default, timeout for menu display. Add commented-out `boot.loader.grub.extraEntries` with manual Ubuntu chainloader fallback (if os-prober fails to detect)
-- [ ] T026 [US3] Validate US3: `make dry-run HOST=gibson`, `make local-dry` (Silicon unchanged)
-
-**Checkpoint**: Dual-boot configured. Physical verification requires install.
+**Checkpoint**: Gibson boots into NixOS i3. All drives mounted. GRUB dual-boot works. US1 core + US3 complete.
 
 ---
 
-## Phase 6: User Story 4 — Gaming Peripheral Support (Priority: P2)
+## Phase 4: Gibson i3 Desktop (US2)
 
-**Goal**: Xbox One controller, Logitech joysticks, and G29 racing wheel work as non-root user.
+**Goal**: Triple-monitor i3 with correct workspace assignments, directional movement, and polybar on all monitors.
 
-**Independent Test**: Gaming module includes xpadneo, new-lg4ff, and udev rules in evaluation.
+**Independent Test**: Log into i3 on Gibson, verify 3 monitors, workspace navigation, polybar.
 
-### Implementation
+- [ ] T090 [US2] Update `modules/home/workstation/i3/gibson.nix` — triple-monitor xrandr setup using discovered output names (DP-0, DP-1, HDMI-0 etc.). Set resolutions: center 2560x1440, left 1920x1080, right 1920x1080. Reference: FR-005
+- [ ] T091 [US2] Configure workspace-to-monitor assignment in `modules/home/workstation/i3/gibson.nix` — Left: ws 3 (Firefox) + ws 9 (spare), Right: ws 4 (Discord) + ws 10 (spare), Center: ws 1, 2, 5, 6, 7, 8. Reference: FR-005
+- [ ] T092 [US2] Add directional workspace movement keybindings in `modules/home/workstation/i3/gibson.nix` — move workspace left/right between the three monitors. Reference: FR-006
+- [ ] T093 [US2] Update picom config in `modules/home/workstation/i3/gibson.nix` — switch to `backend = "glx"`, `vsync = true`, `use-damage = false`, `unredir-if-possible = false`. Reference: R-004
+- [ ] T094 [US2] Configure startup layout in `modules/home/workstation/i3/gibson.nix` — workspace 1 with 3 alacritty terminals + floating scratchpad. Same as Silicon. Reference: FR-019
+- [ ] T095 [US2] Update `modules/home/workstation/polybar-gibson.nix` — remove battery module, set correct network interfaces (ethernet + WiFi), set default monitor to center monitor. Correct Gruvbox colors. Reference: FR-007
+- [ ] T096 [US2] Run `make dry-run HOST=silicon` — unchanged. Apply on Gibson
+- [ ] T097 [US2] Operator: verify all 3 monitors display content at correct resolutions, workspace switching via keybindings, directional workspace movement, polybar on all 3 monitors with correct modules, Gruvbox theme consistent
 
-- [ ] T027 [US4] Research: verify whether existing Steam config in `gaming.nix` already pulls in `steam-hardware` package (provides broad udev rules for gaming HIDs including Logitech joysticks). Check `nixpkgs` source for `programs.steam.enable` — if it includes `steam-hardware` udev rules, FR-011 is covered for all gaming HID devices. If not, T028 needs explicit Logitech joystick vendor:product udev rules alongside G29 rule
-- [ ] T028 [US4] Enhance `modules/nixos/workstation/gaming.nix` — add `hardware.xpadneo.enable = true` (Xbox One via xpadneo DKMS), `hardware.new-lg4ff.enable = true` (G29 enhanced force feedback), udev rule `TAG+="uaccess"` for G29 (vendor `046d`, product `c24f`), testing tool packages (alphabetically sorted): `evtest`, `jstest-gtk`, `linuxConsoleTools`, `oversteer`. Keep existing Steam config. If T027 confirms `steam-hardware` udev rules are NOT included by Steam module, add explicit Logitech joystick udev rules. See research.md R-002
-- [ ] T029 [US4] Validate US4: `make dry-run HOST=gibson` includes xpadneo/new-lg4ff; `make local-dry` also passes (inherits gaming.nix)
-
-**Checkpoint**: Peripheral support configured. Physical verification requires hardware.
+**Checkpoint**: US2 complete. Triple-monitor Gibson desktop fully functional.
 
 ---
 
-## Phase 7: Polish & Cross-Cutting Concerns
+## Phase 5: Gaming Peripherals (US4)
 
-**Purpose**: Documentation, constitution prep, final validation
+**Goal**: Xbox controller, Logitech joysticks, and G29 wheel work as non-root user.
 
-- [ ] T030 [P] Update `CLAUDE.md` directory structure section to reflect post-reorg layout
-- [ ] T031 [P] Update `specs/002-gibson-nixos-onboard/quickstart.md` with finalized install procedure and post-install verification. Include NVIDIA fallback test (boot with `nomodeset` kernel param) and post-`nixos-generate-config` check: verify `hardware-configuration.nix` does NOT set `boot.resumeDevice` (FR-025)
-- [ ] T032 Draft constitution Principle VII amendment — update host capability table for Gibson as NixOS workstation. Save to `specs/002-gibson-nixos-onboard/constitution-amendment-draft.md`. NOT applied until physical install. Post-install follow-up: apply amendment and commit with `docs: amend constitution to vX.Y.Z` message.
-- [ ] T033 Final validation: `make flake-check`, `make dry-run HOST=gibson`, `make local-dry`, HLC spot-check (`make dry-run HOST=hlc-501`, `make dry-run HOST=hlc-401`). Verify SC-007: confirm a future laptop host can be onboarded by creating only hardware module + host config + selecting i3/laptop.nix — no shared module changes needed. Verify Gruvbox theme consistency (FR-017): confirm `colors.nix` is imported by all workstation home modules. Note: `build-vm` not used for Gibson — NVIDIA proprietary drivers make QEMU testing infeasible per Principle IV "when feasible" clause.
+**Independent Test**: Connect each peripheral, verify detection and functionality in Steam.
 
-**Checkpoint**: All configuration work complete. Ready for physical install on Gibson hardware.
+- [ ] T098 [US4] Add `hardware.xpadneo.enable = true` to `modules/nixos/workstation/gaming.nix` or Gibson-specific config. Reference: FR-008, R-002
+- [ ] T099 [US4] Add `hardware.new-lg4ff.enable = true` to Gibson-specific config. Reference: FR-010, R-002
+- [ ] T100 [US4] Add udev rules for gaming HID devices — `TAG+="uaccess"` for G29 (vendor 046d, product c24f), general gamepad access. Reference: FR-011
+- [ ] T101 [US4] Run `make dry-run HOST=silicon` — verify store path. If gaming.nix changes affect Silicon derivation, refactor gaming peripheral enables to Gibson-only config. Store path MUST be identical
+- [ ] T102 [US4] Operator: connect Xbox controller (USB), verify `evtest` shows input. Connect Logitech joystick, verify `jstest`. Connect G29, verify `fftest` for force feedback. Test in Steam game
+
+**Checkpoint**: US4 complete. All gaming peripherals functional.
+
+---
+
+## Phase 6: Audio & System (US1 remaining)
+
+**Goal**: PipeWire 5.1 surround audio output and microphone input via onboard audio.
+
+**Independent Test**: Play audio through 5.1 surround speakers, verify all 6 channels.
+
+- [ ] T103 [US1] Verify PipeWire 5.1 surround config in `modules/hardware/gibson.nix` (created in T003) — WirePlumber rule `90-onboard-surround` matches onboard HD-Audio card, sets `output:analog-surround-51+input:analog-stereo` profile. Reference: FR-018, R-007
+- [ ] T104 [US1] Verify NVIDIA HDMI audio deprioritization rule in `modules/hardware/gibson.nix` — rule `91-nvidia-sink-priority` lowers HDMI sink priority so onboard analog is default. Reference: R-007
+- [ ] T105 [US1] Run `make dry-run HOST=silicon` — unchanged
+- [ ] T106 [US1] Operator: apply on Gibson. Run `pactl list cards` to verify surround profile active. Play test audio through all 6 channels (`speaker-test -c 6`). Test microphone input
+
+**Checkpoint**: US1 fully complete. Gibson boots, mounts all drives, has working audio, suspends/resumes, network works.
+
+---
+
+## Phase 7: Code Deduplication (US5 — parallel with Phases 4-6)
+
+**Goal**: Extract shared logic from duplicated modules into common.nix + host-specific deltas. Runs in parallel with Phases 4-6 (FR-031).
+
+**Independent Test**: Both hosts build identically to pre-dedup state. Silicon visual spot check after each module dedup.
+
+### i3 Deduplication
+
+- [ ] T107 [US5] Diff `modules/home/workstation/i3/laptop.nix` vs `i3/gibson.nix` — identify shared lines (~250 lines: keybindings, colors, fonts, gaps, assigns, modes, window commands, startup layout)
+- [ ] T108 [US5] Create `modules/home/workstation/i3/common.nix` — extract shared i3 config. Update `modules/home/workstation.nix` to import `./workstation/i3/common.nix` instead of (or in addition to) `i3/laptop.nix`
+- [ ] T109 [US5] Reduce `modules/home/workstation/i3/laptop.nix` to Silicon-specific delta only — xrandr scaling, brightness keys, xrender picom. Merges with common.nix via NixOS module system. Reference: FR-014b
+- [ ] T110 [US5] Reduce `modules/home/workstation/i3/gibson.nix` to Gibson-specific delta only — triple-monitor xrandr, glx picom, directional workspace movement. Reference: FR-014b
+- [ ] T111 [US5] Run `make dry-run HOST=silicon` — identical store path. Run `make dry-run HOST=gibson` — passes
+- [ ] T112 [US5] Operator visual spot check on Silicon after i3 dedup — full i3 keybinding check, workspace switching, picom compositing
+
+### Polybar Deduplication
+
+- [ ] T113 [US5] Create parameterized `modules/home/workstation/polybar.nix` — read `osConfig.custom.hostProfile` for battery, network interfaces, default monitor. Conditionally include battery module, use correct interface names. Reference: FR-015b, R-003
+- [ ] T114 [US5] Replace `polybar-laptop.nix` and `polybar-gibson.nix` with single parameterized `polybar.nix`. Update import in `modules/home/workstation.nix`. Remove per-host polybar imports from flake.nix host configs
+- [ ] T115 [US5] Run `make dry-run HOST=silicon` — identical store path. Run `make dry-run HOST=gibson` — passes
+- [ ] T116 [US5] Operator visual spot check on Silicon — polybar all modules rendering, battery present, WiFi interface correct
+
+### Remaining Module Dedup
+
+- [ ] T117 [US5] For each remaining duplicated module (picom, dunst, others from T067): diff variants, evaluate whether dedup is worthwhile. **Ask operator** before keeping any module as independent copies — operator's judgment call (FR-030)
+- [ ] T118 [US5] Deduplicate approved modules. For each: extract common config, reduce variants to deltas, verify both hosts unchanged
+- [ ] T119 [US5] Run `make dry-run HOST=silicon` — identical store path. Final operator visual spot check
+
+**Checkpoint**: US5 complete. Architecture supports multiple hosts with shared common modules and host-specific deltas.
+
+---
+
+## Phase 8: Polish & Final Validation
+
+**Purpose**: Final verification, documentation, cleanup.
+
+- [ ] T120 Run `make dry-run HOST=silicon` — verify store path matches original pre-Phase-1 baseline
+- [ ] T121 Run `make dry-run HOST=gibson` — passes cleanly
+- [ ] T122 Run `make dry-run HOST=hlc-501` — cluster node unchanged
+- [ ] T123 Update `CLAUDE.md` — directory structure section reflects new module layout, build commands include Gibson, Gibson host listed in project overview
+- [ ] T124 Verify `specs/002-gibson-nixos-onboard/quickstart.md` is accurate for final state
+- [ ] T125 [P] Constitution Principle VII table update — Gibson now has NixOS (PATCH bump). Update `gibson` row: `nixos-rebuild` now available
+- [ ] T126 Operator: full daily workflow test on both Silicon and Gibson. Verify SC-001 through SC-007
+
+**Checkpoint**: All user stories verified. Ready for merge.
 
 ---
 
@@ -155,115 +268,55 @@
 ### Phase Dependencies
 
 ```
-Phase 1 (Setup)
-    └── Phase 2 (US5: Module Reorg) ← BLOCKS ALL
-        └── Phase 3 (US1: Gibson Boot) ← MVP
-            ├── Phase 4 (US2: Triple Monitor) ─┐
-            ├── Phase 5 (US3: GRUB Dual-Boot) ─┤ can run parallel
-            └── Phase 6 (US4: Gaming) ─────────┘
-                └── Phase 7 (Polish) ← after all above
+Phase 1 (Scaffold) ──→ Phase 2 (Restructure) ──┬──→ Phase 3 (Boot/Storage) ──→ Phase 8 (Polish)
+                                                 ├──→ Phase 4 (i3 Desktop)   ──→ Phase 8
+                                                 ├──→ Phase 5 (Gaming)       ──→ Phase 8
+                                                 ├──→ Phase 6 (Audio)        ──→ Phase 8
+                                                 └──→ Phase 7 (Dedup)        ──→ Phase 8
 ```
 
-### User Story Dependencies
+- **Phase 1**: No dependencies — start immediately
+- **Phase 2**: Depends on Phase 1 — BLOCKS all subsequent phases
+- **Phases 3-6**: All depend on Phase 2. Can run in parallel (different files)
+- **Phase 7**: Depends on Phase 2. MAY run in parallel with Phases 4-6
+- **Phase 8**: Depends on all previous phases
 
-- **US5 (Module Reorg)**: Foundational — must complete first
-- **US1 (Boot)**: Depends on US5 — MVP target
-- **US2 (Triple Monitor)**: Depends on US1 (needs Gibson in flake + home-manager)
-- **US3 (GRUB)**: Depends on US1 (needs Gibson host config)
-- **US4 (Gaming)**: Depends on US1 (needs Gibson host config to validate)
+### User Story Independence
 
-### Within Phase 2 — Execution Order
-
-```
-T003 (dirs) → T004 (HLC extract) → T005–T009 [parallel: file moves]
-→ T010a (picom reconcile ui.nix) → T010b (i3 split) → T011+T012 [parallel: import updates] → T013 (cleanup)
-→ T014 (hostProfile options) → T015 (polybar parameterize)
-→ T016 (validate)
-```
-
-Key constraints:
-- T004 before file moves (T004 rewrites flake.nix cluster/sd refs to `lib/hlc.nix` paths; moves must not break flake.nix mid-reorg)
-- T009 before T010a (workstation/ dir must exist for picom reconciliation and i3/ subdirectory)
-- T014 before T015 (hostProfile options must be defined before polybar reads them)
+- **US1** (Boot): Phases 1 + 3 + 6 — can be tested after Phase 6
+- **US2** (Triple-monitor): Phase 4 — testable after Phase 4
+- **US3** (Dual-boot): Phase 3 — testable after Phase 3
+- **US4** (Gaming): Phase 5 — testable after Phase 5
+- **US5** (Architecture): Phases 2 + 7 — testable after Phase 7
 
 ### Parallel Opportunities
 
-- **Phase 2 file moves**: T005–T009 fully parallel (different source directories)
-- **Phase 3 new files**: T017 + T018 parallel (separate new files)
-- **Phases 4, 5, 6**: Can run parallel after Phase 3 (different files/concerns)
-- **Phase 7**: T030 + T031 parallel
+Within Phase 2 move groups: sequential (each depends on prior group's import updates).
 
----
-
-## Parallel Example: Phase 2 (File Moves)
-
-```bash
-# After T003 (dirs) and T004 (HLC), launch all file moves:
-Task T005: "Move NixOS system modules hosts/ → nixos/"
-Task T006: "Move cluster modules → nixos/server/"
-Task T007: "Move misc NixOS modules (k8s, shell, users)"
-Task T008: "Move RPi + SD modules → hardware/rpi/"
-Task T009: "Move home workstation modules → home/workstation/"
-
-# Then sequential: T010a (picom) → T010b (i3 split) → T011-T016
-```
-
-## Parallel Example: After Phase 3
-
-```bash
-# These three phases are independent — can run parallel:
-Phase 4 (US2): Triple-monitor i3 (T022-T024)
-Phase 5 (US3): GRUB dual-boot (T025-T026)
-Phase 6 (US4): Gaming peripherals (T027-T028)
-
-# NOTE: Phases 4+5 are order-independent but NOT file-concurrent —
-# T023 and T025 both modify hosts/gibson/configuration.nix.
-# Run in any order, not simultaneously.
-```
+After Phase 2, these can run in parallel:
+- Phase 3 (T082-T089) and Phase 4 (T090-T097) — different files
+- Phase 5 (T098-T102) — different files from Phase 4
+- Phase 6 (T103-T106) — different files
+- Phase 7 (T107-T119) — depends on Phase 2 only, runs alongside 4-6
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (Phase 2 + Phase 3)
+### MVP First (US1 — Boot into NixOS)
 
-1. Complete Phase 1: Baseline verification
-2. Complete Phase 2: Module reorganization + i3 split + polybar parameterization (US5)
-3. Complete Phase 3: Gibson boot config (US1)
-4. **STOP and VALIDATE**: Both hosts evaluate, Silicon unchanged
-5. Physical install feasible (Gibson boots with shared i3/common.nix — no variant until Phase 4)
+1. Complete Phase 1: Gibson scaffold
+2. Complete Phase 2: Repo restructure (Silicon stays stable)
+3. Complete Phase 3: Gibson boots with all drives + GRUB
+4. **STOP and VALIDATE**: Boot Gibson, verify base system works
+5. Gibson is usable (basic i3 with Silicon's config)
 
 ### Incremental Delivery
 
-1. Phase 2 → Reorganized architecture, parameterized polybar ✓
-2. Phase 3 → Gibson boot config, MVP installable ✓
-3. Phase 4 → Triple-monitor i3 + Gibson desktop ✓
-4. Phase 5 + 6 → GRUB dual-boot + gaming (parallel) ✓
-5. Phase 7 → Polish, docs, constitution prep ✓
-
-### Physical Install Gate
-
-Between Phase 3 and Phase 4, the operator performs the physical NixOS install:
-1. Boot NixOS ISO from USB
-2. Partition 2TB NVMe (512MB EFI + 32GB swap + rest ext4)
-3. `nixos-generate-config` → replace `hosts/gibson/hardware-configuration.nix`; verify it does NOT set `boot.resumeDevice` (FR-025: no hibernate)
-4. `xrandr` → discover output names for `i3/gibson.nix` (Phase 4)
-5. `ip link` → discover interface names for `custom.hostProfile`
-6. Replace PLACEHOLDER UUIDs in `hosts/gibson/configuration.nix`
-7. `nixos-install --flake /path/to/nix-config#gibson`
-
----
-
-## Notes
-
-- [P] tasks = different files, no dependencies within the phase
-- All import path updates (T011–T013) MUST run after all file moves (T005–T010b)
-- Constitution amendment (T032) drafted but NOT applied until Gibson has NixOS
-- Hardware-specific values (UUIDs, xrandr outputs, interfaces) are TBD until physical install
-- Picom shared settings (`enable`, `fade`, `shadow`) in i3/common.nix; backend+vsync ONLY in variant files (laptop.nix: xrender; gibson.nix: glx) — removed from polybar.nix (T015) and ui.nix (T010a)
-- i3 variant wired via `home-manager.users.eaglerock.imports` in each host's `configuration.nix` — NOT via string interpolation or extraSpecialArgs
-- Polybar parameterized via `osConfig.custom.hostProfile.*` NixOS options — NOT via `extraSpecialArgs`
-- Single shared `home/eaglerock.nix` for all workstations — NO per-host home entry files
-- `dotfiles/` and `themes/` stay at `modules/home/` root (shared by base.nix)
-- `layouts/` and `scripts/` move to `modules/home/workstation/` (i3/ui specific)
-- PipeWire 5.1 surround profile name may need post-install tuning via `pactl list cards`
+1. Phase 1 + 2 → Architecture ready
+2. Phase 3 → Gibson boots (MVP — US1 core + US3)
+3. Phase 4 → Triple-monitor desktop (US2)
+4. Phase 5 → Gaming peripherals (US4)
+5. Phase 6 → Audio + system polish (US1 complete)
+6. Phase 7 → DRY architecture (US5 complete)
+7. Phase 8 → Ship it

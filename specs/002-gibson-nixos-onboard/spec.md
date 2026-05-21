@@ -76,19 +76,25 @@ The operator's gaming peripherals work under NixOS: Xbox One controllers connect
 
 ### User Story 5 - Module Architecture Supports Multiple Hosts (Priority: P3)
 
-The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (desktop) from the same flake, with a reorganized module directory structure. Modules are split into `modules/nixos/` (NixOS system modules) and `modules/home/` (home-manager modules), each with `workstation/` and `server/` subdirectories for role-specific configs. Shared modules live at each directory's root level. The i3 configuration is split into laptop and desktop variants under `modules/home/workstation/`. Polybar is parameterized to adapt to host-specific differences. The `modules/cluster/` directory is absorbed into `modules/nixos/server/`. The architecture prepares for future hosts (Carbon laptop, Pi cluster nodes).
+The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (desktop) from the same flake, with a reorganized module directory structure. The work proceeds in two stages: **Phase 2 (Refactor)** moves/renames files and creates independent copies of host-specific modules for Gibson — Silicon's evaluated config MUST NOT change. **Phase 7 (Deduplication)** extracts shared logic into common modules (e.g., `i3/common.nix`) and reduces host variants to deltas. This two-stage approach ensures Silicon is never broken by architectural changes.
 
-**Why this priority**: Good architecture prevents configuration drift and makes future host onboarding cheaper. Not blocking for Gibson itself but improves long-term maintainability.
+During Phase 2, modules are split into `modules/nixos/` (NixOS system modules) and `modules/home/` (home-manager modules), each with `workstation/` and `server/` subdirectories. Gibson gets independent copies of i3, polybar, and other UI modules. The `modules/cluster/` directory is absorbed into `modules/nixos/server/`. RPi and cluster configs are treated as immutable — content-unchanged moves only.
 
-**Independent Test**: Both `nixos-rebuild dry-run --flake .#silicon` and `nixos-rebuild dry-run --flake .#gibson` succeed, importing the correct host-specific modules. All import paths updated to reflect the reorganized structure.
+During Phase 7 (which MAY run in parallel with Phases 4–6), duplicated modules are deduplicated into `common.nix` + host-specific variants. The operator decides case-by-case whether a specific dedup is worth the complexity.
+
+**Why this priority**: Good architecture prevents configuration drift and makes future host onboarding cheaper. The two-stage approach was adopted after a failed attempt where in-place refactoring broke Silicon's desktop (alacritty translucency, i3bar, workspace shortcuts).
+
+**Independent Test**: Both `make dry-run HOST=silicon` and `make dry-run HOST=gibson` succeed at every Phase 2 checkpoint. Silicon's store path is unchanged after each move group. After Phase 7, both hosts build and the architecture supports adding a third host without modifying shared modules.
 
 **Acceptance Scenarios**:
 
-1. **Given** the flake defines both `silicon` and `gibson`, **When** the configuration is evaluated, **Then** Silicon's `configuration.nix` imports `modules/home/workstation/i3/laptop.nix` and Gibson's imports `modules/home/workstation/i3/gibson.nix` via `home-manager.users.eaglerock.imports`
-2. **Given** polybar.nix is parameterized, **When** evaluated for Gibson, **Then** the battery module is absent, and network modules reference Gibson's interfaces
-3. **Given** polybar.nix is parameterized, **When** evaluated for Silicon, **Then** the battery module is present, WiFi module references `wlp0s20f3`, and behavior is identical to before the refactor
-4. **Given** a developer wants to add a third host (Carbon), **When** they review the module structure, **Then** they can onboard it by creating a hardware module, host config, and selecting `i3/laptop.nix` without modifying shared modules
-5. **Given** the module reorganization is complete, **When** inspecting the directory structure, **Then** `modules/hosts/` no longer exists, `modules/cluster/` no longer exists, and all modules are under `modules/nixos/`, `modules/home/`, or `modules/hardware/`
+1. **Given** Phase 2 is in progress, **When** any file move or copy is committed, **Then** `make dry-run HOST=silicon` produces an identical derivation to before the commit
+2. **Given** Phase 2 is complete, **When** Gibson's config is evaluated, **Then** Gibson imports its own independent `i3/gibson.nix` and polybar config, and Silicon imports its own unchanged modules
+3. **Given** Phase 7 deduplication is complete, **When** the i3 directory is inspected, **Then** `common.nix` contains shared config, `laptop.nix` and `gibson.nix` contain only host-specific deltas merged via the module system
+4. **Given** polybar is deduplicated, **When** evaluated for Silicon, **Then** the battery module is present, WiFi module references `wlp0s20f3`, and behavior is identical to before the refactor
+5. **Given** a developer wants to add a third host (Carbon), **When** they review the module structure, **Then** they can onboard it by creating a hardware module, host config, and selecting the laptop i3 variant without modifying shared modules
+6. **Given** the module reorganization is complete, **When** inspecting the directory structure, **Then** `modules/hosts/` no longer exists, `modules/cluster/` no longer exists, and all modules are under `modules/nixos/`, `modules/home/`, or `modules/hardware/`
+7. **Given** Phase 2 is in progress, **When** any commit touches cluster/RPi module files, **Then** only the file path changes — file content is byte-identical to before the move
 
 ---
 
@@ -99,6 +105,8 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 - What happens if the Ubuntu NVMe is removed or fails? NixOS should still boot; the `/mnt/ubuntu` mount should be configured with `nofail` so it doesn't block boot.
 - What happens if os-prober doesn't detect Ubuntu? A manual GRUB menu entry should be addable as a fallback.
 - What happens if a gaming peripheral is not connected at boot? No errors; devices are hot-pluggable via udev.
+- What happens if a Phase 2 file move changes Silicon's derivation? The commit MUST be reverted immediately. The move group is investigated before retrying. No "fix forward" — revert first, diagnose second.
+- What happens if Phase 7 dedup of a specific module becomes too complex? Operator decides whether to keep independent copies. Agent asks; operator approves or rejects.
 
 ## Requirements *(mandatory)*
 
@@ -117,8 +125,10 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 - **FR-011**: System MUST provide udev rules granting non-root users access to gaming HID devices
 - **FR-012**: System MUST include a hardware module (`gibson.nix`) for AMD CPU microcode, NVIDIA GPU configuration using `nvidiaPackages.stable` (with commented `nvidiaPackages.latest` alternative for easy switching), NVIDIA power management enabled for suspend/resume (`nvidia.powerManagement.enable = true`), and desktop-appropriate settings (no TLP, thermald, lid actions, or battery management)
 - **FR-013**: System MUST add a `nixosConfigurations.gibson` entry to `flake.nix` without affecting existing Silicon configuration. HLC helper functions (`mkHlcNode`, `mkHlcProvision`, `mkHlcBootstrap`, `mkSdImages`, host lists) MUST be extracted to `lib/hlc.nix` so flake.nix remains pure composition
-- **FR-014**: The i3 configuration MUST be split into three files under `modules/home/workstation/i3/`: `common.nix` (shared keybindings, colors, fonts, gaps, assigns, modes, window commands), `laptop.nix` (Silicon/future laptops: xrandr scaling, brightness keys, xrender picom), and `gibson.nix` (triple-monitor xrandr, glx picom, directional workspace movement). `workstation.nix` imports `i3/common.nix`; host-specific variant is imported in the host's `configuration.nix` via `home-manager.users.eaglerock.imports` alongside `home/eaglerock.nix`
-- **FR-015**: The polybar configuration MUST be parameterized to handle host-specific differences (default monitor, network interfaces, battery presence) via NixOS options defined in a `custom.hostProfile` option set (`hasBattery`, `wlanInterface`, `ethInterface`, `defaultMonitor`). Each host's `configuration.nix` sets these options; polybar reads them via `osConfig`. Single shared polybar module in `modules/home/workstation/`
+- **FR-014**: *(Phase 2 — independent copies)* Gibson MUST receive its own independent copy of Silicon's i3 configuration as `modules/home/workstation/i3/gibson.nix`. Silicon's existing i3 config MUST remain untouched (content-unchanged; may be moved to `modules/home/workstation/i3/laptop.nix` as a path-only rename). Both files are complete, standalone i3 configs — no shared extraction at this phase. Host-specific variant is imported in the host's `configuration.nix` via `home-manager.users.eaglerock.imports` alongside `home/eaglerock.nix`
+- **FR-014b**: *(Phase 7 — deduplication)* The i3 configuration MUST be deduplicated into three files under `modules/home/workstation/i3/`: `common.nix` (shared keybindings, colors, fonts, gaps, assigns, modes, window commands), `laptop.nix` (Silicon/future laptops: xrandr scaling, brightness keys, xrender picom — reduced to host-specific delta), and `gibson.nix` (triple-monitor xrandr, glx picom, directional workspace movement — reduced to host-specific delta). `workstation.nix` imports `i3/common.nix`; host variants merge on top via the module system
+- **FR-015**: *(Phase 2 — independent copies)* Gibson MUST receive its own independent copy of Silicon's polybar configuration. Silicon's polybar MUST remain untouched in content. Gibson's copy is adapted for Gibson-specific differences (no battery module, correct network interfaces, correct default monitor)
+- **FR-015b**: *(Phase 7 — deduplication)* The polybar configuration MUST be parameterized to handle host-specific differences via NixOS options defined in a `custom.hostProfile` option set (`hasBattery`, `wlanInterface`, `ethInterface`, `defaultMonitor`). Each host's `configuration.nix` sets these options; polybar reads them via `osConfig`. Single shared polybar module in `modules/home/workstation/`
 - **FR-016**: System MUST support both wired ethernet and WiFi via NetworkManager
 - **FR-017**: System MUST apply the Gruvbox Dark theme consistently (same as Silicon) across i3, polybar, GTK, terminal, and lock screen
 - **FR-018**: System MUST support 5.1 surround audio output (analog multi-channel via motherboard's 3 audio jacks: front, rear, center/sub) and microphone input via onboard motherboard audio through PipeWire with the appropriate surround profile enabled
@@ -129,6 +139,12 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 - **FR-023**: `modules/sd/` MUST be relocated to `modules/hardware/rpi/sd/` and existing RPi hardware modules (`rpi4.nix`, `rpi5.nix`, `rpi-eeprom.nix`) MUST be moved under `modules/hardware/rpi/`
 - **FR-024**: Workstation-specific home-manager modules (`i3*.nix`, `polybar.nix`, `dunst.nix`, `ui.nix`, `vscode.nix`, `dev.nix`, `layouts/`, `scripts/`) MUST be moved under `modules/home/workstation/`; shared modules (`base.nix`, `colors.nix`), shared support directories (`dotfiles/`, `themes/` — referenced by `base.nix`), and entry points (`workstation.nix`, `server.nix`) stay at `modules/home/` root
 - **FR-025**: System MUST support suspend-to-RAM (sleep) but NOT hibernate (suspend-to-disk). The 32GB swap partition serves as runtime swap only, not a resume device. `systemd-logind` suspend-on-idle configuration is out of scope for initial onboarding
+- **FR-026**: *(Constitution Principle IX enforcement)* Silicon's evaluated NixOS configuration MUST NOT change at any point during this spec. Every commit that touches shared modules, import paths, or flake-level config MUST be verified with `make dry-run HOST=silicon` producing an identical store path. Zero architectural changes to Silicon — no renderer swaps, no default changes, no "while we're in here" cleanups
+- **FR-027**: RPi and cluster node configurations MUST be treated as immutable during this spec. Module files for these hosts MAY be moved to new paths (FR-020–FR-023) but file content MUST be byte-identical before and after. No behavioral changes to non-workstation hosts
+- **FR-028**: Phase 2 MUST be broken into ~10 logical move groups, each followed by: (a) `make dry-run HOST=silicon` to verify identical derivation, and (b) an operator visual spot check where the operator logs into Silicon and validates the desktop. Each checkpoint MUST include agent-provided guidance on which Silicon components are most at risk for that move group (e.g., after i3-related moves, check workspaces/keybindings/polybar; after home-manager moves, check alacritty/theming/dunst). The move groups are: (1) NixOS module moves, (2) cluster/server module moves, (3) misc NixOS module moves (k8s, shell, operator), (4) hardware module moves (sd → hardware/rpi/sd), (5) home-manager shared module moves, (6) i3 duplication for Gibson, (7) polybar duplication for Gibson, (8) remaining home module duplications (dunst, picom, etc.), (9) flake.nix changes (add gibson config, extract HLC to lib/hlc.nix), (10) final full validation (both hosts)
+- **FR-029**: Each Phase 2 file move MUST be an atomic commit — one logical move per commit. The commit message MUST state what was moved and that content is unchanged. This ensures `git bisect` can pinpoint any regression to a single move
+- **FR-030**: *(Phase 7 — deduplication)* ALL modules duplicated in Phase 2 MUST be deduplicated into `common.nix` + host-specific variants, unless the operator judges that a specific dedup is too messy or yields marginal benefit. The decision to keep duplicates for a specific module is an operator judgment call — the agent MUST ask before keeping any module as independent copies. Phase 7 applies to i3, polybar, picom, dunst, and any other module that was copied for Gibson
+- **FR-031**: Phase structure MUST be: Phases 1–6 as planned, Phase 7 = code deduplication (MAY run in parallel with Phases 4–6), Phase 8 = polish (formerly Phase 7). Phase 7 dedup work MUST NOT block Gibson-specific work in Phases 4–6
 
 ### Key Entities
 
@@ -146,8 +162,8 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 - **SC-002**: All three monitors display content with correct resolution (1440p center, 1080p sides) and workspaces are navigable via keybindings
 - **SC-003**: Ubuntu is bootable from the GRUB menu without any modification to the Ubuntu drive
 - **SC-004**: All three gaming peripheral types (Xbox controller, Logitech joystick, G29 wheel) are detected and functional in Steam games as a non-root user
-- **SC-005**: Silicon's `nixos-rebuild dry-run` produces functionally identical results before and after Gibson onboarding (zero regression — store path changes from file renames are expected and acceptable)
-- **SC-006**: The i3-laptop/i3-gibson split and polybar parameterization result in no functional change to Silicon's desktop behavior
+- **SC-005**: `make dry-run HOST=silicon` produces an identical store path at every Phase 2 checkpoint and at spec completion. Zero regressions — Silicon's desktop behavior is unchanged throughout. Operator visual spot checks confirm i3, polybar, alacritty, workspaces, and theming are unaffected after each move group
+- **SC-006**: After Phase 7 deduplication, Silicon's desktop behavior remains identical to pre-refactor baseline. The i3-laptop/polybar parameterization introduces zero functional change to Silicon
 - **SC-007**: Adding a future laptop host requires creating only a hardware module, host config, and selecting the laptop i3 variant — no shared module changes
 
 ## Clarifications
@@ -177,6 +193,14 @@ The NixOS configuration cleanly supports both Silicon (laptop) and Gibson (deskt
 
 - Q: Does Gibson suspend/hibernate or shutdown only? → A: Suspend-to-RAM (sleep) supported, no hibernate. NVIDIA power management enabled for clean suspend/resume. 32GB swap is runtime-only, not a resume device.
 - Q: How does Gibson output 5.1 surround audio? → A: Analog multi-channel from motherboard (3 jacks: front, rear, center/sub). PipeWire with surround profile, no HDMI audio or external receiver.
+
+### Session 2026-05-21
+
+- Q: Phase 2 Silicon isolation — can Silicon files be moved/renamed? → A: Yes, file moves allowed if content unchanged, each move is atomic commit, verified with `make dry-run HOST=silicon`. Gibson gets independent copies of modules it needs.
+- Q: What constitutes a visual spot check and how often? → A: `make dry-run` after every commit + operator visual check after every logical move group (~10 checkpoints). Each checkpoint includes guidance on which Silicon components to validate most.
+- Q: Should FR-014 (i3 split) be split into Phase 2 and Phase 7? → A: Yes. Phase 2 FR = independent copies (Gibson gets full copy, Silicon untouched). Phase 7 FR = deduplication into common.nix + host deltas. Same treatment for polybar and other duplicated modules.
+- Q: Phase 7 deduplication scope — all modules or selective? → A: All duplicated modules, but operator may decide case-by-case to keep duplicates where dedup is too messy. This is an operator judgment call — agent must ask.
+- Q: Phase 2 sub-phase grouping? → A: ~10 groups: (1) NixOS module moves, (2) cluster/server moves, (3) misc NixOS moves, (4) hardware moves, (5) home shared moves, (6) i3 duplication, (7) polybar duplication, (8) remaining home duplications, (9) flake.nix changes, (10) final validation. RPi/cluster configs are immutable — content-unchanged moves only.
 
 ## Assumptions
 
