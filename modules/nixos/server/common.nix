@@ -1,9 +1,9 @@
 { config, lib, pkgs, operatorPubkeys, ... }: {
   imports = [
-    ../hosts/common.nix
+    ../common.nix
     ./motd.nix
     ./prompt.nix
-    ../k8s/prereqs.nix
+    ../../k8s/prereqs.nix
   ];
 
   networking.domain = lib.mkDefault "marks.dev";

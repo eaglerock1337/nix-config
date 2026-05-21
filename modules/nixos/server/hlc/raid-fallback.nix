@@ -92,7 +92,7 @@ in {
       ssh = {
         enable = true;
         port = 22;
-        hostKeys = [ ../../../secrets/initrd/ssh_host_ed25519_key ];
+        hostKeys = [ ../../../../secrets/initrd/ssh_host_ed25519_key ];
         authorizedKeys = operatorPubkeys;
       };
     };

@@ -42,7 +42,7 @@
       nixos-raspberrypi.lib.nixosSystem {
         specialArgs = {
           inherit inputs operatorPubkeys;
-          clusterModule = ./modules/cluster/hlc/default.nix;
+          clusterModule = ./modules/nixos/server/hlc/default.nix;
         };
         modules = [
           home-manager.nixosModules.home-manager
@@ -65,7 +65,7 @@
       nixos-raspberrypi.lib.nixosSystem {
         specialArgs = {
           inherit inputs operatorPubkeys;
-          clusterModule = ./modules/cluster/hlc/provision.nix;
+          clusterModule = ./modules/nixos/server/hlc/provision.nix;
         };
         modules = [
           disko.nixosModules.disko

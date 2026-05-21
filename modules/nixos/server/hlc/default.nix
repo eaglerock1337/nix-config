@@ -51,6 +51,6 @@ in {
 
     # Home-manager bindings for the operator
     home-manager.extraSpecialArgs = { };
-    home-manager.users.bob = import ../../../home/bob.nix;
+    home-manager.users.bob = import ../../../../home/bob.nix;
   };
 }
