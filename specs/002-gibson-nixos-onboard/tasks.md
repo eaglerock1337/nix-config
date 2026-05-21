@@ -36,6 +36,8 @@
 
 **CRITICAL**: Every task that moves/renames files MUST make one atomic commit per logical move. Commit message states what was moved and that content is unchanged. `make dry-run HOST=silicon` after EVERY commit.
 
+- [ ] T127 [US5] Verify `specs/WORKAROUNDS.md` entry W-018 exists for Phase 2 module duplication (Principle V requirement). Entry documents Principle III deferral, exit condition = Phase 7 dedup complete. If missing, create it before proceeding with Move Group 1
+
 ### Move Group 1: NixOS Module Moves
 
 - [ ] T008 [US5] Create `modules/nixos/` and `modules/nixos/workstation/` directories
@@ -94,7 +96,7 @@
 - [ ] T049 [US5] Move `modules/home/vscode.nix` → `modules/home/workstation/vscode.nix` — content unchanged
 - [ ] T050 [US5] Move `modules/home/layouts/` → `modules/home/workstation/layouts/` — content unchanged
 - [ ] T051 [US5] Move `modules/home/scripts/` → `modules/home/workstation/scripts/` — content unchanged
-- [ ] T052 [US5] Update all imports in `modules/home/workstation.nix` — `./dunst.nix` → `./workstation/dunst.nix`, `./ui.nix` → `./workstation/ui.nix`, etc.
+- [ ] T052 [US5] Update imports in `modules/home/workstation.nix` for MG5 modules only — `./dunst.nix` → `./workstation/dunst.nix`, `./ui.nix` → `./workstation/ui.nix`, `./dev.nix` → `./workstation/dev.nix`, `./vscode.nix` → `./workstation/vscode.nix`, `./layouts/` → `./workstation/layouts/`, `./scripts/` → `./workstation/scripts/`. Do NOT modify i3 or polybar imports — those are handled in MG6/MG7
 - [ ] T053 [US5] Run `make dry-run HOST=silicon` — identical store path
 - [ ] T054 [US5] **CHECKPOINT 5** (HIGH RISK): Operator visual spot check on Silicon. **Check**: alacritty transparency and colors, dunst notification popup (`notify-send "test" "checkpoint 5"`), i3 window borders and gaps and colors, VS Code launches correctly, picom compositing (window shadows visible, transparency works). These modules directly control Silicon's visual appearance
 
@@ -103,7 +105,7 @@
 - [ ] T055 [US5] Create `modules/home/workstation/i3/` directory
 - [ ] T056 [US5] Move `modules/home/i3.nix` → `modules/home/workstation/i3/laptop.nix` — content unchanged (rename only)
 - [ ] T057 [US5] Copy `modules/home/workstation/i3/laptop.nix` → `modules/home/workstation/i3/gibson.nix` — independent copy for Gibson. Content identical to laptop.nix at this point; Gibson-specific changes in Phase 4
-- [ ] T058 [US5] Update import in `modules/home/workstation.nix` — `./i3.nix` → `./workstation/i3/laptop.nix`
+- [ ] T058 [US5] Remove i3 import from `modules/home/workstation.nix` (was `./i3.nix`). Wire `../../modules/home/workstation/i3/laptop.nix` via `home-manager.users.eaglerock.imports` in `hosts/silicon/configuration.nix`. Wire `../../modules/home/workstation/i3/gibson.nix` via same mechanism in `hosts/gibson/configuration.nix`. Shared workstation.nix must not import host-specific modules
 - [ ] T059 [US5] Run `make dry-run HOST=silicon` — identical store path
 - [ ] T060 [US5] **CHECKPOINT 6** (HIGHEST RISK): Operator visual spot check on Silicon. This is the exact change type that broke Silicon before. **Check**: ALL i3 keybindings (Super+1 through Super+0, Super+Enter for terminal, Super+d for dmenu/rofi), workspace switching between all workspaces, window movement (Super+Shift+arrow), floating toggle (Super+Shift+space), resize mode (Super+r), i3bar/polybar visible on all outputs, picom compositing (transparency, shadows), scratchpad (Super+minus to show, Super+Shift+minus to move to scratchpad), workspace 1 layout restoration (3 terminals)
 
@@ -111,7 +113,7 @@
 
 - [ ] T061 [US5] Move `modules/home/polybar.nix` → `modules/home/workstation/polybar-laptop.nix` — content unchanged (rename only). Update `colors.nix` import path if needed
 - [ ] T062 [US5] Copy `modules/home/workstation/polybar-laptop.nix` → `modules/home/workstation/polybar-gibson.nix` — independent copy. Content identical at this point; Gibson-specific changes in Phase 4
-- [ ] T063 [US5] Update import in `modules/home/workstation.nix` — `./polybar.nix` → `./workstation/polybar-laptop.nix`
+- [ ] T063 [US5] Remove polybar import from `modules/home/workstation.nix` (was `./polybar.nix`). Wire `../../modules/home/workstation/polybar-laptop.nix` via `home-manager.users.eaglerock.imports` in `hosts/silicon/configuration.nix`. Wire `../../modules/home/workstation/polybar-gibson.nix` via same mechanism in `hosts/gibson/configuration.nix`. Shared workstation.nix must not import host-specific modules
 - [ ] T064 [US5] Run `make dry-run HOST=silicon` — identical store path
 - [ ] T065 [US5] **CHECKPOINT 7**: Operator visual spot check on Silicon. **Check**: polybar visible on all bars, all modules rendering (battery percentage, WiFi SSID, CPU/memory usage, workspace indicators, date/time, volume icon), click actions work (volume, network), correct Gruvbox colors
 
@@ -126,10 +128,7 @@
 
 - [ ] T070 [US5] Create `lib/hlc.nix` — extract HLC helper functions (`mkHlcNode`, `mkHlcProvision`, `mkHlcBootstrap`, `mkSdImages`, `pi4Hosts`, `pi5Hosts`) from `flake.nix`. Function receives inputs, returns helper set. Reference: R-009
 - [ ] T071 [US5] Update `flake.nix` — import `lib/hlc.nix`, replace inline helpers with imported versions. Verify all nixosConfigurations still reference correctly
-- [ ] T072 [US5] Add `custom.hostProfile` NixOS options to `modules/nixos/workstation.nix` — `hasBattery` (bool), `wlanInterface` (str), `ethInterface` (str), `defaultMonitor` (str). Reference: R-003
-- [ ] T073 [US5] Set `custom.hostProfile` values in `hosts/silicon/configuration.nix` — `hasBattery = true`, `wlanInterface = "wlp0s20f3"`, `defaultMonitor = "eDP-1"`
-- [ ] T074 [US5] Add `home-manager.users.eaglerock.imports` to Silicon's flake.nix config block — `[ ../../modules/home/workstation/i3/laptop.nix ]` (wires Silicon's i3 variant)
-- [ ] T075 [US5] Add `home-manager.users.eaglerock.imports` to Gibson's flake.nix config block — `[ ../../modules/home/workstation/i3/gibson.nix ../../modules/home/workstation/polybar-gibson.nix ]`
+- *(T074/T075 absorbed into MG6 T058 and MG7 T063 — host-specific i3/polybar wiring happens at move time, not deferred to MG9)*
 - [ ] T076 [US5] Run `make dry-run HOST=silicon` — identical store path. Run `make dry-run HOST=gibson` — passes
 - [ ] T077 [US5] **CHECKPOINT 9**: Operator visual spot check on Silicon. This group changes flake.nix and Silicon's configuration.nix directly. **Check**: full desktop — LightDM login, i3 session startup, all workspace keybindings, polybar all modules, alacritty, dunst, picom, lock screen (if configured)
 
@@ -157,9 +156,13 @@
 - [ ] T084 [US3] Configure GRUB dual-boot in `hosts/gibson/configuration.nix` — `boot.loader.grub.enable`, `efiSupport`, `device = "nodev"`, `useOSProber = true`, NixOS default. `boot.loader.efi.canTouchEfiVariables = true`. Reference: FR-004, R-002
 - [ ] T085 [US1] Configure suspend-to-RAM in `hosts/gibson/configuration.nix` — no hibernate, swap is runtime-only, NVIDIA power management handles suspend/resume. Reference: FR-025
 - [ ] T086 [US1] Configure NetworkManager in `hosts/gibson/configuration.nix` — wired ethernet + WiFi. Reference: FR-016
+- [ ] T129 [US1] Ensure NVIDIA fallback to console TTY — verify `hardware.nvidia.open = false` in `modules/hardware/gibson.nix`, confirm kernel console (nouveau/fbdev) is available as fallback so system boots to TTY if proprietary driver fails to load. No custom config needed if `nomodeset` kernel param is available via GRUB
+- [ ] T130 [US3] Add manual GRUB menu entry for Ubuntu as fallback in `hosts/gibson/configuration.nix` — `boot.loader.grub.extraEntries` with chainloader to Ubuntu's EFI partition, in case os-prober fails to detect Ubuntu. Reference: spec edge case
 - [ ] T087 [US1] Run `make dry-run HOST=silicon` — unchanged. Run `make dry-run HOST=gibson` — passes
 - [ ] T088 [US1] Operator: run `nixos-install --flake .#gibson` on Gibson, reboot, verify boot, login to i3, check `lsblk`/`mount` for all 4 drives, verify `nvidia-smi` shows RTX 3080
 - [ ] T089 [US3] Operator: reboot Gibson, verify GRUB menu shows NixOS + Ubuntu, boot into Ubuntu to confirm it's untouched, boot back to NixOS
+- [ ] T137 [US2] Operator: record hardware identifiers for Phase 4 — run `xrandr --query` to discover monitor output names (DP-0, HDMI-0, etc.) and resolutions, run `ip link` to discover network interface names for polybar config. Save output for T090/T095
+- [ ] T131 Update Constitution Principle VII host table — Gibson now dual-boots NixOS + Ubuntu. Change Gibson row: `nixos-rebuild` available when booted into NixOS, `nix build` as fallback when on Ubuntu. Note that until Ubuntu is fully decommissioned, agents MUST verify Gibson is running NixOS before using `nixos-rebuild`; use `nix` commands (via Makefile) when on Ubuntu. PATCH bump constitution version
 
 **Checkpoint**: Gibson boots into NixOS i3. All drives mounted. GRUB dual-boot works. US1 core + US3 complete.
 
@@ -177,8 +180,9 @@
 - [ ] T093 [US2] Update picom config in `modules/home/workstation/i3/gibson.nix` — switch to `backend = "glx"`, `vsync = true`, `use-damage = false`, `unredir-if-possible = false`. Reference: R-004
 - [ ] T094 [US2] Configure startup layout in `modules/home/workstation/i3/gibson.nix` — workspace 1 with 3 alacritty terminals + floating scratchpad. Same as Silicon. Reference: FR-019
 - [ ] T095 [US2] Update `modules/home/workstation/polybar-gibson.nix` — remove battery module, set correct network interfaces (ethernet + WiFi), set default monitor to center monitor. Correct Gruvbox colors. Reference: FR-007
+- [ ] T132 [US2] Copy Silicon's wallpaper to `assets/wallpaper-gibson.png` as starting point. Gibson's i3 config references this file. Operator will create a dedicated Gibson wallpaper in Phase 8
 - [ ] T096 [US2] Run `make dry-run HOST=silicon` — unchanged. Apply on Gibson
-- [ ] T097 [US2] Operator: verify all 3 monitors display content at correct resolutions, workspace switching via keybindings, directional workspace movement, polybar on all 3 monitors with correct modules, Gruvbox theme consistent
+- [ ] T097 [US2] Operator: verify all 3 monitors display content at correct resolutions, workspace switching via keybindings, directional workspace movement, polybar on all 3 monitors with correct modules. Verify Gruvbox Dark theme consistent across i3 borders/gaps, polybar colors, GTK file dialogs, alacritty terminal colors, lock screen background (FR-017)
 
 **Checkpoint**: US2 complete. Triple-monitor Gibson desktop fully functional.
 
@@ -190,19 +194,21 @@
 
 **Independent Test**: Connect each peripheral, verify detection and functionality in Steam.
 
-- [ ] T098 [US4] Add `hardware.xpadneo.enable = true` to `modules/nixos/workstation/gaming.nix` or Gibson-specific config. Reference: FR-008, R-002
+- [ ] T098 [US4] Add `hardware.xpadneo.enable = true` to `modules/nixos/workstation/gaming.nix` (shared — Silicon derivation change from kernel module addition is accepted per plan Phase 5 approval). Reference: FR-008, R-002
 - [ ] T099 [US4] Add `hardware.new-lg4ff.enable = true` to Gibson-specific config. Reference: FR-010, R-002
 - [ ] T100 [US4] Add udev rules for gaming HID devices — `TAG+="uaccess"` for G29 (vendor 046d, product c24f), general gamepad access. Reference: FR-011
-- [ ] T101 [US4] Run `make dry-run HOST=silicon` — verify store path. If gaming.nix changes affect Silicon derivation, refactor gaming peripheral enables to Gibson-only config. Store path MUST be identical
-- [ ] T102 [US4] Operator: connect Xbox controller (USB), verify `evtest` shows input. Connect Logitech joystick, verify `jstest`. Connect G29, verify `fftest` for force feedback. Test in Steam game
+- [ ] T101 [US4] Run `make dry-run HOST=silicon` — check for derivation changes. Phase 5 is approved for Silicon derivation changes from peripheral enablement (xpadneo/new-lg4ff add kernel modules even without hardware). If changes are unacceptable to operator, refactor to Gibson-only module
+- [ ] T102 [US4] Operator: connect Xbox controller (USB), verify `evtest` shows input. Connect Logitech joystick, verify `jstest` — joystick support is kernel-native HID, no explicit config needed (FR-009). Connect G29, verify `fftest` for force feedback. Test in Steam game
+- [ ] T133 [US4] Operator: attempt Xbox controller Bluetooth pairing as secondary validation. Bluetooth is known spotty (USB is primary) but should be functional via xpadneo. If Bluetooth pairing fails, document as known limitation — not a blocker
+- [ ] T134 [US4] Operator visual spot check on Silicon after gaming.nix changes — verify desktop, i3, polybar, alacritty, no regressions from peripheral module enablement
 
 **Checkpoint**: US4 complete. All gaming peripherals functional.
 
 ---
 
-## Phase 6: Audio & System (US1 remaining)
+## Phase 6: Audio & System Verification (US1 remaining)
 
-**Goal**: PipeWire 5.1 surround audio output and microphone input via onboard audio.
+**Goal**: Verify PipeWire 5.1 surround config (created in Phase 1 scaffold T003), complete remaining system config (suspend, NetworkManager).
 
 **Independent Test**: Play audio through 5.1 surround speakers, verify all 6 channels.
 
@@ -230,10 +236,16 @@
 - [ ] T111 [US5] Run `make dry-run HOST=silicon` — identical store path. Run `make dry-run HOST=gibson` — passes
 - [ ] T112 [US5] Operator visual spot check on Silicon after i3 dedup — full i3 keybinding check, workspace switching, picom compositing
 
+### Host Profile Options (prerequisite for polybar dedup)
+
+- [ ] T072 [US5] Add `custom.hostProfile` NixOS options to `modules/nixos/workstation.nix` — `hasBattery` (bool), `wlanInterface` (str), `ethInterface` (str), `defaultMonitor` (str). Reference: R-003
+- [ ] T073 [US5] Set `custom.hostProfile` values in `hosts/silicon/configuration.nix` — `hasBattery = true`, `wlanInterface = "wlp0s20f3"`, `defaultMonitor = "eDP-1"`. Set corresponding values in `hosts/gibson/configuration.nix`
+- [ ] T128 [US5] Run `make dry-run HOST=silicon` — identical store path (options with defaults are no-op). Run `make dry-run HOST=gibson` — passes
+
 ### Polybar Deduplication
 
 - [ ] T113 [US5] Create parameterized `modules/home/workstation/polybar.nix` — read `osConfig.custom.hostProfile` for battery, network interfaces, default monitor. Conditionally include battery module, use correct interface names. Reference: FR-015b, R-003
-- [ ] T114 [US5] Replace `polybar-laptop.nix` and `polybar-gibson.nix` with single parameterized `polybar.nix`. Update import in `modules/home/workstation.nix`. Remove per-host polybar imports from flake.nix host configs
+- [ ] T114 [US5] Replace `polybar-laptop.nix` and `polybar-gibson.nix` with single parameterized `polybar.nix`. Update import in `modules/home/workstation.nix`. Remove per-host polybar imports from host configuration.nix files
 - [ ] T115 [US5] Run `make dry-run HOST=silicon` — identical store path. Run `make dry-run HOST=gibson` — passes
 - [ ] T116 [US5] Operator visual spot check on Silicon — polybar all modules rendering, battery present, WiFi interface correct
 
@@ -256,7 +268,9 @@
 - [ ] T122 Run `make dry-run HOST=hlc-501` — cluster node unchanged
 - [ ] T123 Update `CLAUDE.md` — directory structure section reflects new module layout, build commands include Gibson, Gibson host listed in project overview
 - [ ] T124 Verify `specs/002-gibson-nixos-onboard/quickstart.md` is accurate for final state
-- [ ] T125 [P] Constitution Principle VII table update — Gibson now has NixOS (PATCH bump). Update `gibson` row: `nixos-rebuild` now available
+- [ ] T125 [P] Constitution Principle VII table — verify T131 update is accurate for final state. If Gibson Ubuntu is fully decommissioned by this point, simplify the table entry to show Gibson as pure NixOS
+- [ ] T135 [US5] Verify module structure supports third-host onboarding (SC-007) — review that adding a future laptop (e.g., Carbon) requires only: hardware module, host config, selecting laptop i3 variant. Confirm no shared module changes needed. This is a code/architecture review, not hardware validation
+- [ ] T136 Operator: create Gibson-specific wallpaper to replace the copied Silicon wallpaper at `assets/wallpaper-gibson.png`. Nice-to-have — current wallpaper is functional
 - [ ] T126 Operator: full daily workflow test on both Silicon and Gibson. Verify SC-001 through SC-007
 
 **Checkpoint**: All user stories verified. Ready for merge.
@@ -278,7 +292,7 @@ Phase 1 (Scaffold) ──→ Phase 2 (Restructure) ──┬──→ Phase 3 (B
 - **Phase 1**: No dependencies — start immediately
 - **Phase 2**: Depends on Phase 1 — BLOCKS all subsequent phases
 - **Phases 3-6**: All depend on Phase 2. Can run in parallel (different files)
-- **Phase 7**: Depends on Phase 2. MAY run in parallel with Phases 4-6
+- **Phase 7**: Depends on Phase 2. `custom.hostProfile` options (T072-T073, T128) MAY run in parallel with Phases 4-6. i3 dedup (T107-T112) and polybar dedup (T113-T116) require Phase 4 completion (can't diff files that haven't been customized yet)
 - **Phase 8**: Depends on all previous phases
 
 ### User Story Independence
@@ -294,10 +308,10 @@ Phase 1 (Scaffold) ──→ Phase 2 (Restructure) ──┬──→ Phase 3 (B
 Within Phase 2 move groups: sequential (each depends on prior group's import updates).
 
 After Phase 2, these can run in parallel:
-- Phase 3 (T082-T089) and Phase 4 (T090-T097) — different files
-- Phase 5 (T098-T102) — different files from Phase 4
+- Phase 3 (T082-T131) and Phase 4 (T090-T132) — different files
+- Phase 5 (T098-T134) — different files from Phase 4
 - Phase 6 (T103-T106) — different files
-- Phase 7 (T107-T119) — depends on Phase 2 only, runs alongside 4-6
+- Phase 7 (T072-T073, T107-T128) — depends on Phase 2 only, runs alongside 4-6
 
 ---
 
