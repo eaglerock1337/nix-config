@@ -1,7 +1,7 @@
 { config, pkgs, ... }:
 
 let
-  colors = import ./colors.nix;
+  colors = import ../colors.nix;
   gruvboxDark = colors.gruvboxDark;
 in {
   services.dunst = {
