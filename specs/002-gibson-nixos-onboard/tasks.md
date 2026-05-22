@@ -36,108 +36,108 @@
 
 **CRITICAL**: Every task that moves/renames files MUST make one atomic commit per logical move. Commit message states what was moved and that content is unchanged. `make dry-run HOST=silicon` after EVERY commit.
 
-- [ ] T127 [US5] Verify `specs/WORKAROUNDS.md` entry W-018 exists for Phase 2 module duplication (Principle V requirement). Entry documents Principle III deferral, exit condition = Phase 7 dedup complete. If missing, create it before proceeding with Move Group 1
+- [x] T127 [US5] Verify `specs/WORKAROUNDS.md` entry W-018 exists for Phase 2 module duplication (Principle V requirement). Entry documents Principle III deferral, exit condition = Phase 7 dedup complete. If missing, create it before proceeding with Move Group 1
 
 ### Move Group 1: NixOS Module Moves
 
-- [ ] T008 [US5] Create `modules/nixos/` and `modules/nixos/workstation/` directories
-- [ ] T009 [US5] Move `modules/hosts/common.nix` → `modules/nixos/common.nix` — content unchanged. Update import in `modules/hosts/workstation.nix` (`./common.nix` path unchanged since both files move together)
-- [ ] T010 [US5] Move `modules/hosts/workstation.nix` → `modules/nixos/workstation.nix` — content unchanged
-- [ ] T011 [US5] Move `modules/hosts/desktop-ui.nix` → `modules/nixos/workstation/desktop-ui.nix` — content unchanged
-- [ ] T012 [US5] Move `modules/hosts/gaming.nix` → `modules/nixos/workstation/gaming.nix` — content unchanged
-- [ ] T013 [US5] Move `modules/hosts/grub.nix` + `modules/hosts/grub/` → `modules/nixos/workstation/grub.nix` + `modules/nixos/workstation/grub/` — content unchanged
-- [ ] T014 [US5] Update all import paths in `hosts/silicon/configuration.nix` — `../../modules/hosts/` → `../../modules/nixos/` (workstation.nix) and `../../modules/nixos/workstation/` (desktop-ui, gaming, grub)
-- [ ] T015 [US5] Update all import paths in `hosts/gibson/configuration.nix` — same path updates as Silicon
-- [ ] T016 [US5] Remove empty `modules/hosts/` directory
-- [ ] T017 [US5] Run `make dry-run HOST=silicon` — identical store path. Run `make dry-run HOST=gibson` — passes
-- [ ] T018 [US5] **CHECKPOINT 1**: Operator visual spot check on Silicon. **Check**: i3 starts, workspaces respond to Super+1-9, polybar visible on all bars, alacritty launches with correct colors. These are at risk because `workstation.nix` is the root NixOS module for Silicon's desktop
+- [x] T008 [US5] Create `modules/nixos/` and `modules/nixos/workstation/` directories
+- [x] T009 [US5] Move `modules/hosts/common.nix` → `modules/nixos/common.nix` — content unchanged. Update import in `modules/hosts/workstation.nix` (`./common.nix` path unchanged since both files move together)
+- [x] T010 [US5] Move `modules/hosts/workstation.nix` → `modules/nixos/workstation.nix` — content unchanged
+- [x] T011 [US5] Move `modules/hosts/desktop-ui.nix` → `modules/nixos/workstation/desktop-ui.nix` — content unchanged
+- [x] T012 [US5] Move `modules/hosts/gaming.nix` → `modules/nixos/workstation/gaming.nix` — content unchanged
+- [x] T013 [US5] Move `modules/hosts/grub.nix` + `modules/hosts/grub/` → `modules/nixos/workstation/grub.nix` + `modules/nixos/workstation/grub/` — content unchanged
+- [x] T014 [US5] Update all import paths in `hosts/silicon/configuration.nix` — `../../modules/hosts/` → `../../modules/nixos/` (workstation.nix) and `../../modules/nixos/workstation/` (desktop-ui, gaming, grub)
+- [x] T015 [US5] Update all import paths in `hosts/gibson/configuration.nix` — same path updates as Silicon
+- [x] T016 [US5] Remove empty `modules/hosts/` directory
+- [x] T017 [US5] Run `make dry-run HOST=silicon` — identical store path. Run `make dry-run HOST=gibson` — passes
+- [x] T018 [US5] **CHECKPOINT 1**: Operator visual spot check on Silicon. **Check**: i3 starts, workspaces respond to Super+1-9, polybar visible on all bars, alacritty launches with correct colors. These are at risk because `workstation.nix` is the root NixOS module for Silicon's desktop
 
 ### Move Group 2: Cluster/Server Module Moves
 
-- [ ] T019 [US5] Create `modules/nixos/server/` and `modules/nixos/server/hlc/` directories
-- [ ] T020 [US5] Move `modules/cluster/common.nix` → `modules/nixos/server/common.nix` — content unchanged
-- [ ] T021 [US5] Move `modules/cluster/motd.nix` → `modules/nixos/server/motd.nix` — content unchanged
-- [ ] T022 [US5] Move `modules/cluster/prompt.nix` → `modules/nixos/server/prompt.nix` — content unchanged
-- [ ] T023 [US5] Move `modules/cluster/hlc/` → `modules/nixos/server/hlc/` (all files: default.nix, hlc-recover-script.nix, hosts.nix, options.nix, provision.nix, raid-fallback.nix) — content unchanged
-- [ ] T024 [US5] Update `flake.nix` — `clusterModule` paths: `./modules/cluster/hlc/default.nix` → `./modules/nixos/server/hlc/default.nix` and `./modules/cluster/hlc/provision.nix` → `./modules/nixos/server/hlc/provision.nix`
-- [ ] T025 [US5] Update internal imports in moved server modules (relative paths like `../common.nix` — verify still correct after move)
-- [ ] T026 [US5] Remove empty `modules/cluster/` directory
-- [ ] T027 [US5] Run `make dry-run HOST=silicon` + `make dry-run HOST=hlc-501` — both unchanged
-- [ ] T028 [US5] **CHECKPOINT 2**: Operator visual spot check on Silicon. **Check**: polybar network modules, dunst notifications (send test with `notify-send`). Cluster moves shouldn't affect Silicon but verify imports intact
+- [x] T019 [US5] Create `modules/nixos/server/` and `modules/nixos/server/hlc/` directories
+- [x] T020 [US5] Move `modules/cluster/common.nix` → `modules/nixos/server/common.nix` — content unchanged
+- [x] T021 [US5] Move `modules/cluster/motd.nix` → `modules/nixos/server/motd.nix` — content unchanged
+- [x] T022 [US5] Move `modules/cluster/prompt.nix` → `modules/nixos/server/prompt.nix` — content unchanged
+- [x] T023 [US5] Move `modules/cluster/hlc/` → `modules/nixos/server/hlc/` (all files: default.nix, hlc-recover-script.nix, hosts.nix, options.nix, provision.nix, raid-fallback.nix) — content unchanged
+- [x] T024 [US5] Update `flake.nix` — `clusterModule` paths: `./modules/cluster/hlc/default.nix` → `./modules/nixos/server/hlc/default.nix` and `./modules/cluster/hlc/provision.nix` → `./modules/nixos/server/hlc/provision.nix`
+- [x] T025 [US5] Update internal imports in moved server modules (relative paths like `../common.nix` — verify still correct after move)
+- [x] T026 [US5] Remove empty `modules/cluster/` directory
+- [x] T027 [US5] Run `make dry-run HOST=silicon` + `make dry-run HOST=hlc-501` — both unchanged
+- [x] T028 [US5] **CHECKPOINT 2**: Operator visual spot check on Silicon. **Check**: polybar network modules, dunst notifications (send test with `notify-send`). Cluster moves shouldn't affect Silicon but verify imports intact
 
 ### Move Group 3: Misc NixOS Module Moves
 
-- [ ] T029 [US5] Move `modules/k8s/prereqs.nix` → `modules/nixos/k8s.nix` — content unchanged. Remove empty `modules/k8s/`
-- [ ] T030 [US5] Move `modules/shell/` → `modules/nixos/shell/` (common.nix, utilities.nix) — content unchanged. Remove empty `modules/shell/`
-- [ ] T031 [US5] Move `modules/users/operator.nix` → `modules/nixos/operator.nix` — content unchanged. Remove empty `modules/users/`
-- [ ] T032 [US5] Update imports in `modules/nixos/common.nix` — shell/ and operator.nix paths. Update k8s import in `modules/nixos/server/common.nix`
-- [ ] T033 [US5] Run `make dry-run HOST=silicon` — identical store path
-- [ ] T034 [US5] **CHECKPOINT 3**: Operator visual spot check on Silicon. **Check**: open terminal, verify shell prompt renders correctly (Gruvbox colors, git branch display), `docker` command available, user groups correct (`groups` command)
+- [x] T029 [US5] Move `modules/k8s/prereqs.nix` → `modules/nixos/k8s.nix` — content unchanged. Remove empty `modules/k8s/`
+- [x] T030 [US5] Move `modules/shell/` → `modules/nixos/shell/` (common.nix, utilities.nix) — content unchanged. Remove empty `modules/shell/`
+- [x] T031 [US5] Move `modules/users/operator.nix` → `modules/nixos/operator.nix` — content unchanged. Remove empty `modules/users/`
+- [x] T032 [US5] Update imports in `modules/nixos/common.nix` — shell/ and operator.nix paths. Update k8s import in `modules/nixos/server/common.nix`
+- [x] T033 [US5] Run `make dry-run HOST=silicon` — identical store path
+- [x] T034 [US5] **CHECKPOINT 3**: Operator visual spot check on Silicon. **Check**: open terminal, verify shell prompt renders correctly (Gruvbox colors, git branch display), `docker` command available, user groups correct (`groups` command)
 
 ### Move Group 4: Hardware Module Moves
 
-- [ ] T035 [US5] Create `modules/hardware/rpi/` and `modules/hardware/rpi/sd/` directories
-- [ ] T036 [US5] Move `modules/hardware/rpi4.nix` → `modules/hardware/rpi/rpi4.nix` — content unchanged
-- [ ] T037 [US5] Move `modules/hardware/rpi5.nix` → `modules/hardware/rpi/rpi5.nix` — content unchanged
-- [ ] T038 [US5] Move `modules/hardware/rpi-eeprom.nix` → `modules/hardware/rpi/rpi-eeprom.nix` — content unchanged
-- [ ] T039 [US5] Move `modules/sd/` → `modules/hardware/rpi/sd/` (bootstrap.nix, recovery-utils.nix) — content unchanged. Remove empty `modules/sd/`
-- [ ] T040 [US5] Update import paths in `flake.nix` — SD bootstrap path, piModule references for rpi4/rpi5
-- [ ] T041 [US5] Update import paths in `modules/hardware/rpi/sd/recovery-utils.nix` — cluster import → server import
-- [ ] T042 [US5] Update any HLC host configs importing rpi hardware modules
-- [ ] T043 [US5] Run `make dry-run HOST=silicon` + `make dry-run HOST=hlc-501` — both unchanged
-- [ ] T044 [US5] **CHECKPOINT 4**: Operator visual spot check on Silicon. **Check**: i3 launches, monitor resolution correct. Minimal visual risk from hardware module moves (x1-carbon.nix not moved). Quick confirmation only
+- [x] T035 [US5] Create `modules/hardware/rpi/` and `modules/hardware/rpi/sd/` directories
+- [x] T036 [US5] Move `modules/hardware/rpi4.nix` → `modules/hardware/rpi/rpi4.nix` — content unchanged
+- [x] T037 [US5] Move `modules/hardware/rpi5.nix` → `modules/hardware/rpi/rpi5.nix` — content unchanged
+- [x] T038 [US5] Move `modules/hardware/rpi-eeprom.nix` → `modules/hardware/rpi/rpi-eeprom.nix` — content unchanged
+- [x] T039 [US5] Move `modules/sd/` → `modules/hardware/rpi/sd/` (bootstrap.nix, recovery-utils.nix) — content unchanged. Remove empty `modules/sd/`
+- [x] T040 [US5] Update import paths in `flake.nix` — SD bootstrap path, piModule references for rpi4/rpi5
+- [x] T041 [US5] Update import paths in `modules/hardware/rpi/sd/recovery-utils.nix` — cluster import → server import
+- [x] T042 [US5] Update any HLC host configs importing rpi hardware modules
+- [x] T043 [US5] Run `make dry-run HOST=silicon` + `make dry-run HOST=hlc-501` — both unchanged
+- [x] T044 [US5] **CHECKPOINT 4**: Operator visual spot check on Silicon. **Check**: i3 launches, monitor resolution correct. Minimal visual risk from hardware module moves (x1-carbon.nix not moved). Quick confirmation only
 
 ### Move Group 5: Home-Manager Workstation Module Moves
 
-- [ ] T045 [US5] Create `modules/home/workstation/` directory
-- [ ] T046 [US5] Move `modules/home/dunst.nix` → `modules/home/workstation/dunst.nix` — content unchanged. Update `colors.nix` import path if relative (`./colors.nix` → `../colors.nix`)
-- [ ] T047 [US5] Move `modules/home/ui.nix` → `modules/home/workstation/ui.nix` — content unchanged. Update relative import paths (e.g., `./colors.nix` → `../colors.nix` if present)
-- [ ] T048 [US5] Move `modules/home/dev.nix` → `modules/home/workstation/dev.nix` — content unchanged
-- [ ] T049 [US5] Move `modules/home/vscode.nix` → `modules/home/workstation/vscode.nix` — content unchanged
-- [ ] T050 [US5] Move `modules/home/layouts/` → `modules/home/workstation/layouts/` — content unchanged
-- [ ] T051 [US5] Move `modules/home/scripts/` → `modules/home/workstation/scripts/` — content unchanged
-- [ ] T052 [US5] Update imports in `modules/home/workstation.nix` for MG5 modules only — `./dunst.nix` → `./workstation/dunst.nix`, `./ui.nix` → `./workstation/ui.nix`, `./dev.nix` → `./workstation/dev.nix`, `./vscode.nix` → `./workstation/vscode.nix`, `./layouts/` → `./workstation/layouts/`, `./scripts/` → `./workstation/scripts/`. Do NOT modify i3 or polybar imports — those are handled in MG6/MG7
-- [ ] T053 [US5] Run `make dry-run HOST=silicon` — identical store path
-- [ ] T054 [US5] **CHECKPOINT 5** (HIGH RISK): Operator visual spot check on Silicon. **Check**: alacritty transparency and colors, dunst notification popup (`notify-send "test" "checkpoint 5"`), i3 window borders and gaps and colors, VS Code launches correctly, picom compositing (window shadows visible, transparency works). These modules directly control Silicon's visual appearance
+- [x] T045 [US5] Create `modules/home/workstation/` directory
+- [x] T046 [US5] Move `modules/home/dunst.nix` → `modules/home/workstation/dunst.nix` — content unchanged. Update `colors.nix` import path if relative (`./colors.nix` → `../colors.nix`)
+- [x] T047 [US5] Move `modules/home/ui.nix` → `modules/home/workstation/ui.nix` — content unchanged. Update relative import paths (e.g., `./colors.nix` → `../colors.nix` if present)
+- [x] T048 [US5] Move `modules/home/dev.nix` → `modules/home/workstation/dev.nix` — content unchanged
+- [x] T049 [US5] Move `modules/home/vscode.nix` → `modules/home/workstation/vscode.nix` — content unchanged
+- [x] T050 [US5] Move `modules/home/layouts/` → `modules/home/workstation/layouts/` — content unchanged
+- [x] T051 [US5] Move `modules/home/scripts/` → `modules/home/workstation/scripts/` — content unchanged
+- [x] T052 [US5] Update imports in `modules/home/workstation.nix` for MG5 modules only — `./dunst.nix` → `./workstation/dunst.nix`, `./ui.nix` → `./workstation/ui.nix`, `./dev.nix` → `./workstation/dev.nix`, `./vscode.nix` → `./workstation/vscode.nix`, `./layouts/` → `./workstation/layouts/`, `./scripts/` → `./workstation/scripts/`. Do NOT modify i3 or polybar imports — those are handled in MG6/MG7
+- [x] T053 [US5] Run `make dry-run HOST=silicon` — identical store path
+- [x] T054 [US5] **CHECKPOINT 5** (HIGH RISK): Operator visual spot check on Silicon. **Check**: alacritty transparency and colors, dunst notification popup (`notify-send "test" "checkpoint 5"`), i3 window borders and gaps and colors, VS Code launches correctly, picom compositing (window shadows visible, transparency works). These modules directly control Silicon's visual appearance
 
 ### Move Group 6: i3 Duplication for Gibson
 
-- [ ] T055 [US5] Create `modules/home/workstation/i3/` directory
-- [ ] T056 [US5] Move `modules/home/i3.nix` → `modules/home/workstation/i3/laptop.nix` — content unchanged (rename only)
-- [ ] T057 [US5] Copy `modules/home/workstation/i3/laptop.nix` → `modules/home/workstation/i3/gibson.nix` — independent copy for Gibson. Content identical to laptop.nix at this point; Gibson-specific changes in Phase 4
-- [ ] T058 [US5] Remove i3 import from `modules/home/workstation.nix` (was `./i3.nix`). Wire `../../modules/home/workstation/i3/laptop.nix` via `home-manager.users.eaglerock.imports` in `hosts/silicon/configuration.nix`. Wire `../../modules/home/workstation/i3/gibson.nix` via same mechanism in `hosts/gibson/configuration.nix`. Shared workstation.nix must not import host-specific modules
-- [ ] T059 [US5] Run `make dry-run HOST=silicon` — identical store path
-- [ ] T060 [US5] **CHECKPOINT 6** (HIGHEST RISK): Operator visual spot check on Silicon. This is the exact change type that broke Silicon before. **Check**: ALL i3 keybindings (Super+1 through Super+0, Super+Enter for terminal, Super+d for dmenu/rofi), workspace switching between all workspaces, window movement (Super+Shift+arrow), floating toggle (Super+Shift+space), resize mode (Super+r), i3bar/polybar visible on all outputs, picom compositing (transparency, shadows), scratchpad (Super+minus to show, Super+Shift+minus to move to scratchpad), workspace 1 layout restoration (3 terminals)
+- [x] T055 [US5] Create `modules/home/workstation/i3/` directory
+- [x] T056 [US5] Move `modules/home/i3.nix` → `modules/home/workstation/i3/laptop.nix` — content unchanged (rename only)
+- [x] T057 [US5] Copy `modules/home/workstation/i3/laptop.nix` → `modules/home/workstation/i3/gibson.nix` — independent copy for Gibson. Content identical to laptop.nix at this point; Gibson-specific changes in Phase 4
+- [x] T058 [US5] Remove i3 import from `modules/home/workstation.nix` (was `./i3.nix`). Wire `../../modules/home/workstation/i3/laptop.nix` via `home-manager.users.eaglerock.imports` in `hosts/silicon/configuration.nix`. Wire `../../modules/home/workstation/i3/gibson.nix` via same mechanism in `hosts/gibson/configuration.nix`. Shared workstation.nix must not import host-specific modules
+- [x] T059 [US5] Run `make dry-run HOST=silicon` — identical store path
+- [x] T060 [US5] **CHECKPOINT 6** (HIGHEST RISK): Operator visual spot check on Silicon. This is the exact change type that broke Silicon before. **Check**: ALL i3 keybindings (Super+1 through Super+0, Super+Enter for terminal, Super+d for dmenu/rofi), workspace switching between all workspaces, window movement (Super+Shift+arrow), floating toggle (Super+Shift+space), resize mode (Super+r), i3bar/polybar visible on all outputs, picom compositing (transparency, shadows), scratchpad (Super+minus to show, Super+Shift+minus to move to scratchpad), workspace 1 layout restoration (3 terminals)
 
 ### Move Group 7: Polybar Duplication for Gibson
 
-- [ ] T061 [US5] Move `modules/home/polybar.nix` → `modules/home/workstation/polybar-laptop.nix` — content unchanged (rename only). Update `colors.nix` import path if needed
-- [ ] T062 [US5] Copy `modules/home/workstation/polybar-laptop.nix` → `modules/home/workstation/polybar-gibson.nix` — independent copy. Content identical at this point; Gibson-specific changes in Phase 4
-- [ ] T063 [US5] Remove polybar import from `modules/home/workstation.nix` (was `./polybar.nix`). Wire `../../modules/home/workstation/polybar-laptop.nix` via `home-manager.users.eaglerock.imports` in `hosts/silicon/configuration.nix`. Wire `../../modules/home/workstation/polybar-gibson.nix` via same mechanism in `hosts/gibson/configuration.nix`. Shared workstation.nix must not import host-specific modules
-- [ ] T064 [US5] Run `make dry-run HOST=silicon` — identical store path
-- [ ] T065 [US5] **CHECKPOINT 7**: Operator visual spot check on Silicon. **Check**: polybar visible on all bars, all modules rendering (battery percentage, WiFi SSID, CPU/memory usage, workspace indicators, date/time, volume icon), click actions work (volume, network), correct Gruvbox colors
+- [x] T061 [US5] Move `modules/home/polybar.nix` → `modules/home/workstation/polybar-laptop.nix` — content unchanged (rename only). Update `colors.nix` import path if needed
+- [x] T062 [US5] Copy `modules/home/workstation/polybar-laptop.nix` → `modules/home/workstation/polybar-gibson.nix` — independent copy. Content identical at this point; Gibson-specific changes in Phase 4
+- [x] T063 [US5] Remove polybar import from `modules/home/workstation.nix` (was `./polybar.nix`). Wire `../../modules/home/workstation/polybar-laptop.nix` via `home-manager.users.eaglerock.imports` in `hosts/silicon/configuration.nix`. Wire `../../modules/home/workstation/polybar-gibson.nix` via same mechanism in `hosts/gibson/configuration.nix`. Shared workstation.nix must not import host-specific modules
+- [x] T064 [US5] Run `make dry-run HOST=silicon` — identical store path
+- [x] T065 [US5] **CHECKPOINT 7**: Operator visual spot check on Silicon. **Check**: polybar visible on all bars, all modules rendering (battery percentage, WiFi SSID, CPU/memory usage, workspace indicators, date/time, volume icon), click actions work (volume, network), correct Gruvbox colors
 
 ### Move Group 8: Remaining Home Module Duplications
 
-- [ ] T066 [US5] Audit remaining workstation modules for Gibson-specific differences. A module needs duplication if it references hardware-specific values (monitor names, network interfaces, GPU backend) or operator wants different behavior on Gibson. **Picom resolution**: picom config lives in two places — `i3.nix` has inline `picom.conf` (backend, vsync, shadows) and exec startup, while `ui.nix` has `services.picom` (home-manager service). The i3-embedded picom.conf travels with the i3 variant files (laptop.nix/gibson.nix) — no separate duplication needed for picom. `ui.nix` picom service config should be checked: if it sets backend/vsync that conflicts with i3's picom.conf, resolve in Phase 4. Remaining candidates: none expected — dunst, dev, vscode are shared
-- [ ] T067 [US5] For each module identified as needing Gibson-specific config: create independent copy in `modules/home/workstation/`. For shared modules: no action (imported via common workstation.nix path)
-- [ ] T068 [US5] Run `make dry-run HOST=silicon` — identical store path
-- [ ] T069 [US5] **CHECKPOINT 8**: Operator visual spot check on Silicon. **Check**: alacritty font and transparency, dunst notification style, GTK theme (open file dialog or settings). Low risk — most modules unchanged
+- [x] T066 [US5] Audit remaining workstation modules for Gibson-specific differences. A module needs duplication if it references hardware-specific values (monitor names, network interfaces, GPU backend) or operator wants different behavior on Gibson. **Picom resolution**: picom config lives in two places — `i3.nix` has inline `picom.conf` (backend, vsync, shadows) and exec startup, while `ui.nix` has `services.picom` (home-manager service). The i3-embedded picom.conf travels with the i3 variant files (laptop.nix/gibson.nix) — no separate duplication needed for picom. `ui.nix` picom service config should be checked: if it sets backend/vsync that conflicts with i3's picom.conf, resolve in Phase 4. Remaining candidates: none expected — dunst, dev, vscode are shared
+- [x] T067 [US5] For each module identified as needing Gibson-specific config: create independent copy in `modules/home/workstation/`. For shared modules: no action (imported via common workstation.nix path)
+- [x] T068 [US5] Run `make dry-run HOST=silicon` — identical store path
+- [x] T069 [US5] **CHECKPOINT 8**: Operator visual spot check on Silicon. **Check**: alacritty font and transparency, dunst notification style, GTK theme (open file dialog or settings). Low risk — most modules unchanged
 
 ### Move Group 9: Flake.nix + Host Profile Changes
 
-- [ ] T070 [US5] Create `lib/hlc.nix` — extract HLC helper functions (`mkHlcNode`, `mkHlcProvision`, `mkHlcBootstrap`, `mkSdImages`, `pi4Hosts`, `pi5Hosts`) from `flake.nix`. Single function receives `inputs` attrset (nixpkgs, home-manager, sops-nix, etc.), returns attrset of helpers and host lists that `flake.nix` merges into `nixosConfigurations`. See R-009 in research.md for detailed interface. Reference: R-009
-- [ ] T071 [US5] Update `flake.nix` — import `lib/hlc.nix`, replace inline helpers with imported versions. Verify all nixosConfigurations still reference correctly
+- [x] T070 [US5] Create `lib/hlc.nix` — extract HLC helper functions (`mkHlcNode`, `mkHlcProvision`, `mkHlcBootstrap`, `mkSdImages`, `pi4Hosts`, `pi5Hosts`) from `flake.nix`. Single function receives `inputs` attrset (nixpkgs, home-manager, sops-nix, etc.), returns attrset of helpers and host lists that `flake.nix` merges into `nixosConfigurations`. See R-009 in research.md for detailed interface. Reference: R-009
+- [x] T071 [US5] Update `flake.nix` — import `lib/hlc.nix`, replace inline helpers with imported versions. Verify all nixosConfigurations still reference correctly
 - *(T074/T075 absorbed into MG6 T058 and MG7 T063 — host-specific i3/polybar wiring happens at move time, not deferred to MG9)*
-- [ ] T076 [US5] Run `make dry-run HOST=silicon` — identical store path. Run `make dry-run HOST=gibson` — passes
-- [ ] T077 [US5] **CHECKPOINT 9**: Operator visual spot check on Silicon. This group changes flake.nix and Silicon's configuration.nix directly. **Check**: full desktop — LightDM login, i3 session startup, all workspace keybindings, polybar all modules, alacritty, dunst, picom, lock screen (if configured)
+- [x] T076 [US5] Run `make dry-run HOST=silicon` — identical store path. Run `make dry-run HOST=gibson` — passes
+- [x] T077 [US5] **CHECKPOINT 9**: Operator visual spot check on Silicon. This group changes flake.nix and Silicon's configuration.nix directly. **Check**: full desktop — LightDM login, i3 session startup, all workspace keybindings, polybar all modules, alacritty, dunst, picom, lock screen (if configured)
 
 ### Move Group 10: Final Full Validation
 
-- [ ] T078 [US5] Run `make dry-run HOST=silicon` — compare store path to Phase 1 baseline recorded in T007
-- [ ] T079 [US5] Run `make dry-run HOST=gibson` — passes
-- [ ] T080 [US5] Run `make dry-run HOST=hlc-501` — spot check cluster node (content-immutable)
-- [ ] T081 [US5] **CHECKPOINT 10**: Complete Silicon desktop validation. Operator runs full daily workflow: terminal usage, browser launch (Firefox ws 3), VS Code (ws 2), workspace switching across all 10 workspaces, window movement between workspaces, multi-monitor if available, notifications, lock screen, volume control
+- [x] T078 [US5] Run `make dry-run HOST=silicon` — compare store path to Phase 1 baseline recorded in T007
+- [x] T079 [US5] Run `make dry-run HOST=gibson` — passes
+- [x] T080 [US5] Run `make dry-run HOST=hlc-501` — spot check cluster node (content-immutable)
+- [X] T081 [US5] **CHECKPOINT 10**: Complete Silicon desktop validation. Operator runs full daily workflow: terminal usage, browser launch (Firefox ws 3), VS Code (ws 2), workspace switching across all 10 workspaces, window movement between workspaces, multi-monitor if available, notifications, lock screen, volume control
 
 **Checkpoint**: Phase 2 complete. All module paths reorganized. Silicon unchanged. Gibson has independent module copies. Ready for Gibson-specific work.
 
