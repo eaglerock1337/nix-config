@@ -3,7 +3,7 @@
     ../common.nix
     ./motd.nix
     ./prompt.nix
-    ../../k8s/prereqs.nix
+    ../k8s.nix
   ];
 
   networking.domain = lib.mkDefault "marks.dev";

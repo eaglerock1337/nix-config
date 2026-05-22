@@ -1,7 +1,7 @@
 { clusterModule, ... }: {
   imports = [
     clusterModule
-    ../../modules/hardware/rpi5.nix
+    ../../modules/hardware/rpi/rpi5.nix
   ];
 
   networking.hostName = "hlc-507";

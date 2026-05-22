@@ -11,7 +11,7 @@
   imports = [
     ./options.nix
     ./raid-fallback.nix
-    ../../../users/operator.nix
+    ../../operator.nix
   ];
 
   networking.domain = "marks.dev";

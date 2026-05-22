@@ -82,7 +82,7 @@
         modules = [
           piModule
           inputs.nixos-raspberrypi.nixosModules.sd-image
-          ./modules/sd/bootstrap.nix
+          ./modules/hardware/rpi/sd/bootstrap.nix
           { networking.hostName = hostname; }
         ];
       }).config.system.build.sdImage;

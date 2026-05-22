@@ -1,10 +1,10 @@
 { lib, inputs, ... }:
-# Raspberry Pi 4 (bcm2711) hardware module
+# Raspberry Pi 5 (bcm2712) hardware module
 {
   imports = [
-    inputs.nixos-raspberrypi.nixosModules.raspberry-pi-4.base
+    inputs.nixos-raspberrypi.nixosModules.raspberry-pi-5.base
     inputs.disko.nixosModules.disko
-    ../../disko/rpi4.nix
+    ../../../disko/rpi5.nix
     ./rpi-eeprom.nix
     # sd-image module lives in flake.nix mkHlcBootstrap — do not include here
   ];
@@ -30,8 +30,8 @@
   # Keep 5 generations on the firmware partition (~53 MiB each); provides rollback
   boot.loader.raspberry-pi.configurationLimit = 5;
 
-  # Pi family for rpi-eeprom.nix — rpi4 uses universal EEPROM settings only
-  hlc.piFamily = "rpi4";
+  # Pi family for rpi-eeprom.nix — gates Pi 5-specific EEPROM settings
+  hlc.piFamily = "rpi5";
 
   # Headless server config.txt profile
   # Confirmed option path: hardware.raspberry-pi.config.<section>.{options,base-dt-params,dt-overlays}
@@ -43,15 +43,13 @@
       disable_splash = { enable = true; value = 1; };
       # Zero firmware boot delay
       boot_delay = { enable = true; value = 0; };
-      # Modest overclock for passive-heatsink Pi 4: validated safe under sustained load
-      # 1750 MHz with over_voltage=2 stays well within passive cooling margin
-      over_voltage = { enable = true; value = 2; };
-      arm_freq = { enable = true; value = 1750; };
     };
     base-dt-params = {
       # Disable on-board audio (no use case; saves a small driver surface)
       # mkForce required: nvmd configtxt.nix sets audio="on" at normal priority
       audio = { enable = lib.mkForce true; value = lib.mkForce "off"; };
+      # Enable M.2 HAT PCIe lane for NVMe — must be set at firmware time, not kernel
+      nvme = { enable = true; };
     };
     dt-overlays = {
       # Disable Bluetooth; frees UART for serial console debug if needed
@@ -59,8 +57,8 @@
     };
   };
 
-  # Pi 4 class-level disko device defaults (same SoC addresses across all Pi 4 units)
-  hlc.disko.usbDevice0 = lib.mkDefault "/dev/disk/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usbv3-0:2:1.0-scsi-0:0:0:0";
-  hlc.disko.usbDevice1 = lib.mkDefault "/dev/disk/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usbv3-0:1:1.0-scsi-0:0:0:0";
-  hlc.disko.nvmeDevice = lib.mkDefault null;
+  # Pi 5 class-level disko device defaults (same SoC addresses across all Pi 5 units)
+  hlc.disko.usbDevice0 = lib.mkDefault "/dev/disk/by-path/platform-xhci-hcd.0-usb-0:1:1.0-scsi-0:0:0:0";
+  hlc.disko.usbDevice1 = lib.mkDefault "/dev/disk/by-path/platform-xhci-hcd.1-usb-0:1:1.0-scsi-0:0:0:0";
+  hlc.disko.nvmeDevice = lib.mkDefault "/dev/nvme0n1";
 }
