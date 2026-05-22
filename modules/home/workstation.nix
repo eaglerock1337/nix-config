@@ -8,7 +8,6 @@
   imports = [
     ./base.nix
     ./workstation/ui.nix
-    ./polybar.nix
     ./workstation/dunst.nix
     ./workstation/dev.nix
     ./workstation/vscode.nix

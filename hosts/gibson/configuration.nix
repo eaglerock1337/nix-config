@@ -29,9 +29,10 @@
       "nvidia-settings"
     ];
 
-  # Host-specific home-manager modules (i3 variant for this host)
+  # Host-specific home-manager modules (i3, polybar variants for this host)
   home-manager.users.eaglerock.imports = [
     ../../modules/home/workstation/i3/gibson.nix
+    ../../modules/home/workstation/polybar-gibson.nix
   ];
 
   system.stateVersion = "25.11";

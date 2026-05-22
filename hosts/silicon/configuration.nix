@@ -19,9 +19,10 @@
     extraGroups = [ "wheel" "networkmanager" "docker" ];
   };
 
-  # Host-specific home-manager modules (i3 variant for this host)
+  # Host-specific home-manager modules (i3, polybar variants for this host)
   home-manager.users.eaglerock.imports = [
     ../../modules/home/workstation/i3/laptop.nix
+    ../../modules/home/workstation/polybar-laptop.nix
   ];
 
   # See `man configuration.nix` before changing this — it pins stateful data
