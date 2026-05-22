@@ -34,70 +34,14 @@
       };
     };
 
-    # mkHlcNode — provisioned nixosConfiguration for a cluster node.
-    # SD bootstrap images are separate derivations built by mkHlcBootstrap below.
-    mkHlcNode = { hostPath, extraModules ? [] }:
-      # Using nixos-raspberrypi.lib.nixosSystem so nvmd's overlays (vendor kernel,
-      # firmware, raspberrypi-utils) and specialArgs injection apply automatically.
-      nixos-raspberrypi.lib.nixosSystem {
-        specialArgs = {
-          inherit inputs operatorPubkeys;
-          clusterModule = ./modules/nixos/server/hlc/default.nix;
-        };
-        modules = [
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.backupFileExtension = "backup";
-          }
-          # disko NixOS module provides disko.devices option; imported here
-          # so hardware modules (rpi4.nix, rpi5.nix) can set disk layouts.
-          disko.nixosModules.disko
-          hostPath
-        ] ++ extraModules;
-      };
-
-    # mkHlcProvision — small closure for nixos-anywhere stage2.
-    # No home-manager; passes clusterModule = provision.nix via specialArgs so the
-    # host config imports the minimal cluster module instead of the full one.
-    mkHlcProvision = { hostPath, extraModules ? [] }:
-      nixos-raspberrypi.lib.nixosSystem {
-        specialArgs = {
-          inherit inputs operatorPubkeys;
-          clusterModule = ./modules/nixos/server/hlc/provision.nix;
-        };
-        modules = [
-          disko.nixosModules.disko
-          hostPath
-        ] ++ extraModules;
-      };
-
-    # mkHlcBootstrap — builds a minimal SD bootstrap image for a single node.
-    # Hostname is the only per-node differentiator; everything else is shared.
-    # sd-image module lives here only, never in provisioned nixosConfigurations.
-    mkHlcBootstrap = { hostname, piModule }:
-      (nixos-raspberrypi.lib.nixosSystem {
-        specialArgs = { inherit inputs operatorPubkeys; };
-        modules = [
-          piModule
-          inputs.nixos-raspberrypi.nixosModules.sd-image
-          ./modules/hardware/rpi/sd/bootstrap.nix
-          { networking.hostName = hostname; }
-        ];
-      }).config.system.build.sdImage;
-
-    # Host lists — used to generate SD image packages for all 12 nodes.
-    # Pi 4: hlc-401..404 (4 nodes); Pi 5: hlc-501..508 (8 nodes).
-    pi4Hosts = [ "hlc-401" "hlc-402" "hlc-403" "hlc-404" ];
-    pi5Hosts = map (n: "hlc-5${nixpkgs.lib.fixedWidthNumber 2 n}") (nixpkgs.lib.range 1 8);
-
-    # mkSdImages — generate { "<host>-sdImage" = <derivation>; } for a list of hosts.
-    mkSdImages = piModule: hosts:
-      builtins.listToAttrs (map (h: {
-        name = "${h}-sdImage";
-        value = mkHlcBootstrap { hostname = h; inherit piModule; };
-      }) hosts);
+    # HLC cluster helpers — extracted to lib/hlc.nix for clarity
+    hlc = import ./lib/hlc.nix {
+      inherit inputs nixpkgs home-manager nixos-raspberrypi disko operatorPubkeys;
+      clusterModulePath = ./modules/nixos/server/hlc/default.nix;
+      provisionModulePath = ./modules/nixos/server/hlc/provision.nix;
+      bootstrapModulePath = ./modules/hardware/rpi/sd/bootstrap.nix;
+    };
+    inherit (hlc) mkHlcNode mkHlcProvision mkSdImages pi4Hosts pi5Hosts;
   in {
     nixosConfigurations = {
       silicon = nixpkgs.lib.nixosSystem {
