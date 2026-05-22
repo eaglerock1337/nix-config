@@ -1,7 +1,7 @@
 { config, pkgs, ... }:
 
 let
-  colors = import ./colors.nix;
+  colors = import ../../colors.nix;
   gruvboxDark = colors.gruvboxDark;
   workspaces = {
     "1" = "1 ";        # Terminals
@@ -249,7 +249,7 @@ in {
           always = true;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."1"}; append_layout ${./workstation/layouts/workspace-1.json}"'';
+          command = ''i3-msg "workspace ${workspaces."1"}; append_layout ${../layouts/workspace-1.json}"'';
           always = false;
         }
         {

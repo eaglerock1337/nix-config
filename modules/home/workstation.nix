@@ -8,7 +8,6 @@
   imports = [
     ./base.nix
     ./workstation/ui.nix
-    ./i3.nix
     ./polybar.nix
     ./workstation/dunst.nix
     ./workstation/dev.nix

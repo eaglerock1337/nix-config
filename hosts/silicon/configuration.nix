@@ -19,6 +19,11 @@
     extraGroups = [ "wheel" "networkmanager" "docker" ];
   };
 
+  # Host-specific home-manager modules (i3 variant for this host)
+  home-manager.users.eaglerock.imports = [
+    ../../modules/home/workstation/i3/laptop.nix
+  ];
+
   # See `man configuration.nix` before changing this — it pins stateful data
   # locations to the release version that first installed this system.
   system.stateVersion = "25.05";
