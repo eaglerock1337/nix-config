@@ -19,6 +19,14 @@ sudo ln -s /home/eaglerock/git/nix-config /etc/nixos
 sudo nixos-rebuild switch --flake ~/git/nix-config#gibson  # substitute hostname
 ```
 
+- Install the AI CLIs outside Nix so they can self-update (`claude update`,
+  `codex update`). They land in `~/.local/bin` and run via nix-ld:
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+```
+
 ### manual edits for now
 
 #### lxappearance

@@ -3,7 +3,6 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     home-manager.url = "github:nix-community/home-manager/release-25.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
     nixos-hardware.url = "github:nixos/nixos-hardware/master";
     disko.url = "github:nix-community/disko";
@@ -14,7 +13,7 @@
     sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, nixos-raspberrypi, nixos-hardware, disko, nixos-anywhere, sops-nix, ... } @ inputs:
+  outputs = { self, nixpkgs, home-manager, nixos-raspberrypi, nixos-hardware, disko, nixos-anywhere, sops-nix, ... } @ inputs:
   let
     system = "x86_64-linux";
 
@@ -23,16 +22,6 @@
       "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC2MfZmJMxQx3NGjPn92I1/n7pBTne/0aw0xVvgebFriN1UMKcEQagG3QzmM/4+zj001UGNKFK7FOlnTx6b8dz2mEC/ejYFG6R2Vtd6coxShjQDL2Nw3B/FMfky+jOBQ7viyODEiPhQlrO2FrQcd0BgjzHPvH0qtu12Ej2bo27abkIpyCEJyLf/xFKIyZ/RyFWaF8FOA4tpXpXvNa73QijvymMk2gY2HuLQVGYGPAVsLBEUbmAV7oN3inPcbawmjAgV5X23AoMr9F5pZbxdmZ61FUwWvaBjRdTopgfkI1RXZ52P27CJTjC3ndmlSgfV2Ht1iQ9VQmY5ShxFET9Wr6jz eaglerock@gibson"
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOK+Z0E+vIXJMcVO0Pv81vZNHoF4JuS08r2t7rAEWhm4 eaglerock@nixos"
     ];
-
-    unstable = import nixpkgs-unstable {
-      inherit system;
-      config = {
-        allowUnfreePredicate = pkg:
-          builtins.elem ((pkg.pname or (pkg.name or ""))) [
-            "claude-code"
-          ];
-      };
-    };
 
     # HLC cluster helpers — extracted to lib/hlc.nix for clarity
     hlc = import ./lib/hlc.nix {
@@ -46,7 +35,7 @@
     nixosConfigurations = {
       silicon = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = { inherit self nixpkgs nixpkgs-unstable home-manager operatorPubkeys; };
+        specialArgs = { inherit self nixpkgs home-manager operatorPubkeys; };
         modules = [
           ./hosts/silicon/configuration.nix
 
@@ -54,23 +43,16 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.extraSpecialArgs = { inherit unstable; };
             home-manager.users.eaglerock = import ./home/eaglerock.nix;
             # Back up conflicting files instead of failing
             home-manager.backupFileExtension = "backup";
-          }
-          {
-            nixpkgs.config.allowUnfreePredicate = pkg:
-              builtins.elem ((pkg.pname or (pkg.name or ""))) [
-                "claude-code"
-              ];
           }
         ];
       };
 
       gibson = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = { inherit self nixpkgs nixpkgs-unstable home-manager operatorPubkeys; };
+        specialArgs = { inherit self nixpkgs home-manager operatorPubkeys; };
         modules = [
           ./hosts/gibson/configuration.nix
 
@@ -78,7 +60,6 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.extraSpecialArgs = { inherit unstable; };
             home-manager.users.eaglerock = import ./home/eaglerock.nix;
             home-manager.backupFileExtension = "backup";
           }

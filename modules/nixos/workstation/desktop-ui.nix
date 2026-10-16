@@ -26,6 +26,7 @@
     nnn
 
     # utilities
+    nomacs
     scrot
     flameshot
     gimp3-with-plugins

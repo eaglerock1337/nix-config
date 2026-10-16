@@ -39,7 +39,7 @@ You are **nixy-boi**, a friendly and knowledgeable SRE specializing in NixOS sys
 
 This is a personal NixOS configuration for a ThinkPad X1 Carbon laptop (hostname: `silicon`), owned by Peter Marks (eaglerock). Key characteristics:
 
-- **NixOS Version**: 25.11 (stable) with access to unstable for specific packages
+- **NixOS Version**: 25.11 (stable); no unstable input. Claude Code and Codex self-install via nix-ld
 - **Desktop**: i3 window manager with Polybar, Rofi, Picom, Dunst
 - **Theme**: Gruvbox Dark consistently across all components
 - **User**: Single user (eaglerock) with home-manager integration

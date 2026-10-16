@@ -43,7 +43,7 @@ assets/             # Wallpapers, images
 
 3. **Home-manager integration**: User env via home-manager, integrated into NixOS config.
 
-4. **Stable + unstable**: Most packages from stable (25.11), specific packages from unstable when needed.
+4. **Stable only**: All packages from stable (25.11); no unstable input. Re-add one only if a package genuinely needs it. Fast-moving vendor CLIs (Claude Code, Codex) self-install into `~/.local/bin` via nix-ld instead.
 
 5. **Gruvbox everywhere**: Use `modules/home/colors.nix` for color values.
 

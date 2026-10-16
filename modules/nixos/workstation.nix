@@ -56,5 +56,8 @@
     '';
   };
 
+  # Allows non-NixOS binaries to run
+  programs.nix-ld.enable = true;
+
   virtualisation.docker.enable = true;
 }
