@@ -1,43 +1,40 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.3.2 → 1.3.3
-Bump rationale: PATCH — correct smoke-test definition in Principle IV. The
-prior text said "interactive-PTY ssh + sudo round-trip"; post-implementation
-testing confirmed PTY mode causes Pi login hangs. Smoke-test is now defined
-as non-PTY SSH with `uname -a` (no `-t` flag), matching Q9 clarification
-in spec.md and the tasks.md smoke-test definition. Safety intent unchanged.
-
-Prior version (1.3.2):
-Bump rationale: PATCH — clarify Principle IV's canary scope. Canary applies
-to the *change set* being deployed, which MAY be a single module OR a
-batched bundle (e.g. all module-creation work for a phase). When the change
-set bundles multiple modules, smoke-test failure triggers a bisect via the
-/speckit-debug skill (revert-and-incrementally-reintroduce on the canary
-node) to isolate the breaking module before fleet roll. The canary +
-smoke-test gate before any fleet roll still binds. No intent change to
-Principle IV's safety guarantee; this clarifies cadence flexibility.
+Version change: 1.3.3 → 1.4.0
+Bump rationale: MINOR — two changes:
+  1. New Principle IX (Blast-Radius Isolation) added. Changes MUST be
+     effective no-ops for systems not targeted by the current spec.
+     Motivated by spec #002 where Gibson onboarding caused Silicon config
+     breakage via shared-module changes (picom renderer, repo restructuring).
+  2. Principle VII strengthened: agents MUST NOT run raw nix commands;
+     Makefile targets are mandatory. When no target exists, agent must ask
+     operator to add one or request one-time permission for one-offs.
 
 Modified principles:
-  - IV. Safety-First Changes — corrected smoke-test language from
-    "interactive-PTY ssh + sudo round-trip" to non-PTY SSH reachability
-    check per post-implementation Q9 finding.
+  - VII. Standardized Build & Test Workflow — added NON-NEGOTIABLE agent
+    restriction on raw nix commands; clarified operator-only exception for
+    interactive triage; reworded host capability table framing.
 
-Modified sections:
-  - Safety & Change Management — smoke-test definition updated.
+Added principles:
+  - IX. Blast-Radius Isolation (NON-NEGOTIABLE) — new
 
-Added principles: none
+Added sections: none
 Removed sections: none
 
 Templates checked:
-  - .specify/templates/plan-template.md ✅ aligned (generic)
-  - .specify/templates/spec-template.md ✅ aligned
-  - .specify/templates/tasks-template.md ✅ aligned
-  - .specify/templates/checklist-template.md ✅ aligned
+  - .specify/templates/plan-template.md ✅ aligned — Constitution Check
+    section already generic; new principle auto-surfaces at plan time
+  - .specify/templates/spec-template.md ✅ aligned — no changes needed
+  - .specify/templates/tasks-template.md ✅ aligned — no changes needed
+  - No commands/ directory exists
 
 Deferred TODOs: none
 
 Prior version sync impacts (retained for history):
+  1.3.2 → 1.3.3: PATCH — corrected smoke-test definition in Principle IV.
+  1.3.1 → 1.3.2: PATCH — clarified Principle IV admits canary scope for
+                 bundled change sets.
   1.3.0 → 1.3.1: PATCH — clarified Principle IV admits two canary paths
                  (automated and manual operator-driven).
   1.2.0 → 1.3.0: MINOR — added Principle VIII (Human-AI Collaboration
@@ -168,25 +165,38 @@ Start simple; add complexity only when the need is demonstrated.
 ### VII. Standardized Build & Test Workflow
 
 All build and test operations MUST use Makefile targets as the canonical
-interface. Direct CLI invocation of `nix build`, `nixos-rebuild`, or
-`smoke-test.sh` is permitted during interactive triage; scripts, agents, and
-any automated workflow MUST invoke Makefile targets to ensure a consistent,
-documented interface.
+interface. Makefile targets abstract host-specific command differences (e.g.,
+`nix build` on gibson vs `nixos-rebuild` on silicon) and are the documented,
+consistent entry point for all operations.
 
-**Host capability awareness**: Available commands differ by host. Commands MUST
-be selected based on the executing host:
+**Agent restriction (NON-NEGOTIABLE)**: AI agents MUST NOT run raw nix
+commands (`nix build`, `nix eval`, `nixos-rebuild`, etc.) directly. All
+agent-initiated build, test, and deploy operations MUST go through Makefile
+targets. If no Makefile target exists for a needed operation, the agent MUST:
 
-| Host | Role | Available | Not available |
-|------|------|-----------|---------------|
+1. Ask the operator whether a new Makefile target should be created for it; or
+2. Request one-time permission to run the raw command, if the operation is a
+   one-off that will not be run regularly.
+
+The agent MUST NOT assume permission and run the raw command. The operator
+grants permission explicitly in either case.
+
+**Operator exception**: The operator MAY run raw nix commands directly during
+interactive triage or exploratory debugging. This exception applies only to
+the human operator, never to agents or automated workflows.
+
+**Host capability awareness**: Available commands differ by host. Makefile
+targets abstract these differences and MUST be used by agents:
+
+| Host | Role | Host has | Not available |
+|------|------|----------|---------------|
 | `gibson` | build host (x86_64) | `nix`, `nix build`, Makefile targets | `nixos-rebuild` (NixOS not yet installed — future project) |
 | `silicon` | laptop (x86_64 NixOS) | `nix`, `nixos-rebuild`, Makefile targets | — |
 | cluster nodes | aarch64 NixOS | `nix`, `nixos-rebuild` | Makefile (not cloned) |
 
-When executing on `gibson`, use `nix build
-.#nixosConfigurations.<host>.config.system.build.toplevel` for build
-validation in place of `sudo nixos-rebuild dry-run`. Makefile targets already
-abstract this distinction and MUST be preferred for any scripted or
-agent-driven invocation.
+Makefile targets already select the correct underlying command per host
+(e.g., `make dry-run` runs `nix build` on gibson, `nixos-rebuild dry-run`
+on silicon). Agents rely on this abstraction and MUST NOT bypass it.
 
 This principle MUST be revisited when gibson receives NixOS system management
 (tracked as a separate project outside the current feature scope).
@@ -229,6 +239,48 @@ doubt, prefer caution: ask, verify, or read the code before acting.
 theory drifted to "the operator's report is wrong" without that hypothesis
 being explicitly raised. Branch state was corrupted; rebase recovery is
 pending. This principle codifies the conduct that would have prevented it.
+
+### IX. Blast-Radius Isolation (NON-NEGOTIABLE)
+
+Any change — new system onboarding, code refactors, module restructuring —
+MUST be an effective no-op for every system not actively targeted by the
+current spec. If a spec targets host X, hosts Y and Z MUST build identically
+and behave identically before and after the change set is applied.
+
+This applies to:
+
+- **Module refactors** (rename, reorganize, split, merge) — import paths
+  may change, but evaluated output for non-target hosts MUST NOT change.
+- **New host introduction** — adding host X's config MUST NOT alter the
+  evaluated config of existing hosts.
+- **Shared module edits made "for" one host** — if a shared module is
+  modified to support the target host, non-target hosts that import the same
+  module MUST produce identical derivations before and after.
+- **"While we're in here" changes** — incidental cleanups, renderer swaps,
+  default changes, or dependency bumps that touch non-target systems are
+  forbidden unless the spec explicitly authorizes them.
+
+**Verification**: Before and after a change set, run `make dry-run
+HOST=<non-target-host>` for each non-target NixOS host. The output MUST
+show no derivation changes. When home-manager is involved, the
+home-manager activation package for non-target users/hosts MUST likewise
+be unchanged. This verification SHOULD be performed by the agent before
+declaring a task complete when the change touches shared modules, import
+structure, or flake-level configuration.
+
+**Exceptions require explicit spec authorization**: The spec MUST name the
+non-target system and the specific behavioral change being made to it, with
+justification. "Architectural cleanup" or "while we're in here" is not
+sufficient authorization. Leeway for the *target* system to adopt
+architectural patterns that will later benefit other systems is permitted —
+but only the target system's output may change.
+
+**Why**: During spec #002 (Gibson NixOS onboard), repo restructuring and
+shared-module changes (e.g., picom renderer configuration) caused Silicon
+config breakage. Silicon was not in scope for that spec. Changes to
+non-target systems create untested regressions and violate the operator's
+trust that stable systems remain stable. A system the operator is not
+actively working on MUST NOT surprise them with new behavior.
 
 ## Cluster Topology & Phasing
 
@@ -362,4 +414,4 @@ principles before declaring work complete. Pull requests that introduce
 new workarounds MUST include the corresponding ledger entry in the same
 commit (or earlier in the branch history).
 
-**Version**: 1.3.3 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-05-01
+**Version**: 1.4.0 | **Ratified**: 2026-04-25 | **Last Amended**: 2026-05-21

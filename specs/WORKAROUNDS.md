@@ -119,6 +119,18 @@ listed below under a separate header, also in numerical order.
 
 ---
 
+### W-018: Phase 2 module duplication defers Principle III (spec 002)
+
+- **Site(s)**: `modules/home/workstation/i3/gibson.nix` (copy of `laptop.nix`), `modules/home/workstation/polybar-gibson.nix` (copy of `polybar-laptop.nix`), and any other modules duplicated in Phase 2 Move Groups 6–8
+- **Deviates from**: Constitution Principle III (Modular Design) — independent copies of i3, polybar, and potentially other modules exist for Gibson alongside Silicon originals
+- **Reason**: Copy-first, dedup-later strategy. Phase 2 creates independent copies so Gibson can be customized in Phases 4–6 without touching Silicon's modules. Prior attempt at in-place refactoring broke Silicon's desktop (picom renderer, i3bar, workspace shortcuts). Duplication isolates blast radius per Principle IX.
+- **Exit condition**: Phase 7 deduplication complete — each duplicated module extracted into `common.nix` + host-specific deltas, or operator explicitly decides to keep independent copies for a specific module (FR-030 judgment call)
+- **Target phase / feature**: Phase 7 (Code Deduplication), spec 002-gibson-nixos-onboard
+- **Opened**: 2026-05-21
+- **Resolved**: (open)
+
+---
+
 ## Resolved Workarounds
 
 ### W-001: Inline minimal host configs (defers Principle III)

@@ -43,7 +43,7 @@ assets/             # Wallpapers, images
 
 3. **Home-manager integration**: User env via home-manager, integrated into NixOS config.
 
-4. **Stable + unstable**: Most packages from stable (25.11), specific packages from unstable when needed.
+4. **Stable only**: All packages from stable (25.11); no unstable input. Re-add one only if a package genuinely needs it. Fast-moving vendor CLIs (Claude Code, Codex) self-install into `~/.local/bin` via nix-ld instead.
 
 5. **Gruvbox everywhere**: Use `modules/home/colors.nix` for color values.
 
@@ -80,5 +80,18 @@ assets/             # Wallpapers, images
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at `specs/001-nixos-rpi-cluster/plan.md`
+at `specs/002-gibson-nixos-onboard/plan.md`
+
+Key design decisions for active feature (002-gibson-nixos-onboard):
+- **Copy-first, dedup-later**: Phase 2 moves files + creates independent copies for Gibson; Phase 7 deduplicates into common.nix + host variants
+- **Silicon immutability**: `make dry-run HOST=silicon` MUST produce identical store path after every Phase 2 commit; ~10 operator visual checkpoints
+- **RPi/cluster immutability**: content-unchanged moves only (FR-027)
+- Polybar parameterization (Phase 7): NixOS options (`custom.hostProfile`) + `osConfig`, NOT `extraSpecialArgs`
+- i3 Phase 2: independent `laptop.nix` (Silicon rename) + `gibson.nix` (copy). Phase 7: extract `common.nix`, reduce to deltas
+- HLC helpers extracted to `lib/hlc.nix`; flake.nix stays pure composition
+- Single shared `home/eaglerock.nix` for all workstations
+- Module reorg: `modules/hosts/` → `modules/nixos/`, `modules/cluster/` → `modules/nixos/server/`
+- NVIDIA driver: `nvidiaPackages.stable` default, commented `.latest` alternative
+- Multi-monitor failure: graceful xrandr failure, no autorandr
+- Agents MUST NOT run raw nix commands (Principle VII) — use Makefile targets
 <!-- SPECKIT END -->

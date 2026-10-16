@@ -6,9 +6,9 @@
 
 {
   imports = [
-    ../shell/utilities.nix
-    ../shell/common.nix
-    ../users/operator.nix
+    ./shell/utilities.nix
+    ./shell/common.nix
+    ./operator.nix
   ];
 
   # Nix settings

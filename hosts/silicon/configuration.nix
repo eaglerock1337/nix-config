@@ -2,10 +2,10 @@
 
 {
   imports = [
-    ../../modules/hosts/workstation.nix
-    ../../modules/hosts/grub.nix
-    ../../modules/hosts/desktop-ui.nix
-    ../../modules/hosts/gaming.nix
+    ../../modules/nixos/workstation.nix
+    ../../modules/nixos/workstation/grub.nix
+    ../../modules/nixos/workstation/desktop-ui.nix
+    ../../modules/nixos/workstation/gaming.nix
     ../../modules/hardware/x1-carbon.nix
     ./hardware-configuration.nix
   ];
@@ -18,6 +18,12 @@
     description = "Peter Marks";
     extraGroups = [ "wheel" "networkmanager" "docker" ];
   };
+
+  # Host-specific home-manager modules (i3, polybar variants for this host)
+  home-manager.users.eaglerock.imports = [
+    ../../modules/home/workstation/i3/laptop.nix
+    ../../modules/home/workstation/polybar-laptop.nix
+  ];
 
   # See `man configuration.nix` before changing this — it pins stateful data
   # locations to the release version that first installed this system.

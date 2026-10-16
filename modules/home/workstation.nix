@@ -7,11 +7,9 @@
 {
   imports = [
     ./base.nix
-    ./ui.nix
-    ./i3.nix
-    ./polybar.nix
-    ./dunst.nix
-    ./dev.nix
-    ./vscode.nix
+    ./workstation/ui.nix
+    ./workstation/dunst.nix
+    ./workstation/dev.nix
+    ./workstation/vscode.nix
   ];
 }

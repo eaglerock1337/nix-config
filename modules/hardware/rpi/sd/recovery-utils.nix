@@ -2,7 +2,7 @@
 
 let
   hlc-recover = pkgs.writeShellScriptBin "hlc-recover"
-    (import ../cluster/hlc/hlc-recover-script.nix {
+    (import ../../../nixos/server/hlc/hlc-recover-script.nix {
       hostname = config.networking.hostName;
     });
 

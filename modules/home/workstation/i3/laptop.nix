@@ -1,7 +1,7 @@
 { config, pkgs, ... }:
 
 let
-  colors = import ./colors.nix;
+  colors = import ../../colors.nix;
   gruvboxDark = colors.gruvboxDark;
   workspaces = {
     "1" = "1 ";        # Terminals
@@ -225,7 +225,11 @@ in {
 
       startup = [
         {
-          command = "xrandr --output eDP-1 --scale 0.8x0.8 --dpi 144";
+          # Native 2048x1152 mode, not --scale: a RandR transform is not cleared
+          # when a game takes exclusive fullscreen, so the CRTC samples a
+          # mode*0.8 sub-rectangle and the view comes out cropped. Same logical
+          # geometry, and the panel's scaler handles 1440p instead of the GPU.
+          command = "xrandr --output eDP-1 --mode 2048x1152 --dpi 144";
           always = true;
         }
         {
@@ -249,7 +253,7 @@ in {
           always = true;
         }
         {
-          command = ''i3-msg "workspace ${workspaces."1"}; append_layout ${./layouts/workspace-1.json}"'';
+          command = ''i3-msg "workspace ${workspaces."1"}; append_layout ${../layouts/workspace-1.json}"'';
           always = false;
         }
         {

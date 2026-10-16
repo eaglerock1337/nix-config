@@ -11,12 +11,15 @@
     bsdgames
     dosbox
     fuse-emulator
+    gamemode
+    gamescope       # Nested compositor: decouples render res from display mode
+    intel-gpu-tools # intel_gpu_top — GPU-side profiling on the iGPU
+    mangohud
     protonplus
     protontricks
     protonup-ng     # GUI for installing/updating Proton versions (including GE)
     steam-run
     vulkan-tools
-    gamemode
   ];
 
   nixpkgs.config.allowUnfreePredicate = pkg:
@@ -26,6 +29,8 @@
       "steam-unwrapped"
       "steam-run"
     ];
+
+  programs.gamemode.enable = true;
 
   programs.steam = {
     enable = true;

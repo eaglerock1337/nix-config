@@ -26,6 +26,7 @@
     nnn
 
     # utilities
+    nomacs
     scrot
     flameshot
     gimp3-with-plugins
@@ -76,7 +77,7 @@
     displayManager = {
       lightdm = {
         enable = true;
-        background = ./. + "/../../assets/login.png";
+        background = ./. + "/../../../assets/login.png";
         greeters.enso = {
           enable = true;
           theme = {
